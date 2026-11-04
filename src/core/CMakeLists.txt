@@ -5,10 +5,12 @@ configure_file(
 )
 
 find_package(tl-expected CONFIG REQUIRED)
+find_package(simdutf CONFIG REQUIRED)
 
 add_library(
     lv_core STATIC
     version.cpp
+    encoding/encoding.cpp
     platform/file_common.cpp
     $<IF:$<BOOL:${WIN32}>,platform/file_win32.cpp,platform/file_posix.cpp>
     util/assert.cpp
@@ -24,5 +26,5 @@ target_include_directories(
 target_link_libraries(
     lv_core
     PUBLIC tl::expected
-    PRIVATE lv::compile_options
+    PRIVATE lv::compile_options simdutf::simdutf
 )
