@@ -1,0 +1,64 @@
+name: Set up Linux build environment
+description: Installs compilers, Qt (pinned in .github/qt-version), vcpkg at the manifest baseline, and caches.
+
+inputs:
+  cache-key:
+    description: Unique cache key prefix for this job (vcpkg binaries and ccache).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends \
+          ninja-build lld clang-format-19 clang-tidy-19 \
+          libgl-dev libxkbcommon-dev libvulkan-dev
+
+    - name: Read pinned versions
+      id: versions
+      shell: bash
+      run: |
+        echo "qt=$(tr -d '[:space:]' < .github/qt-version)" >> "$GITHUB_OUTPUT"
+        echo "vcpkg=$(jq -r '.["builtin-baseline"]' vcpkg.json)" >> "$GITHUB_OUTPUT"
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
+      with:
+        version: ${{ steps.versions.outputs.qt }}
+        host: linux
+        target: desktop
+        arch: linux_gcc_64
+        cache: true
+
+    - name: Check out vcpkg at the manifest baseline
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: microsoft/vcpkg
+        ref: ${{ steps.versions.outputs.vcpkg }}
+        path: .vcpkg
+        fetch-depth: 1
+
+    - name: Bootstrap vcpkg
+      shell: bash
+      run: |
+        ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        echo "VCPKG_ROOT=$GITHUB_WORKSPACE/.vcpkg" >> "$GITHUB_ENV"
+        echo "VCPKG_BINARY_SOURCES=clear;files,$RUNNER_TEMP/vcpkg-cache,readwrite" >> "$GITHUB_ENV"
+        mkdir -p "$RUNNER_TEMP/vcpkg-cache"
+
+    - name: Cache vcpkg binaries
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-${{ inputs.cache-key }}-${{ steps.versions.outputs.vcpkg }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ inputs.cache-key }}-
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+      with:
+        key: ccache-${{ inputs.cache-key }}
+        max-size: 500M
