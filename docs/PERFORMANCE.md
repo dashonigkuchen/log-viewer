@@ -60,4 +60,5 @@ Append one row per measurement session. Never edit old rows.
 
 | Date | Machine | Commit | Scenario | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| – | – | – | – | – | No measurements yet |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-04 | `BM_LineIndex_Append` (1M line ends, 110–150 B lines) | 1.19 bytes/line, 384 M/s | release build |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-04 | `BM_LineIndex_RandomAccess` / `LowerBound` | 89 ns / 354 ns | release build |

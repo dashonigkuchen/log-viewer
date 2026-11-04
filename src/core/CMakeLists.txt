@@ -11,6 +11,7 @@ add_library(
     lv_core STATIC
     version.cpp
     encoding/encoding.cpp
+    index/sorted_u64_sequence.cpp
     platform/file_common.cpp
     $<IF:$<BOOL:${WIN32}>,platform/file_win32.cpp,platform/file_posix.cpp>
     util/assert.cpp
