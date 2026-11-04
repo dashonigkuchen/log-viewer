@@ -50,7 +50,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Scope: `tools/loggen/` (C++ executable, no Qt): profiles `small`, `large`, `huge`, `short`, `long`, `utf16`, `cp1252` exactly as in `PERFORMANCE.md` §2; options `--profile`, `--seed`, `--size`, `--out`, `--append-rate <MB/s> --duration <s>` (simulated live writer, flushes every write), `--rotate-every <MB>` (rename + recreate) and `--truncate-every <MB>`.
   - Done when: same seed produces byte-identical output (test compares SHA-256 of a 5 MB run twice); line counts and level distribution of a 5 MB `small` run are within 1% of the profile; writer modes have a smoke test.
 
-- [ ] **M0-07 Benchmark harness** — Depends on: M0-06
+- [x] **M0-07 Benchmark harness** — Depends on: M0-06 (PR #8)
   - Scope: `bench/` with Google Benchmark, `lv_bench` executable, data cache dir (`LV_BENCH_DATA`), a baseline benchmark `BM_ReadOnly_Sequential` (plain sequential read of `small` with 4 MiB buffers → reference for P-IDX-2), JSON output, `tools/bench_compare.py` comparing a result JSON with `bench/baseline-ci-linux.json` (fails on > 25% slowdown).
   - Done when: `lv_bench` runs locally; `bench_compare.py` has a unit test with two fake JSON files.
 

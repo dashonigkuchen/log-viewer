@@ -40,6 +40,9 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(tools)
+if(LV_BUILD_BENCH)
+    add_subdirectory(bench)
+endif()
 
 if(LV_BUILD_TESTS)
     add_subdirectory(tests)
