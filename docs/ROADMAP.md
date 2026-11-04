@@ -101,7 +101,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/encoding/decode.cpp`: raw → UTF-16 (`std::u16string`) for all encodings, invalid UTF-8 → U+FFFD (F-ENC-4), control characters and NUL mapped to visible placeholders for display (F-ROB-1), tab expansion helper, mapping between byte offset ↔ UTF-16 offset ↔ display column.
   - Done when: tests for umlauts in UTF-8/CP1252/UTF-16, surrogate pairs, invalid sequences at start/middle/end, tabs at various columns, round-trip offset mapping property tests; `BM_Decode_*` benchmarks.
 
-- [ ] **M1-09 Line reader with page cache** — Depends on: M1-07
+- [x] **M1-09 Line reader with page cache** — Depends on: M1-07 (PR #19)
   - Scope: `src/core/reader/line_reader.h/.cpp` (ARCHITECTURE §3.5), thread-safe, 64 KiB page LRU (configurable size), max line length handling (F-FILE-7).
   - Done when: random line reads equal reference on generated files; reading lines at a block of 1,000 consecutive lines does one or few reads (counted through a test hook); 16 MiB line read correctly; lines in a truncated file return an error, not garbage.
 

@@ -10,7 +10,7 @@ catch_discover_tests(
 )
 
 # File-system integration tests (label fs): real files, sharing, rename, delete.
-add_executable(lv_fs_tests file_test.cpp indexer_test.cpp)
+add_executable(lv_fs_tests file_test.cpp indexer_test.cpp line_reader_test.cpp)
 target_link_libraries(lv_fs_tests PRIVATE lv::core lv::loggen lv_test_support lv::compile_options Catch2::Catch2WithMain)
 catch_discover_tests(
     lv_fs_tests
