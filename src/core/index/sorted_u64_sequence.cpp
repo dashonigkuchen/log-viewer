@@ -66,8 +66,7 @@ std::uint64_t* SortedU64Sequence::allocateWords(std::size_t count)
     }
     std::uint64_t* words = m_pages.back()->data() + m_pageUsed;
     m_pageUsed += count;
-    std::fill_n(words, count, std::uint64_t{0});
-    return words;
+    return words;  // sealBlock() writes every word
 }
 
 void SortedU64Sequence::append(std::uint64_t value)
@@ -82,24 +81,55 @@ void SortedU64Sequence::append(std::uint64_t value)
     }
 }
 
+void SortedU64Sequence::append(std::span<const std::uint64_t> values)
+{
+    std::size_t done = 0;
+    while (done < values.size()) {
+        const std::size_t indexInBlock = m_appended % kBlockSize;
+        const std::size_t take = std::min(kBlockSize - indexInBlock, values.size() - done);
+        const auto chunk = values.subspan(done, take);
+        LV_ASSERT(std::ranges::is_sorted(chunk));
+        LV_ASSERT(m_appended == 0 || chunk.front() >= m_last);
+        std::ranges::copy(chunk, m_pending.begin() + static_cast<std::ptrdiff_t>(indexInBlock));
+        m_appended += take;
+        m_last = chunk.back();
+        done += take;
+        if (indexInBlock + take == kBlockSize) {
+            sealBlock();
+        }
+    }
+}
+
 void SortedU64Sequence::sealBlock()
 {
-    std::uint64_t maxDelta = 0;
+    const std::uint64_t* const values = m_pending.data();
+    // The OR of all deltas has the same bit width as their maximum and vectorizes well.
+    std::uint64_t allDeltas = 0;
     for (std::size_t i = 1; i < kBlockSize; ++i) {
-        maxDelta = std::max(maxDelta, m_pending.at(i) - m_pending.at(i - 1));
+        allDeltas |= values[i] - values[i - 1];
     }
-    const auto width = static_cast<std::size_t>(std::bit_width(maxDelta));
+    const auto width = static_cast<std::size_t>(std::bit_width(allDeltas));
     const std::size_t wordCount = wordsForWidth(width);
     std::uint64_t* words = wordCount == 0 ? nullptr : allocateWords(wordCount);
-    for (std::size_t i = 1; i < kBlockSize && width != 0; ++i) {
-        const std::uint64_t delta = m_pending.at(i) - m_pending.at(i - 1);
-        const std::size_t bit = (i - 1) * width;
-        const std::size_t word = bit / 64;
-        const std::size_t offset = bit % 64;
-        words[word] |= delta << offset;
-        if (offset + width > 64) {
-            words[word + 1] |= delta >> (64 - offset);
+    if (width != 0) {
+        // Bit writer: fill a 64-bit accumulator and flush whole words.
+        std::uint64_t accumulator = 0;
+        std::size_t filled = 0;
+        std::size_t word = 0;
+        for (std::size_t i = 1; i < kBlockSize; ++i) {
+            const std::uint64_t delta = values[i] - values[i - 1];
+            accumulator |= delta << filled;
+            filled += width;
+            if (filled >= 64) {
+                words[word++] = accumulator;
+                filled -= 64;
+                accumulator = filled == 0 ? 0 : delta >> (width - filled);
+            }
         }
+        if (filled != 0) {
+            words[word++] = accumulator;
+        }
+        LV_ASSERT(word == wordCount);
     }
 
     const std::size_t block = m_sealedBlocks.load(std::memory_order_relaxed);

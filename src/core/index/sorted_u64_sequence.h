@@ -41,6 +41,10 @@ public:
     // Writer: appends a value that must be >= the previous one. Not visible before publish().
     void append(std::uint64_t value);
 
+    // Writer: appends several values (non-decreasing, >= the previous one). Same as calling
+    // append() for each, but much faster.
+    void append(std::span<const std::uint64_t> values);
+
     // Writer: makes all appended values visible to readers.
     void publish();
 

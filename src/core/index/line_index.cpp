@@ -30,13 +30,20 @@ void LineIndex::reset(Encoding encoding, std::uint64_t dataStart)
 
 void LineIndex::append(std::span<const std::uint64_t> lineEnds)
 {
-    std::uint64_t maxLength = m_maxLineLength.load(std::memory_order_relaxed);
-    for (const std::uint64_t end : lineEnds) {
-        LV_ASSERT(end >= m_lastAppendedEnd + m_lineFeedSize);
-        maxLength = std::max(maxLength, end - m_lastAppendedEnd - m_lineFeedSize);
-        m_ends.append(end);
-        m_lastAppendedEnd = end;
+    if (lineEnds.empty()) {
+        return;
     }
+    LV_ASSERT(lineEnds.front() >= m_lastAppendedEnd + m_lineFeedSize);
+    // Longest distance between consecutive ends (a line length plus its line feed).
+    std::uint64_t maxDistance = lineEnds.front() - m_lastAppendedEnd;
+    for (std::size_t i = 1; i < lineEnds.size(); ++i) {
+        LV_ASSERT(lineEnds[i] >= lineEnds[i - 1] + m_lineFeedSize);
+        maxDistance = std::max(maxDistance, lineEnds[i] - lineEnds[i - 1]);
+    }
+    m_ends.append(lineEnds);
+    m_lastAppendedEnd = lineEnds.back();
+    const std::uint64_t maxLength =
+        std::max(m_maxLineLength.load(std::memory_order_relaxed), maxDistance - m_lineFeedSize);
     m_maxLineLength.store(maxLength, std::memory_order_release);
 }
 
