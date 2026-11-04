@@ -20,7 +20,9 @@ Current state of the project and notes for the next session. Update this file in
 - M0-09 dropped: the UI is English only (ADR 0013). M0 is complete.
 - M1-01 done: `src/core/util/` has `strong_types.h` (`LineNumber`, `LineCount`, `ByteOffset`, `ByteRange`, overflow checked with `LV_ASSERT`), `result.h` (`Result<T>` = `tl::expected<T, Error>`, `ErrorCode`, `makeError`), `assert.h` (`LV_ASSERT`, active unless `NDEBUG`; `setAssertHandler` lets tests throw instead of abort), `scope_guard.h`. `lv_core` links `tl::expected` publicly.
 - Pitfall: GCC 14 with LTO reports a false `-Wstringop-overflow` for `"literal" + std::to_string(x)`; build strings with `std::to_chars` or `+=` instead.
-- Next step: **M1-02 Platform file access** (M1-03 and M1-04 are also unblocked).
+- M1-02 done: `lv::core::File` (`src/core/platform/file.h`, `file_posix.cpp`, `file_win32.cpp`, `file_common.cpp`): read-only open with full sharing, positional `readAt` (short read at EOF), `size()` from the handle, `identity()` / `identityOfPath()` (volume + file ID / dev + inode). Test helpers in `tests/support/` (`TempDir`, `LogWriter` that opens like a logger: Windows `FILE_SHARE_READ` only). File-system tests are in `lv_fs_tests` (CTest label `fs`).
+- Windows target is `_WIN32_WINNT=0x0A00` (Windows 10+), set in `LvCompilerOptions.cmake`.
+- Next step: **M1-03 Encoding traits and detection** (M1-04 is also unblocked).
 
 ## Environment notes
 

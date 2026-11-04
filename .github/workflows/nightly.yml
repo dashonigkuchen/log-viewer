@@ -31,9 +31,9 @@ jobs:
         run: cmake --preset linux-clang-tsan -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
       - name: Build
         run: cmake --build --preset linux-clang-tsan
-      - name: Test (core, model, tools)
+      - name: Test (core, fs, model, tools)
         # UI tests are excluded: Qt itself is not built with TSan and reports false positives.
-        run: ctest --preset linux-clang-tsan -L "core|model|tools"
+        run: ctest --preset linux-clang-tsan -L "core|fs|model|tools"
 
   linux-release:
     name: linux-release (slow tests and benchmarks)

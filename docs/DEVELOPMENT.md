@@ -77,7 +77,7 @@ ctest --preset linux-gcc-debug -L core          # by label: core, model, ui, fs 
 ctest --preset linux-gcc-debug -R LineIndex     # by name
 ```
 
-- Test executables: `lv_core_tests` (label `core`), `lv_model_tests` (`model`), `lv_ui_tests` (`ui`, Qt Test), `lv_tools_tests` and `tools.loggen.*` CLI checks (`tools`), and `app.*` tests that run `logviewer --version`/`--help` (`app`, Linux only).
+- Test executables: `lv_core_tests` (label `core`), `lv_fs_tests` (`fs`, real files: sharing, rename, delete, truncate), `lv_model_tests` (`model`), `lv_ui_tests` (`ui`, Qt Test), `lv_tools_tests` and `tools.loggen.*` CLI checks (`tools`), and `app.*` tests that run `logviewer --version`/`--help` (`app`, Linux only).
 - UI tests run with `QT_QPA_PLATFORM=offscreen` (set by CTest properties).
 - `LV_SETTINGS_DIR` overrides the settings directory (app log, later settings); use it in tests and manual runs to keep the real profile clean.
 - Tests labeled `slow` (> 5 s) do not run in the default PR CI job; they run in the nightly job.
