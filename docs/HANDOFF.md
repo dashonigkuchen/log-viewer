@@ -22,7 +22,8 @@ Current state of the project and notes for the next session. Update this file in
 - Pitfall: GCC 14 with LTO reports a false `-Wstringop-overflow` for `"literal" + std::to_string(x)`; build strings with `std::to_chars` or `+=` instead.
 - M1-02 done: `lv::core::File` (`src/core/platform/file.h`, `file_posix.cpp`, `file_win32.cpp`, `file_common.cpp`): read-only open with full sharing, positional `readAt` (short read at EOF), `size()` from the handle, `identity()` / `identityOfPath()` (volume + file ID / dev + inode). Test helpers in `tests/support/` (`TempDir`, `LogWriter` that opens like a logger: Windows `FILE_SHARE_READ` only). File-system tests are in `lv_fs_tests` (CTest label `fs`).
 - Windows target is `_WIN32_WINNT=0x0A00` (Windows 10+), set in `LvCompilerOptions.cmake`.
-- Next step: **M1-03 Encoding traits and detection** (M1-04 is also unblocked).
+- M1-03 done: `src/core/encoding/encoding.h` – `Encoding` (`kUtf8`, `kUtf16Le`, `kUtf16Be`, `kWindows1252`, `kIso88591`), `traits()` (code unit size, LF/CR bytes, BOM), `displayName()`/`encodingFromName()`, `detectEncoding(sample, atEndOfFile)` (BOM → simdutf UTF-8 validation, tolerant of a sequence cut at the sample end → Windows-1252). `lv_core` links simdutf privately.
+- Next step: **M1-04 Compressed sorted sequence** (M1-05 and M1-08 are also unblocked).
 
 ## Environment notes
 
