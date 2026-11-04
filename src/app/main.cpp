@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[])
 {
-    QApplication app(argc, argv);
+    const QApplication app(argc, argv);
     QApplication::setOrganizationName(QStringLiteral("LogViewer"));
     QApplication::setApplicationName(QStringLiteral("LogViewer"));
 
