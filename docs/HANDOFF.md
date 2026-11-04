@@ -26,7 +26,8 @@ Current state of the project and notes for the next session. Update this file in
 - M1-04 done: `lv::core::SortedU64Sequence` (`src/core/index/`): blocks of 128 values, base + bit-packed deltas (width 0–64, so huge deltas need no special raw block), headers in never-moving segments, single writer (`append` + `publish`) and lock-free readers for sealed blocks (the open last block is copied under a short mutex). API: `at`, `copy` (fast bulk read), `lowerBound`, `memoryBytes`. Measured (release, 1M values with 110–150 byte deltas): 1.19 bytes/value, append 384 M values/s, random `at` 89 ns, `lowerBound` 354 ns. Concurrency test (1 writer, 4 readers, 2M values) passes under TSan.
 - Note: ARCHITECTURE §3.3 mentioned a raw fallback block for deltas > 32 bits; the implementation instead allows bit widths up to 64, which covers it without a second format.
 - `.clang-tidy`: `cert-msc32-c`/`cert-msc51-cpp` disabled (deterministic seeds are intended).
-- Next step: **M1-05 Line splitter** (M1-08 is also unblocked).
+- M1-05 done: `lv::core::LineSplitter` (`src/core/index/line_splitter.h`): streaming search for line feeds with `memchr`, reports line *end offsets* (just after `\n`). CRLF needs no special case (readers drop a `\r` before `\n`); lone `\r` is not a break; the unterminated last line is not reported. UTF-16 LE/BE: only aligned `\n` code units count; an odd byte at a buffer end is carried over. BOM skipping = construct with `startOffset` = BOM length.
+- Next step: **M1-06 LineIndex with pending tail** (M1-08 is also unblocked).
 
 ## Environment notes
 
