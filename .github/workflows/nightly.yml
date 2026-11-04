@@ -65,9 +65,12 @@ jobs:
           path: bench-result.json
           retention-days: 30
       - name: Compare with baseline
+        # Warning only: GitHub-hosted runners differ in CPU clock (3.2 vs. 4.5 GHz seen on the
+        # same image), which shifts every benchmark by up to 2x (docs/PERFORMANCE.md §4).
         run: |
           if [ -f bench/baseline-ci-linux.json ]; then
-            python3 -I tools/bench_compare.py bench-result.json bench/baseline-ci-linux.json
+            python3 -I tools/bench_compare.py bench-result.json bench/baseline-ci-linux.json ||
+              echo "::warning title=Benchmarks::slower than bench/baseline-ci-linux.json; check the runner CPU (context.mhz_per_cpu) before suspecting a regression"
           else
             echo "No baseline yet (created in roadmap step M1-10); skipping comparison."
           fi
