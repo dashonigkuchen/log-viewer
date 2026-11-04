@@ -1,4 +1,5 @@
 #include "bench_data.h"
+#include "decode_bench.h"
 #include "index_bench.h"
 #include "read_bench.h"
 #include "sequence_bench.h"
@@ -38,6 +39,11 @@ int main(int argc, char** argv)
         ->Unit(benchmark::kMillisecond);
     benchmark::RegisterBenchmark("BM_LineIndex_RandomAccess", lv::bench::lineIndexRandomAccess);
     benchmark::RegisterBenchmark("BM_LineIndex_LowerBound", lv::bench::lineIndexLowerBound);
+
+    benchmark::RegisterBenchmark("BM_Decode_Utf8", lv::bench::decodeLines,
+                                 lv::core::Encoding::kUtf8);
+    benchmark::RegisterBenchmark("BM_Decode_Windows1252", lv::bench::decodeLines,
+                                 lv::core::Encoding::kWindows1252);
 
     benchmark::Initialize(&argc, argv);
     if (benchmark::ReportUnrecognizedArguments(argc, argv)) {

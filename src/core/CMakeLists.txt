@@ -10,6 +10,7 @@ find_package(simdutf CONFIG REQUIRED)
 add_library(
     lv_core STATIC
     version.cpp
+    encoding/decode.cpp
     encoding/encoding.cpp
     index/indexer.cpp
     index/line_index.cpp
