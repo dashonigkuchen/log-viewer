@@ -24,6 +24,25 @@ endif()
 
 install(TARGETS lv_app RUNTIME DESTINATION .)
 
+# "logviewer --version" prints the version (SPEC F-CLI-1). Not on Windows: a GUI-subsystem
+# executable shows --version in a message box there, which would block the test.
+if(LV_BUILD_TESTS AND NOT WIN32)
+    add_test(NAME app.version COMMAND lv_app --version)
+    set_tests_properties(
+        app.version
+        PROPERTIES PASS_REGULAR_EXPRESSION "^LogViewer ${PROJECT_VERSION}"
+                   LABELS app
+                   ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    )
+    add_test(NAME app.help COMMAND lv_app --help)
+    set_tests_properties(
+        app.help
+        PROPERTIES PASS_REGULAR_EXPRESSION "--version"
+                   LABELS app
+                   ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    )
+endif()
+
 if(WIN32)
     # App-local MSVC runtime DLLs, so the portable zip runs without the VC++ redistributable.
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)

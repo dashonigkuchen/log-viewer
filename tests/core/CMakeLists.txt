@@ -1,4 +1,4 @@
-add_executable(lv_core_tests version_test.cpp)
+add_executable(lv_core_tests log_test.cpp version_test.cpp)
 
 target_link_libraries(lv_core_tests PRIVATE lv::core lv::compile_options Catch2::Catch2WithMain)
 

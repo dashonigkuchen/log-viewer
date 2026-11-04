@@ -4,7 +4,7 @@ configure_file(
     @ONLY
 )
 
-add_library(lv_core STATIC version.cpp)
+add_library(lv_core STATIC version.cpp util/log.cpp)
 add_library(lv::core ALIAS lv_core)
 
 target_include_directories(

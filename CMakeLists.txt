@@ -34,10 +34,13 @@ include(LvChecks)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
 
+if(LV_BUILD_TESTS)
+    enable_testing()
+endif()
+
 add_subdirectory(src)
 
 if(LV_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(tests)
 endif()
 

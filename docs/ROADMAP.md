@@ -42,7 +42,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Done when: Windows job green; the artifact zip contains `logviewer.exe` with version info visible in Explorer properties.
   - [Owner] Download the artifact, start `logviewer.exe` on Windows 11, confirm an (empty) window opens.
 
-- [ ] **M0-05 Application skeleton** — Depends on: M0-01
+- [x] **M0-05 Application skeleton** — Depends on: M0-01 (PR #6)
   - Scope: `lv_app/main.cpp` (`QApplication`, organization/application name `LogViewer`, `--help`/`--version` via `QCommandLineParser` (F-CLI-1)), `lv_ui::MainWindow` with empty `QTabWidget`, menu bar (File: Open (disabled), Exit; Help: About), status bar, About dialog (version, MIT license, Qt version, "built with AI agents" note). App log sink writing `logviewer.log` in the settings directory (ARCHITECTURE §3.8).
   - Done when: Qt Test (offscreen) creates `MainWindow`, checks menus exist; `logviewer --version` prints the version (CTest).
 
@@ -72,7 +72,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
 Goal: `lv_core` can open any file, detect its encoding, index it at disk speed with tiny memory, and read any line. No UI yet. Everything is benchmarked.
 
 - [ ] **M1-01 Core utilities** — Depends on: M0-02
-  - Scope: `src/core/util/`: strong types `LineNumber`, `LineCount`, `ByteOffset`, `ByteRange` (arithmetic only where meaningful, explicit construction, formatting), `Result<T>`/`Error` (ARCHITECTURE §3.8), `LV_ASSERT`, scope guard, logging interface.
+  - Scope: `src/core/util/`: strong types `LineNumber`, `LineCount`, `ByteOffset`, `ByteRange` (arithmetic only where meaningful, explicit construction, formatting), `Result<T>`/`Error` (ARCHITECTURE §3.8), `LV_ASSERT`, scope guard. (The logging interface `log.h` already exists since M0-05.)
   - Done when: tests cover construction, comparisons, overflow-sensitive arithmetic (asserts), `Error` formatting.
 
 - [ ] **M1-02 Platform file access** — Depends on: M1-01
