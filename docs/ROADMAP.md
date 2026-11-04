@@ -89,7 +89,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/index/line_splitter.h/.cpp`: given a buffer, the encoding, and carry-over state, emits line end offsets. Handles `\n`, `\r\n` split across buffer boundaries, UTF-16 LE/BE (2-byte aligned `\n` code unit only), BOM skipping at file start.
   - Done when: table tests for all F-FILE-5 cases in UTF-8 and UTF-16 LE/BE; property test: splitting any input in random buffer sizes (1 byte … 1 MiB) gives the same result as a naive reference splitter.
 
-- [ ] **M1-06 LineIndex with pending tail** — Depends on: M1-04, M1-05
+- [x] **M1-06 LineIndex with pending tail** — Depends on: M1-04, M1-05 (PR #16)
   - Scope: `src/core/index/line_index.h/.cpp`: line ranges excluding terminators, `lineContaining`, `maxLineLength`, pending unterminated tail (ARCHITECTURE §3.3, F-TAIL-8), generation number.
   - Done when: tests: empty file → 0 lines; `"a"` → 1 line (pending); `"a\n"` → 1 line; `"a\r\n\r\n"` → 2 lines, second empty; tail completion appends exactly once; `lineContaining` at every byte of a small file.
 

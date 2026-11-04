@@ -11,6 +11,7 @@ add_library(
     lv_core STATIC
     version.cpp
     encoding/encoding.cpp
+    index/line_index.cpp
     index/line_splitter.cpp
     index/sorted_u64_sequence.cpp
     platform/file_common.cpp
