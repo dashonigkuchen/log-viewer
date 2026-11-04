@@ -42,7 +42,7 @@ if(LV_CLANG_TIDY)
     )
     # Generated headers (moc, version_config.h) must exist before clang-tidy runs.
     add_dependencies(tidy lv_app)
-    foreach(_lv_test_target IN ITEMS lv_core_tests lv_model_tests lv_ui_tests)
+    foreach(_lv_test_target IN ITEMS lv_core_tests lv_model_tests lv_ui_tests lv_tools_tests)
         if(TARGET ${_lv_test_target})
             add_dependencies(tidy ${_lv_test_target})
         endif()

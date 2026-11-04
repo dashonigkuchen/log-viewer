@@ -46,7 +46,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Scope: `lv_app/main.cpp` (`QApplication`, organization/application name `LogViewer`, `--help`/`--version` via `QCommandLineParser` (F-CLI-1)), `lv_ui::MainWindow` with empty `QTabWidget`, menu bar (File: Open (disabled), Exit; Help: About), status bar, About dialog (version, MIT license, Qt version, "built with AI agents" note). App log sink writing `logviewer.log` in the settings directory (ARCHITECTURE §3.8).
   - Done when: Qt Test (offscreen) creates `MainWindow`, checks menus exist; `logviewer --version` prints the version (CTest).
 
-- [ ] **M0-06 Test log generator `loggen`** — Depends on: M0-01
+- [x] **M0-06 Test log generator `loggen`** — Depends on: M0-01 (PR #7)
   - Scope: `tools/loggen/` (C++ executable, no Qt): profiles `small`, `large`, `huge`, `short`, `long`, `utf16`, `cp1252` exactly as in `PERFORMANCE.md` §2; options `--profile`, `--seed`, `--size`, `--out`, `--append-rate <MB/s> --duration <s>` (simulated live writer, flushes every write), `--rotate-every <MB>` (rename + recreate) and `--truncate-every <MB>`.
   - Done when: same seed produces byte-identical output (test compares SHA-256 of a 5 MB run twice); line counts and level distribution of a 5 MB `small` run are within 1% of the profile; writer modes have a smoke test.
 
