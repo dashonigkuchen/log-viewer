@@ -1,0 +1,115 @@
+name: CI Windows
+
+# Windows minutes cost more than Linux minutes in private repositories (docs/DEVELOPMENT.md §6),
+# so this workflow runs only on main when code changed, on PRs labeled "windows", and manually.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - '.github/qt-version'
+      - '.github/workflows/ci-windows.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-windows-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-msvc-release:
+    name: windows-msvc-release
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'windows')
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read pinned versions
+        id: versions
+        run: |
+          "qt=$((Get-Content .github/qt-version -Raw).Trim())" >> $env:GITHUB_OUTPUT
+          "vcpkg=$((Get-Content vcpkg.json -Raw | ConvertFrom-Json).'builtin-baseline')" >> $env:GITHUB_OUTPUT
+          "version=$((Select-String -Path CMakeLists.txt -Pattern 'VERSION (\d+\.\d+\.\d+)').Matches[0].Groups[1].Value)" >> $env:GITHUB_OUTPUT
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
+        with:
+          version: ${{ steps.versions.outputs.qt }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Check out vcpkg at the manifest baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.versions.outputs.vcpkg }}
+          path: .vcpkg
+          fetch-depth: 1
+
+      - name: Bootstrap vcpkg
+        run: |
+          ./.vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/vcpkg-cache" | Out-Null
+          "VCPKG_ROOT=$env:GITHUB_WORKSPACE\.vcpkg" >> $env:GITHUB_ENV
+          "VCPKG_BINARY_SOURCES=clear;files,$env:RUNNER_TEMP\vcpkg-cache,readwrite" >> $env:GITHUB_ENV
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-cache
+          key: vcpkg-windows-msvc-release-${{ steps.versions.outputs.vcpkg }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-windows-msvc-release-
+
+      - name: Set up MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: x64
+
+      - name: Configure
+        run: cmake --preset windows-msvc-release
+
+      - name: Build
+        run: cmake --build --preset windows-msvc-release
+
+      - name: Test
+        run: ctest --preset windows-msvc-release
+
+      - name: Install and deploy Qt
+        run: |
+          cmake --install build/windows-msvc-release --prefix dist
+          & "$env:QT_ROOT_DIR/bin/windeployqt.exe" --release --no-translations --no-system-d3d-compiler --no-opengl-sw dist/logviewer.exe
+          Copy-Item LICENSE, README.md dist/
+
+      - name: Verify version info
+        env:
+          EXPECTED: ${{ steps.versions.outputs.version }}
+        run: |
+          $info = (Get-Item dist/logviewer.exe).VersionInfo
+          "ProductName=$($info.ProductName) ProductVersion=$($info.ProductVersion) FileVersion=$($info.FileVersion)"
+          if ($info.ProductVersion -ne $env:EXPECTED) { throw "ProductVersion '$($info.ProductVersion)' != '$env:EXPECTED'" }
+          if ($info.ProductName -ne 'Log Viewer') { throw "ProductName is '$($info.ProductName)'" }
+          Get-ChildItem dist -Recurse | Select-Object -ExpandProperty FullName
+
+      - name: Upload portable package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: LogViewer-${{ steps.versions.outputs.version }}-${{ github.sha }}-windows-x64
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
