@@ -168,18 +168,17 @@ Two separate concepts, matching how the owner works:
 
 | ID | Status | Requirement |
 | --- | --- | --- |
-| F-SET-1 | Must | Settings dialog: font, tab width, line number gutter, colors (current line, marks, match highlight), polling interval, max display columns, filter history size, session restore, single instance, number of search threads (0 = automatic), UI language. |
+| F-SET-1 | Must | Settings dialog: font, tab width, line number gutter, colors (current line, marks, match highlight), polling interval, max display columns, filter history size, session restore, single instance, number of search threads (0 = automatic). |
 | F-SET-2 | Must | Settings are stored as INI files in the user profile (Windows: `%APPDATA%\LogViewer\`, Linux: `~/.config/LogViewer/`). **Portable mode:** if a file `portable.ini` exists next to the executable, all settings are stored next to the executable instead. |
 | F-SET-3 | Must | Settings files have a schema version; older versions are migrated, unknown keys are ignored, corrupt files are backed up and replaced with defaults with a notice. |
 | F-SET-4 | Must | Dark mode: follow the Windows theme (Qt `colorScheme`), with manual override Light / Dark / System. Log view colors have light and dark defaults. |
 | F-SET-5 | Should | Configurable keyboard shortcuts. |
 
-## 12. Internationalization
+## 12. Language
 
 | ID | Status | Requirement |
 | --- | --- | --- |
-| F-I18N-1 | Must | UI available in English (source) and German. Language follows the system locale, overridable in settings. |
-| F-I18N-2 | Must | All UI strings use `tr()`; CI fails when the `.ts` files are out of date or the German file has unfinished entries. |
+| F-I18N-1 | Must | The UI is English only. No translations and no language setting (ADR 0013). Log content in any language and encoding is still displayed correctly (section 2). |
 
 ## 13. Robustness and safety
 

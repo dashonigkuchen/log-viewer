@@ -17,7 +17,8 @@ Current state of the project and notes for the next session. Update this file in
 - `tools/lint.py` skips `.cpp` files that are not in the build's `compile_commands.json` (for example `bench/` in debug builds); CI's `format-and-tidy` configures with benchmarks enabled so they are checked.
 - M0-08 done: `.github/dependabot.yml` (GitHub Actions incl. the composite action, vcpkg baseline; weekly, label `dependencies`), `.github/workflows/nightly.yml` (Mondays 03:00 UTC + manual: TSan on core/model/tools, release build with all tests and benchmarks + baseline compare once it exists, Windows build via the reusable `ci-windows.yml`, Qt patch and aqtinstall release check that opens `qt-update`/`maintenance` issues). `THIRD-PARTY-NOTICES.md`, `CHANGELOG.md`, `SECURITY.md`. Labels `dependencies`, `qt-update`, `maintenance` exist.
 - Agent procedure for Dependabot PRs and nightly issues: DEVELOPMENT §7.
-- Next step: **M0-09 Translation infrastructure**. After it, M0 is complete; then M1-01.
+- M0-09 dropped: the UI is English only (ADR 0013). M0 is complete.
+- Next step: **M1-01 Core utilities**.
 
 ## Environment notes
 

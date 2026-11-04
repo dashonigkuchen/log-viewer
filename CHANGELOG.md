@@ -15,3 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Main window skeleton with About dialog, `--help` and `--version`, application log file.
 - Test log generator `loggen` and benchmark harness `lv_bench`.
 - Dependabot updates and a weekly nightly workflow.
+
+### Changed
+
+- The UI is English only; translations were removed from the plan.
