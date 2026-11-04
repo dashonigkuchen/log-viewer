@@ -22,7 +22,7 @@ if(MSVC)
         target_compile_options(lv_compile_options INTERFACE /WX)
     endif()
     target_compile_definitions(
-        lv_compile_options INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE
+        lv_compile_options INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00
     )
 else()
     target_compile_options(

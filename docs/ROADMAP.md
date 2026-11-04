@@ -73,7 +73,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/util/`: strong types `LineNumber`, `LineCount`, `ByteOffset`, `ByteRange` (arithmetic only where meaningful, explicit construction, formatting), `Result<T>`/`Error` (ARCHITECTURE §3.8), `LV_ASSERT`, scope guard. (The logging interface `log.h` already exists since M0-05.)
   - Done when: tests cover construction, comparisons, overflow-sensitive arithmetic (asserts), `Error` formatting.
 
-- [ ] **M1-02 Platform file access** — Depends on: M1-01
+- [x] **M1-02 Platform file access** — Depends on: M1-01 (PR #12)
   - Scope: `src/core/platform/file.h` interface + `file_win32.cpp` / `file_posix.cpp` (ARCHITECTURE §3.1): `open`, `readAt`, `size`, `identity`, `identityOfPath`.
   - Done when (tests label `fs`, run on Linux; Windows in CI with label): read at arbitrary offsets incl. past EOF (short read); another handle can write, append, rename, and delete the file while it is open (F-FILE-2) — on Windows the test opens the writer with `FILE_SHARE_READ` like typical loggers; size reflects appended data via the handle; identity equal for same file, different after rename-and-recreate; open errors return proper `Error` codes for missing file, directory, no permission (POSIX). **[Windows]**
 
