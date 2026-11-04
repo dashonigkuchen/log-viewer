@@ -21,16 +21,17 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-windows-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   windows-msvc-release:
     name: windows-msvc-release
     if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'windows')
     runs-on: windows-2025
     timeout-minutes: 45
+    # Job-level (not workflow-level) concurrency: a run that skips this job, e.g. the "opened"
+    # event of a PR that gets its "windows" label a moment later, must not cancel the real run.
+    concurrency:
+      group: ci-windows-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     defaults:
       run:
         shell: pwsh
