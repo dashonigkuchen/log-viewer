@@ -154,7 +154,8 @@ Rules to stay within the allowance:
 
 - `github-actions` (weekly): action versions.
 - `vcpkg` (weekly): updates `builtin-baseline` in `vcpkg.json`, which moves PCRE2, simdutf, and the other vcpkg ports to their latest versions.
-- Qt is not managed by Dependabot. The pinned version in `.github/qt-version` is checked weekly by `nightly.yml` against the latest patch release of the same minor line; if newer, the job opens an issue (`qt-update`) so an agent can bump it.
+- Qt is not managed by Dependabot. The pinned version in `.github/qt-version` is checked weekly by `nightly.yml` against the latest patch release of the same minor line; if newer, the job opens an issue (`qt-update`) so an agent can bump it. The same job opens a `maintenance` issue when a new aqtinstall release appears (to remove the ADR 0012 pin). PRs that change `nightly.yml` run it as a dry run that never opens issues.
+- `CHANGELOG.md` (Keep a Changelog): every user-visible change adds a line under `[Unreleased]` in its PR.
 
 Security alerts: Dependabot alerts are enabled in the repository settings (owner). Owner gets e-mail notifications from GitHub for failed workflows and new Dependabot PRs.
 

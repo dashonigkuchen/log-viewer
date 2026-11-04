@@ -1,0 +1,27 @@
+# Automated dependency updates (docs/DEVELOPMENT.md §7).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/setup-linux"
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Moves vcpkg.json's builtin-baseline forward, which updates PCRE2, simdutf, Catch2, and the
+  # other vcpkg ports at once. CI builds and tests every such PR.
+  - package-ecosystem: vcpkg
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies]
+    commit-message:
+      prefix: build

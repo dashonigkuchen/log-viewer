@@ -1,0 +1,117 @@
+name: Nightly
+
+# Weekly deep checks that are too slow or too expensive for every PR (docs/DEVELOPMENT.md §6).
+# Pull requests that change this file run it as a dry run (no issues are opened).
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/nightly.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-clang-tsan:
+    name: linux-clang-tsan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-linux
+        with:
+          cache-key: linux-clang-tsan
+      - name: Configure
+        run: cmake --preset linux-clang-tsan -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+      - name: Build
+        run: cmake --build --preset linux-clang-tsan
+      - name: Test (core, model, tools)
+        # UI tests are excluded: Qt itself is not built with TSan and reports false positives.
+        run: ctest --preset linux-clang-tsan -L "core|model|tools"
+
+  linux-release:
+    name: linux-release (slow tests and benchmarks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-linux
+        with:
+          cache-key: linux-release
+      - name: Configure
+        run: cmake --preset linux-release -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+      - name: Build
+        run: cmake --build --preset linux-release
+      - name: All tests including slow ones
+        run: ctest --test-dir build/linux-release --output-on-failure --no-tests=ignore
+      - name: Benchmarks
+        env:
+          LV_BENCH_PROFILES: small,short
+          LV_BENCH_DATA: ${{ runner.temp }}/bench-data
+        run: >-
+          ./build/linux-release/bench/lv_bench --benchmark_repetitions=5
+          --benchmark_report_aggregates_only=true
+          --benchmark_out=bench-result.json --benchmark_out_format=json
+      - name: Compare with baseline
+        run: |
+          if [ -f bench/baseline-ci-linux.json ]; then
+            python3 -I tools/bench_compare.py bench-result.json bench/baseline-ci-linux.json
+          else
+            echo "No baseline yet (created in roadmap step M1-10); skipping comparison."
+          fi
+
+  windows:
+    name: windows
+    uses: ./.github/workflows/ci-windows.yml
+
+  qt-and-tools-check:
+    name: qt-and-tools-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install aqtinstall (pinned fix commit, ADR 0012)
+        run: python3 -m pip install --quiet "aqtinstall @ git+https://github.com/jdpurcell/aqtinstall@6f0f842da47c744cdc814cd94da9828d934d7bf0"
+      - name: Check for newer Qt patch release and aqtinstall release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          pinned=$(tr -d '[:space:]' < .github/qt-version)
+          minor=${pinned%.*}
+          latest=$(aqt list-qt linux desktop --spec "$minor" --latest-version)
+          echo "Pinned Qt: $pinned, latest $minor.x: $latest"
+
+          open_issue() {  # title, label, body
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "Dry run: would open issue '$1'"
+              return
+            fi
+            if [ -n "$(gh issue list --label "$2" --state open --json number --jq '.[].number')" ]; then
+              echo "An open '$2' issue exists already."
+              return
+            fi
+            gh issue create --title "$1" --label "$2" --body "$3"
+          }
+
+          if [ "$latest" != "$pinned" ]; then
+            open_issue "Update Qt to $latest" qt-update \
+              "Qt $latest is available; \`.github/qt-version\` pins $pinned. Bump the file, run Linux and Windows CI (label \`windows\`), and update docs/DEVELOPMENT.md if needed. Opened by the nightly workflow."
+          fi
+
+          aqt_release=$(python3 -c "import json,urllib.request;print(json.load(urllib.request.urlopen('https://pypi.org/pypi/aqtinstall/json'))['info']['version'])")
+          echo "Latest aqtinstall release: $aqt_release"
+          if [ "$aqt_release" != "3.3.0" ]; then
+            open_issue "Check whether aqtinstall $aqt_release supports Qt 6.12" maintenance \
+              "A new aqtinstall release ($aqt_release) exists. If it installs Qt 6.12 on Windows, remove the \`aqtsource\` pins (ADR 0012) and supersede the ADR. Opened by the nightly workflow."
+          fi

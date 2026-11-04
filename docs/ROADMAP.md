@@ -54,7 +54,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Scope: `bench/` with Google Benchmark, `lv_bench` executable, data cache dir (`LV_BENCH_DATA`), a baseline benchmark `BM_ReadOnly_Sequential` (plain sequential read of `small` with 4 MiB buffers → reference for P-IDX-2), JSON output, `tools/bench_compare.py` comparing a result JSON with `bench/baseline-ci-linux.json` (fails on > 25% slowdown).
   - Done when: `lv_bench` runs locally; `bench_compare.py` has a unit test with two fake JSON files.
 
-- [ ] **M0-08 Dependabot, nightly workflow, notices** — Depends on: M0-03
+- [x] **M0-08 Dependabot, nightly workflow, notices** — Depends on: M0-03 (PR #9)
   - Scope: `.github/dependabot.yml` (`github-actions` weekly, `vcpkg` weekly, grouped minor/patch, PR labels `dependencies`), `.github/workflows/nightly.yml` (weekly + manual: TSan job, `slow` tests, Windows build, benchmark smoke + compare, Qt patch-version check that opens an issue labeled `qt-update` using `gh` when a newer 6.12.x exists), `THIRD-PARTY-NOTICES.md`, `CHANGELOG.md` (Keep a Changelog format), `SECURITY.md` (how to report, "no network features" statement).
   - Done when: workflow files pass `actionlint` (run locally or in CI); nightly runs green once via manual dispatch.
   - [Owner] Enable Dependabot alerts and security updates in repo settings; enable "Automatically delete head branches"; enable "Allow auto-merge" if desired.

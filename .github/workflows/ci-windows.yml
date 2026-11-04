@@ -17,6 +17,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -30,7 +31,8 @@ jobs:
     # Job-level (not workflow-level) concurrency: a run that skips this job, e.g. the "opened"
     # event of a PR that gets its "windows" label a moment later, must not cancel the real run.
     concurrency:
-      group: ci-windows-${{ github.event.pull_request.number || github.ref }}
+      # github.workflow differs when called from nightly.yml, so both runs can coexist.
+      group: ci-windows-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     defaults:
       run:
