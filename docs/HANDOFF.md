@@ -8,7 +8,8 @@ Current state of the project and notes for the next session. Update this file in
 - M0-01 done: CMake skeleton with `lv_core`, `lv_model`, `lv_ui`, `lv_app` (`logviewer`), `lv_core_tests`; all Linux presets build and pass. The libraries contain only placeholders (`versionString()`, a bare `QMainWindow` factory). `src/ui/main_window_factory.*` is replaced by the real `MainWindow` in M0-05.
 - M0-02 done: `.clang-format`, `.clang-tidy` (naming rules from AGENTS.md §5 enforced), `.editorconfig`, targets `format`/`format-check`/`tidy`. All sources are clean.
 - M0-03 done: `ci.yml` with `changes`, `linux-gcc`, `linux-clang-asan`, `format-and-tidy`; Qt 6.12.0 on CI (Linux dev machine uses Debian's 6.8.2, so both versions are covered).
-- Next step: **M0-04 Windows CI and portable package** (M0-05, M0-06, M0-08 are also unblocked; M0-05 is a good choice if Windows CI minutes should be saved).
+- M0-04 done: `ci-windows.yml`, version resource, manifest, placeholder icon (`src/app/resources/`), portable zip artifact. Owner still has to start the exe on Windows 11 once (roadmap note).
+- Next step: **M0-05 Application skeleton** (M0-06 and M0-08 are also unblocked).
 
 ## Environment notes
 
@@ -23,4 +24,4 @@ Current state of the project and notes for the next session. Update this file in
 
 ## Known issues
 
-- None.
+- aqtinstall is pinned to an unreleased fix commit (ADR 0012). Remove the pin when an aqtinstall release supports Qt 6.12.

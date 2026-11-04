@@ -55,7 +55,7 @@ Every configure preset has a matching build and test preset of the same name. Bu
 
 - All presets use the vcpkg toolchain from `$VCPKG_ROOT`. vcpkg packages are installed once into `build/vcpkg_installed/` and shared by all presets; the vcpkg binary cache (`~/.cache/vcpkg`) makes reconfiguring fast. The first configure on a new machine takes about 2 minutes.
 - Linux presets use ccache; Clang presets link with lld.
-- Windows presets expect `QT_ROOT_DIR` (Qt install for MSVC) and must run from a Visual Studio developer prompt. They are not verified yet; this happens in M0-04.
+- Windows presets expect `QT_ROOT_DIR` (Qt install for MSVC) and must run from a Visual Studio developer prompt. vcpkg uses the triplet `x64-windows-static-md`: third-party libraries are linked statically, so only Qt and the MSVC runtime ship as DLLs. `windows-msvc-release` is verified by `ci-windows.yml`; `windows-msvc-debug` is not built on CI.
 - Test presets fail when no tests are found (`noTestsAction: error`); sanitizer presets set `ASAN_OPTIONS`/`UBSAN_OPTIONS`/`TSAN_OPTIONS` to halt on the first error.
 - `CMAKE_CXX_SCAN_FOR_MODULES` is off: the project does not use C++20 modules.
 - `lv_core` must not link Qt: `cmake/LvChecks.cmake` fails the configure step otherwise (ADR 0006).
@@ -128,6 +128,10 @@ Rules to stay within the allowance:
 - `format-and-tidy` runs clang-tidy on changed files for PRs and on all files for pushes to `main`.
 - Reading CI results as an agent: `gh run list --branch <branch>` and `gh run view <id> --json jobs`. `gh pr checks` does not work with the fine-grained token (GraphQL `statusCheckRollup` is not accessible).
 - Workflows are linted with `actionlint` (download the release binary into a scratch directory).
+- Qt on CI is installed with aqtinstall pinned to a fix commit, because aqtinstall 3.3.0 cannot install Qt 6.12 on Windows (ADR 0012).
+- `ci-windows.yml` runs on `windows-2025` (Visual Studio 2022 + 2026). Measured: ~7 min with a cold vcpkg cache. The portable package is uploaded as artifact `LogViewer-<version>-<sha>-windows-x64` (7 days): `logviewer.exe`, Qt DLLs and plugins from `windeployqt`, app-local MSVC runtime DLLs, `LICENSE`, `README.md`. The job fails if the exe's version info does not match the CMake project version.
+- To run Windows CI on a PR, add the label `windows` (the label exists in the repository).
+- If a push does not trigger CI (GitHub hiccup: the PR head stays on the old commit), close and reopen the PR.
 - `concurrency:` groups cancel superseded runs of the same PR.
 - `timeout-minutes` is set on every job.
 - Docs-only changes (`**.md`, `docs/**`) skip `ci.yml` via `paths-ignore`, but a lightweight `docs` job still runs so the required status check reports success.
