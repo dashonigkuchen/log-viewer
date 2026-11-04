@@ -33,6 +33,13 @@ namespace detail
 [[noreturn]] void assertionFailed(std::string_view expression,
                                   const std::source_location& location);
 
+// Used by LV_ASSERT so the caller's condition is not negated textually (clang-tidy would
+// otherwise suggest De Morgan rewrites at every call site).
+[[nodiscard]] constexpr bool isFalse(bool value) noexcept
+{
+    return !value;
+}
+
 }  // namespace detail
 
 }  // namespace lv::core
@@ -40,7 +47,7 @@ namespace detail
 #if LV_ASSERTS_ENABLED
 #define LV_ASSERT(condition)                                                                       \
     do {                                                                                           \
-        if (!(condition)) {                                                                        \
+        if (::lv::core::detail::isFalse(static_cast<bool>(condition))) {                           \
             ::lv::core::detail::assertionFailed(#condition, std::source_location::current());      \
         }                                                                                          \
     } while (false)

@@ -23,7 +23,10 @@ Current state of the project and notes for the next session. Update this file in
 - M1-02 done: `lv::core::File` (`src/core/platform/file.h`, `file_posix.cpp`, `file_win32.cpp`, `file_common.cpp`): read-only open with full sharing, positional `readAt` (short read at EOF), `size()` from the handle, `identity()` / `identityOfPath()` (volume + file ID / dev + inode). Test helpers in `tests/support/` (`TempDir`, `LogWriter` that opens like a logger: Windows `FILE_SHARE_READ` only). File-system tests are in `lv_fs_tests` (CTest label `fs`).
 - Windows target is `_WIN32_WINNT=0x0A00` (Windows 10+), set in `LvCompilerOptions.cmake`.
 - M1-03 done: `src/core/encoding/encoding.h` – `Encoding` (`kUtf8`, `kUtf16Le`, `kUtf16Be`, `kWindows1252`, `kIso88591`), `traits()` (code unit size, LF/CR bytes, BOM), `displayName()`/`encodingFromName()`, `detectEncoding(sample, atEndOfFile)` (BOM → simdutf UTF-8 validation, tolerant of a sequence cut at the sample end → Windows-1252). `lv_core` links simdutf privately.
-- Next step: **M1-04 Compressed sorted sequence** (M1-05 and M1-08 are also unblocked).
+- M1-04 done: `lv::core::SortedU64Sequence` (`src/core/index/`): blocks of 128 values, base + bit-packed deltas (width 0–64, so huge deltas need no special raw block), headers in never-moving segments, single writer (`append` + `publish`) and lock-free readers for sealed blocks (the open last block is copied under a short mutex). API: `at`, `copy` (fast bulk read), `lowerBound`, `memoryBytes`. Measured (release, 1M values with 110–150 byte deltas): 1.19 bytes/value, append 384 M values/s, random `at` 89 ns, `lowerBound` 354 ns. Concurrency test (1 writer, 4 readers, 2M values) passes under TSan.
+- Note: ARCHITECTURE §3.3 mentioned a raw fallback block for deltas > 32 bits; the implementation instead allows bit widths up to 64, which covers it without a second format.
+- `.clang-tidy`: `cert-msc32-c`/`cert-msc51-cpp` disabled (deterministic seeds are intended).
+- Next step: **M1-05 Line splitter** (M1-08 is also unblocked).
 
 ## Environment notes
 

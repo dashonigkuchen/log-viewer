@@ -81,7 +81,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/encoding/encoding.h`, `detect.cpp` (F-ENC-1, F-ENC-2) using simdutf for UTF-8 validation; single-byte tables for Windows-1252 and ISO-8859-1.
   - Done when: tests for every BOM, pure ASCII, valid UTF-8, invalid UTF-8 → Windows-1252, UTF-8 sequence cut at the end of the 1 MiB sample still detected as UTF-8, empty input → UTF-8.
 
-- [ ] **M1-04 Compressed sorted sequence** — Depends on: M1-01
+- [x] **M1-04 Compressed sorted sequence** — Depends on: M1-01 (PR #14)
   - Scope: `src/core/index/sorted_u64_sequence.h/.cpp` (ARCHITECTURE §3.3): blocks of 128, bit-packed deltas, raw fallback block, segmented storage, single-writer append with atomic published count, `at`, `lowerBound`, iteration, `memoryBytes()`.
   - Done when: property tests against `std::vector<uint64_t>` with random sequences (small deltas, huge deltas, mixed, 1 element, block boundaries 127/128/129); concurrent test: one writer appends 10M values while 4 readers read random published positions and verify values (runs under TSan in nightly); `BM_LineIndex_Append` / `BM_LineIndex_RandomAccess` benchmarks; memory ≤ 1.2 bytes/value for deltas < 256.
 

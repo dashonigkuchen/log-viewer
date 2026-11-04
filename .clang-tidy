@@ -3,6 +3,7 @@
 # Disabled checks and why:
 #   bugprone-easily-swappable-parameters        Too noisy; strong types (LineNumber, ByteOffset) prevent the real mistakes.
 #   cert-err58-cpp                              Flags Catch2 test registration and static Qt string literals.
+#   cert-msc32-c, cert-msc51-cpp                Tests, benchmarks, and loggen need deterministic seeds; PRNGs are never used for security.
 #   cppcoreguidelines-avoid-magic-numbers       Duplicate of readability-magic-numbers (disabled below).
 #   cppcoreguidelines-avoid-do-while            do/while(false) is the standard idiom for statement-like macros.
 #   cppcoreguidelines-avoid-non-const-global-variables  Flags Catch2 TEST_CASE registration.
@@ -22,6 +23,8 @@ Checks: >-
   -bugprone-easily-swappable-parameters,
   cert-*,
   -cert-err58-cpp,
+  -cert-msc32-c,
+  -cert-msc51-cpp,
   concurrency-*,
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-magic-numbers,

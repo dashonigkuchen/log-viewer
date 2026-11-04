@@ -1,5 +1,6 @@
 #include "bench_data.h"
 #include "read_bench.h"
+#include "sequence_bench.h"
 
 #include <benchmark/benchmark.h>
 
@@ -28,6 +29,11 @@ int main(int argc, char** argv)
             ->Unit(benchmark::kMillisecond)
             ->UseRealTime();
     }
+
+    benchmark::RegisterBenchmark("BM_LineIndex_Append", lv::bench::lineIndexAppend)
+        ->Unit(benchmark::kMillisecond);
+    benchmark::RegisterBenchmark("BM_LineIndex_RandomAccess", lv::bench::lineIndexRandomAccess);
+    benchmark::RegisterBenchmark("BM_LineIndex_LowerBound", lv::bench::lineIndexLowerBound);
 
     benchmark::Initialize(&argc, argv);
     if (benchmark::ReportUnrecognizedArguments(argc, argv)) {
