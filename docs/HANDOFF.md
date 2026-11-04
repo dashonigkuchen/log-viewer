@@ -27,7 +27,8 @@ Current state of the project and notes for the next session. Update this file in
 - Note: ARCHITECTURE §3.3 mentioned a raw fallback block for deltas > 32 bits; the implementation instead allows bit widths up to 64, which covers it without a second format.
 - `.clang-tidy`: `cert-msc32-c`/`cert-msc51-cpp` disabled (deterministic seeds are intended).
 - M1-05 done: `lv::core::LineSplitter` (`src/core/index/line_splitter.h`): streaming search for line feeds with `memchr`, reports line *end offsets* (just after `\n`). CRLF needs no special case (readers drop a `\r` before `\n`); lone `\r` is not a break; the unterminated last line is not reported. UTF-16 LE/BE: only aligned `\n` code units count; an odd byte at a buffer end is carried over. BOM skipping = construct with `startOffset` = BOM length.
-- Next step: **M1-06 LineIndex with pending tail** (M1-08 is also unblocked).
+- M1-06 done: `lv::core::LineIndex` (`src/core/index/line_index.h`): line end offsets in a `SortedU64Sequence`, published `Snapshot` (complete lines, indexed end, last line end, generation); the unterminated tail is derived (`indexedEnd > lastLineEnd`) and becomes a normal line once its `\n` arrives, so it is never counted twice. `rawLineRange` excludes the LF code unit but keeps a CR (LineReader strips it in M1-09). `lineContaining`, `maxLineLength`, `reset` (new generation).
+- Next step: **M1-07 Indexer** (M1-08 is also unblocked).
 
 ## Environment notes
 
