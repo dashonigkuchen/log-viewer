@@ -1,4 +1,5 @@
 #include "bench_data.h"
+#include "index_bench.h"
 #include "read_bench.h"
 #include "sequence_bench.h"
 
@@ -26,6 +27,9 @@ int main(int argc, char** argv)
         const std::string suffix = "/" + std::string(lv::loggen::profileName(profile));
         benchmark::RegisterBenchmark("BM_ReadOnly_Sequential" + suffix,
                                      lv::bench::readOnlySequential, profile)
+            ->Unit(benchmark::kMillisecond)
+            ->UseRealTime();
+        benchmark::RegisterBenchmark("BM_Index" + suffix, lv::bench::indexFile, profile)
             ->Unit(benchmark::kMillisecond)
             ->UseRealTime();
     }
