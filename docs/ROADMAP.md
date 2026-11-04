@@ -85,7 +85,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/index/sorted_u64_sequence.h/.cpp` (ARCHITECTURE §3.3): blocks of 128, bit-packed deltas, raw fallback block, segmented storage, single-writer append with atomic published count, `at`, `lowerBound`, iteration, `memoryBytes()`.
   - Done when: property tests against `std::vector<uint64_t>` with random sequences (small deltas, huge deltas, mixed, 1 element, block boundaries 127/128/129); concurrent test: one writer appends 10M values while 4 readers read random published positions and verify values (runs under TSan in nightly); `BM_LineIndex_Append` / `BM_LineIndex_RandomAccess` benchmarks; memory ≤ 1.2 bytes/value for deltas < 256.
 
-- [ ] **M1-05 Line splitter** — Depends on: M1-03
+- [x] **M1-05 Line splitter** — Depends on: M1-03 (PR #15)
   - Scope: `src/core/index/line_splitter.h/.cpp`: given a buffer, the encoding, and carry-over state, emits line end offsets. Handles `\n`, `\r\n` split across buffer boundaries, UTF-16 LE/BE (2-byte aligned `\n` code unit only), BOM skipping at file start.
   - Done when: table tests for all F-FILE-5 cases in UTF-8 and UTF-16 LE/BE; property test: splitting any input in random buffer sizes (1 byte … 1 MiB) gives the same result as a naive reference splitter.
 
