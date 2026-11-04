@@ -38,7 +38,7 @@ Machine sizing for development: at least 4 cores, 8 GB RAM, 15 GB free disk (vcp
 3. Qt: `pip install aqtinstall` then `aqt install-qt windows desktop <version from .github/qt-version> win64_msvc2022_64 -m qttranslations -O C:\dev\Qt`; set `QT_ROOT_DIR=C:\dev\Qt\<version>\msvc2022_64`.
 4. Open "x64 Native Tools Command Prompt" (or let Visual Studio open the folder) and use the `windows-msvc-*` presets.
 
-## 2. Build presets (created in M0-01)
+## 2. Build presets
 
 | Preset | Platform | Compiler | Type | Purpose |
 | --- | --- | --- | --- | --- |
@@ -51,6 +51,13 @@ Machine sizing for development: at least 4 cores, 8 GB RAM, 15 GB free disk (vcp
 | `windows-msvc-release` | Windows | MSVC | Release + LTCG | Benchmarks and release packages |
 
 Every configure preset has a matching build and test preset of the same name. Build directory: `build/<preset>/`.
+
+- All presets use the vcpkg toolchain from `$VCPKG_ROOT`. vcpkg packages are installed once into `build/vcpkg_installed/` and shared by all presets; the vcpkg binary cache (`~/.cache/vcpkg`) makes reconfiguring fast. The first configure on a new machine takes about 2 minutes.
+- Linux presets use ccache; Clang presets link with lld.
+- Windows presets expect `QT_ROOT_DIR` (Qt install for MSVC) and must run from a Visual Studio developer prompt. They are not verified yet; this happens in M0-04.
+- Test presets fail when no tests are found (`noTestsAction: error`); sanitizer presets set `ASAN_OPTIONS`/`UBSAN_OPTIONS`/`TSAN_OPTIONS` to halt on the first error.
+- `CMAKE_CXX_SCAN_FOR_MODULES` is off: the project does not use C++20 modules.
+- `lv_core` must not link Qt: `cmake/LvChecks.cmake` fails the configure step otherwise (ADR 0006).
 
 CMake options (all prefixed `LV_`): `LV_BUILD_TESTS` (ON), `LV_BUILD_BENCH` (ON in release presets), `LV_WARNINGS_AS_ERRORS` (ON), `LV_ENABLE_ASAN`, `LV_ENABLE_UBSAN`, `LV_ENABLE_TSAN`.
 

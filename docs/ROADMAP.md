@@ -23,7 +23,7 @@ Step format:
 
 Goal: an empty but complete project: builds on Linux and Windows, tests run, CI enforces quality, dependencies update themselves.
 
-- [ ] **M0-01 CMake skeleton and presets** — Depends on: –
+- [x] **M0-01 CMake skeleton and presets** — Depends on: – (PR #2)
   - Goal: top-level CMake project with the three libraries, the app, and a test executable, all building.
   - Scope: `CMakeLists.txt` (project `LogViewer`, version `0.1.0`, C++20, `LV_*` options), `CMakePresets.json` (all presets from `DEVELOPMENT.md` §2 incl. build/test presets), `cmake/LvCompilerOptions.cmake` (flags from `DEVELOPMENT.md` §2 as an interface target `lv_compile_options`), `cmake/LvSanitizers.cmake`, `vcpkg.json` (manifest with `builtin-baseline` = latest vcpkg release commit; deps: `pcre2`, `simdutf`, `tl-expected`, `catch2`, `benchmark` (benchmark only via a `bench` feature)), `vcpkg-configuration.json` if needed. Targets: `lv_core` (static, one placeholder source `version.cpp` exposing `lv::core::versionString()`), `lv_model` (static, QtCore), `lv_ui` (static, QtWidgets), `lv_app` → executable `logviewer`, `lv_core_tests` (Catch2 with one test of `versionString()`), CTest integration with labels.
   - Done when: `linux-gcc-debug`, `linux-clang-debug`, `linux-clang-asan`, `linux-release` configure, build, and pass tests locally; `lv_core` does not link Qt (verified by a CMake check that fails if `lv_core` links any `Qt6::` target); `DEVELOPMENT.md` reflects the real commands.
