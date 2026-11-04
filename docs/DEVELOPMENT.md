@@ -77,7 +77,7 @@ ctest --preset linux-gcc-debug -L core          # by label: core, model, ui, fs 
 ctest --preset linux-gcc-debug -R LineIndex     # by name
 ```
 
-- Test executables: `lv_core_tests` (label `core`), `lv_model_tests` (`model`), `lv_ui_tests` (`ui`, Qt Test), and `app.*` tests that run `logviewer --version`/`--help` (`app`, Linux only).
+- Test executables: `lv_core_tests` (label `core`), `lv_model_tests` (`model`), `lv_ui_tests` (`ui`, Qt Test), `lv_tools_tests` and `tools.loggen.*` CLI checks (`tools`), and `app.*` tests that run `logviewer --version`/`--help` (`app`, Linux only).
 - UI tests run with `QT_QPA_PLATFORM=offscreen` (set by CTest properties).
 - `LV_SETTINGS_DIR` overrides the settings directory (app log, later settings); use it in tests and manual runs to keep the real profile clean.
 - Tests labeled `slow` (> 5 s) do not run in the default PR CI job; they run in the nightly job.
@@ -88,6 +88,9 @@ ctest --preset linux-gcc-debug -R LineIndex     # by name
 ```bash
 cmake --preset linux-release && cmake --build --preset linux-release
 ./build/linux-release/tools/loggen/loggen --profile small --seed 1 --out build/bench-data/small.log
+./build/linux-release/tools/loggen/loggen --help    # all options
+# Live writer for manual tail tests: 5 MiB/s for 60 s, rotate every 20 MiB
+./build/linux-release/tools/loggen/loggen --profile small --out /tmp/live.log --append-rate 5 --duration 60 --rotate-every 20
 ./build/linux-release/bench/lv_bench --benchmark_filter=Index
 ```
 
