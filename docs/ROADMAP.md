@@ -69,7 +69,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
 
 Goal: `lv_core` can open any file, detect its encoding, index it at disk speed with tiny memory, and read any line. No UI yet. Everything is benchmarked.
 
-- [ ] **M1-01 Core utilities** — Depends on: M0-02
+- [x] **M1-01 Core utilities** — Depends on: M0-02 (PR #11)
   - Scope: `src/core/util/`: strong types `LineNumber`, `LineCount`, `ByteOffset`, `ByteRange` (arithmetic only where meaningful, explicit construction, formatting), `Result<T>`/`Error` (ARCHITECTURE §3.8), `LV_ASSERT`, scope guard. (The logging interface `log.h` already exists since M0-05.)
   - Done when: tests cover construction, comparisons, overflow-sensitive arithmetic (asserts), `Error` formatting.
 

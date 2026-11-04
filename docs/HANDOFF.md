@@ -18,7 +18,9 @@ Current state of the project and notes for the next session. Update this file in
 - M0-08 done: `.github/dependabot.yml` (GitHub Actions incl. the composite action, vcpkg baseline; weekly, label `dependencies`), `.github/workflows/nightly.yml` (Mondays 03:00 UTC + manual: TSan on core/model/tools, release build with all tests and benchmarks + baseline compare once it exists, Windows build via the reusable `ci-windows.yml`, Qt patch and aqtinstall release check that opens `qt-update`/`maintenance` issues). `THIRD-PARTY-NOTICES.md`, `CHANGELOG.md`, `SECURITY.md`. Labels `dependencies`, `qt-update`, `maintenance` exist.
 - Agent procedure for Dependabot PRs and nightly issues: DEVELOPMENT §7.
 - M0-09 dropped: the UI is English only (ADR 0013). M0 is complete.
-- Next step: **M1-01 Core utilities**.
+- M1-01 done: `src/core/util/` has `strong_types.h` (`LineNumber`, `LineCount`, `ByteOffset`, `ByteRange`, overflow checked with `LV_ASSERT`), `result.h` (`Result<T>` = `tl::expected<T, Error>`, `ErrorCode`, `makeError`), `assert.h` (`LV_ASSERT`, active unless `NDEBUG`; `setAssertHandler` lets tests throw instead of abort), `scope_guard.h`. `lv_core` links `tl::expected` publicly.
+- Pitfall: GCC 14 with LTO reports a false `-Wstringop-overflow` for `"literal" + std::to_string(x)`; build strings with `std::to_chars` or `+=` instead.
+- Next step: **M1-02 Platform file access** (M1-03 and M1-04 are also unblocked).
 
 ## Environment notes
 
