@@ -24,8 +24,9 @@ using IndexProgressCallback = std::function<void(const IndexProgress&)>;
 
 struct IndexerOptions
 {
-    // Read block size; 4 MiB is tuned in M1-10.
-    std::size_t blockSize = std::size_t{4} * 1024 * 1024;
+    // Read block size. 512 KiB keeps a block in the CPU cache between reading and scanning;
+    // 4 MiB blocks were 2.5x slower on `large` (measured in M1-10, PERFORMANCE.md §5).
+    std::size_t blockSize = std::size_t{512} * 1024;
     // Buffers in the read-ahead ring (>= 2).
     std::size_t bufferCount = 3;
     // Minimum time between progress callbacks (the final one is always sent).

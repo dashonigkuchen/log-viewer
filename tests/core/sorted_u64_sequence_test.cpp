@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <limits>
 #include <random>
+#include <span>
 #include <thread>
 #include <vector>
 
@@ -244,4 +245,46 @@ TEST_CASE("concurrent readers see a consistent prefix while the writer appends",
     CHECK_FALSE(mismatch.load());
     CHECK(checks.load() > 0);
     checkEqual(sequence, values);
+}
+
+TEST_CASE("bulk append equals single appends", "[core][index]")
+{
+    std::mt19937_64 random(12);
+    std::vector<std::uint64_t> values;
+    std::uint64_t value = 0;
+    for (int i = 0; i < 5000; ++i) {
+        // Mix tiny, large, and zero deltas to hit every bit width and word boundary.
+        switch (random() % 4) {
+        case 0:
+            break;
+        case 1:
+            value += random() % 4;
+            break;
+        case 2:
+            value += random() % 100000;
+            break;
+        default:
+            value += random() >> 20U;
+            break;
+        }
+        values.push_back(value);
+    }
+    lv::core::SortedU64Sequence single;
+    lv::core::SortedU64Sequence bulk;
+    for (const auto v : values) {
+        single.append(v);
+    }
+    std::size_t done = 0;
+    while (done < values.size()) {
+        const auto take = std::min<std::size_t>(1 + (random() % 300), values.size() - done);
+        bulk.append(std::span<const std::uint64_t>(values).subspan(done, take));
+        done += take;
+    }
+    single.publish();
+    bulk.publish();
+    REQUIRE(bulk.size() == values.size());
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        REQUIRE(bulk.at(i) == values[i]);
+        REQUIRE(single.at(i) == values[i]);
+    }
 }

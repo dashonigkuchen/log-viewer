@@ -45,6 +45,8 @@ private:
     std::uint64_t m_position = 0;
     // UTF-16: first byte of a code unit whose second byte is in the next buffer.
     std::optional<std::byte> m_carry;
+    // Scratch output for the SIMD scan of one chunk (allocated on first use, never shrinks).
+    std::vector<std::uint64_t> m_scratch;
 };
 
 }  // namespace lv::core

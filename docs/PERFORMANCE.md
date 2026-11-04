@@ -65,3 +65,9 @@ Append one row per measurement session. Never edit old rows.
 | 2026-11-04 | agent LXC (4 vCPU) | M1-07 | `BM_Index/small` (P-IDX-1) | 15 ms, 3.2 GiB/s, 1.20 B/line | read-only reference 5.1 GiB/s, warm cache |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-08 | `BM_Decode_Utf8` / `Windows1252` (60 lines × 130 B with offsets) | 22 µs / 20 µs per screen | release build |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-07 | `BM_Index/short` (1 GiB) | 611 ms, 1.6 GiB/s, 0.81 B/line | read-only reference 7.1 GiB/s; P-IDX-2 not met yet (M1-10) |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/small` (P-IDX-1) | 7.1 ms, 6.9 GiB/s, 1.20 B/line | read-only 5.2 GiB/s (median of 3) |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/large` (P-IDX-2) | 118 ms, 8.5 GiB/s, 1.19 B/line | read-only 6.7 GiB/s; faster than the reference because 512 KiB blocks stay in cache |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/short` (P-IDX-2) | 315 ms, 3.2 GiB/s, 0.81 B/line | read-only 5.8 GiB/s (55%); meets the 2 GB/s floor, see note below |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/utf16` | 26 ms, 7.4 GiB/s, 1.32 B/line | read-only 6.3 GiB/s |
+
+M1-10 notes: block size was the biggest factor (4 MiB → 512 KiB: `large` 287 → 118 ms) because the scanned block is still in L2/L3 after the read. The SSE2 newline scan with branch-light position extraction replaced one `memchr` call per line (split 450 → 185 ms per GiB on `short`), and bulk append with a word-wise bit packer halved the index append cost (260 → 105 ms per GiB). `short` (≈ 20 bytes per line, 54 M lines per GiB) is bound by per-line work, not I/O; P-IDX-2 is met through its 2 GB/s floor. Further gains (AVX2, parallel scanning of blocks) are not worth it for the owner's ~50 MB files (7 ms).

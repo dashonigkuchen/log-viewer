@@ -167,3 +167,29 @@ TEST_CASE("any buffer split gives the same result as the reference", "[core][ind
     }
     REQUIRE(split(data, encoding, 0, randomSizes) == expected);
 }
+
+TEST_CASE("dense line feeds (more than eight per 64 bytes)", "[core][index]")
+{
+    // Exercises the SIMD path with many matches per step, and every alignment of the tail.
+    std::mt19937_64 random(11);
+    for (int round = 0; round < 200; ++round) {
+        std::string data(static_cast<std::size_t>(random() % 700), 'x');
+        const auto density = 1 + (random() % 4);
+        for (auto& c : data) {
+            if (random() % density == 0) {
+                c = '\n';
+            }
+        }
+        const auto start = static_cast<std::uint64_t>(random() % 1000);
+        LineSplitter splitter(Encoding::kUtf8, start);
+        std::vector<std::uint64_t> ends;
+        splitter.feed(std::as_bytes(std::span<const char>(data.data(), data.size())), ends);
+        std::vector<std::uint64_t> expected;
+        for (std::size_t i = 0; i < data.size(); ++i) {
+            if (data[i] == '\n') {
+                expected.push_back(start + i + 1);
+            }
+        }
+        REQUIRE(ends == expected);
+    }
+}

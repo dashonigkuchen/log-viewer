@@ -58,6 +58,12 @@ jobs:
           ./build/linux-release/bench/lv_bench --benchmark_repetitions=5
           --benchmark_report_aggregates_only=true
           --benchmark_out=bench-result.json --benchmark_out_format=json
+      - name: Upload benchmark result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-result-ci-linux
+          path: bench-result.json
+          retention-days: 30
       - name: Compare with baseline
         run: |
           if [ -f bench/baseline-ci-linux.json ]; then

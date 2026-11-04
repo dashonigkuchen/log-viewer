@@ -105,7 +105,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/reader/line_reader.h/.cpp` (ARCHITECTURE §3.5), thread-safe, 64 KiB page LRU (configurable size), max line length handling (F-FILE-7).
   - Done when: random line reads equal reference on generated files; reading lines at a block of 1,000 consecutive lines does one or few reads (counted through a test hook); 16 MiB line read correctly; lines in a truncated file return an error, not garbage.
 
-- [ ] **M1-10 Indexing performance pass** — Depends on: M1-07, M0-07
+- [x] **M1-10 Indexing performance pass** — Depends on: M1-07, M0-07 (PR #20)
   - Scope: measure P-IDX-1/2/3 on `ci-linux` and locally; tune buffer size, buffer count, and the newline scan (SIMD only if the scanner is the bottleneck per profile); record results in `PERFORMANCE.md` §5; create `bench/baseline-ci-linux.json`.
   - Done when: index throughput ≥ 90% of `BM_ReadOnly_Sequential` on `large` and `short` (warm cache) on the agent machine; memory per line within P-IDX-3; results logged.
 
