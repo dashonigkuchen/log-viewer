@@ -9,7 +9,9 @@ Current state of the project and notes for the next session. Update this file in
 - M0-02 done: `.clang-format`, `.clang-tidy` (naming rules from AGENTS.md §5 enforced), `.editorconfig`, targets `format`/`format-check`/`tidy`. All sources are clean.
 - M0-03 done: `ci.yml` with `changes`, `linux-gcc`, `linux-clang-asan`, `format-and-tidy`; Qt 6.12.0 on CI (Linux dev machine uses Debian's 6.8.2, so both versions are covered).
 - M0-04 done: `ci-windows.yml`, version resource, manifest, placeholder icon (`src/app/resources/`), portable zip artifact. Owner still has to start the exe on Windows 11 once (roadmap note).
-- Next step: **M0-05 Application skeleton** (M0-06 and M0-08 are also unblocked).
+- M0-05 done: `lv::ui::MainWindow` (empty tab widget, File/Help menus, status bar, About dialog), `--help`/`--version` via `QCommandLineParser`, core log interface (`src/core/util/log.h`, part of M1-01 pulled forward), `lv::model::FileLogSink` (writes `logviewer.log` in the settings directory, rotated at 1 MiB to `.1`), `lv::model::settingsDirectory()` (`LV_SETTINGS_DIR` overrides it for tests; portable mode follows in M2-08). Test executables: `lv_core_tests`, `lv_model_tests`, `lv_ui_tests` (Qt Test, offscreen), plus CTest `app.version`/`app.help` (not on Windows: GUI exe shows a message box).
+- Command line file arguments are accepted but only logged as "not implemented" until M2-06.
+- Next step: **M0-06 Test log generator `loggen`** (M0-08 and M0-09 are also unblocked).
 
 ## Environment notes
 
