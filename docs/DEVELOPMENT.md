@@ -122,7 +122,12 @@ Rules to stay within the allowance:
 | `nightly.yml` | Weekly (Monday 03:00 UTC) and manual | TSan, `slow` tests, full benchmark smoke run, Windows build | ≤ 40 min |
 | `release.yml` | Tag `v*` (created only by the owner) | Windows release build, portable zip, SHA-256, draft GitHub release | ≤ 25 min |
 
-- Caching: vcpkg binary cache (`VCPKG_BINARY_SOURCES` with the GitHub Actions cache), Qt install cache, ccache (`hendrikmuhs/ccache-action`).
+- Shared setup: `.github/actions/setup-linux` (composite action) installs system packages incl. `clang-format-19`/`clang-tidy-19`, Qt from `.github/qt-version` via `jurplel/install-qt-action` (sets `QT_ROOT_DIR`, passed as `CMAKE_PREFIX_PATH`), and vcpkg checked out at the manifest's `builtin-baseline`.
+- Caching: vcpkg binary cache (files backend in `$RUNNER_TEMP/vcpkg-cache`, saved with `actions/cache`, key = job + baseline + `vcpkg.json` hash), Qt install cache, ccache (`hendrikmuhs/ccache-action`, 500 MB per job).
+- Docs-only changes: the `changes` job detects them, and the build jobs are skipped. Skipped jobs count as passed for required status checks, so no separate `docs` job is needed.
+- `format-and-tidy` runs clang-tidy on changed files for PRs and on all files for pushes to `main`.
+- Reading CI results as an agent: `gh run list --branch <branch>` and `gh run view <id> --json jobs`. `gh pr checks` does not work with the fine-grained token (GraphQL `statusCheckRollup` is not accessible).
+- Workflows are linted with `actionlint` (download the release binary into a scratch directory).
 - `concurrency:` groups cancel superseded runs of the same PR.
 - `timeout-minutes` is set on every job.
 - Docs-only changes (`**.md`, `docs/**`) skip `ci.yml` via `paths-ignore`, but a lightweight `docs` job still runs so the required status check reports success.
