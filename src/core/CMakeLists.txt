@@ -4,10 +4,23 @@ configure_file(
     @ONLY
 )
 
-add_library(lv_core STATIC version.cpp util/log.cpp)
+find_package(tl-expected CONFIG REQUIRED)
+
+add_library(
+    lv_core STATIC
+    version.cpp
+    util/assert.cpp
+    util/log.cpp
+    util/result.cpp
+    util/strong_types.cpp
+)
 add_library(lv::core ALIAS lv_core)
 
 target_include_directories(
     lv_core PUBLIC "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}/generated"
 )
-target_link_libraries(lv_core PRIVATE lv::compile_options)
+target_link_libraries(
+    lv_core
+    PUBLIC tl::expected
+    PRIVATE lv::compile_options
+)
