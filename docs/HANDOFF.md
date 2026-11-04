@@ -6,7 +6,8 @@ Current state of the project and notes for the next session. Update this file in
 
 - Planning documents exist (README, AGENTS.md, VISION, SPEC, ARCHITECTURE, ROADMAP, PERFORMANCE, DEVELOPMENT, ADRs 0001–0011).
 - M0-01 done: CMake skeleton with `lv_core`, `lv_model`, `lv_ui`, `lv_app` (`logviewer`), `lv_core_tests`; all Linux presets build and pass. The libraries contain only placeholders (`versionString()`, a bare `QMainWindow` factory). `src/ui/main_window_factory.*` is replaced by the real `MainWindow` in M0-05.
-- Next step: **M0-02 Formatting and static analysis** (M0-05 and M0-06 are also unblocked).
+- M0-02 done: `.clang-format`, `.clang-tidy` (naming rules from AGENTS.md §5 enforced), `.editorconfig`, targets `format`/`format-check`/`tidy`. All sources are clean.
+- Next step: **M0-03 Linux CI**. CI must install `clang-format-19`/`clang-tidy-19` on Ubuntu 24.04 (default there is 18).
 
 ## Environment notes
 

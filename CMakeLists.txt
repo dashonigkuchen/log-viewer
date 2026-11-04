@@ -42,3 +42,5 @@ if(LV_BUILD_TESTS)
 endif()
 
 lv_assert_target_has_no_qt(lv_core)
+
+include(LvLint)

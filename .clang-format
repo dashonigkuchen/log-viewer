@@ -1,0 +1,71 @@
+# Formatting rules. Requires clang-format 19 (see docs/DEVELOPMENT.md §5).
+# Never hand-format against these rules; run the `format` target instead.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: None
+FixNamespaceComments: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterExternBlock: true
+  AfterControlStatement: Never
+  AfterCaseLabel: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortEnumsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+BreakInheritanceList: BeforeComma
+BinPackArguments: true
+BinPackParameters: true
+InsertBraces: true
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+SeparateDefinitionBlocks: Always
+SpacesBeforeTrailingComments: 2
+QualifierAlignment: Left
+IncludeBlocks: Regroup
+SortIncludes: CaseSensitive
+IncludeCategories:
+  # Generated project headers
+  - Regex: '^"lv/'
+    Priority: 2
+  # Project headers
+  - Regex: '^"'
+    Priority: 2
+  # Qt
+  - Regex: '^<Q[A-Za-z0-9]*>$|^<Qt[A-Za-z]*/'
+    Priority: 3
+  # Third-party libraries (path with a slash or a file extension)
+  - Regex: '^<[^>]*(/|\.h|\.hpp)[^>]*>$'
+    Priority: 4
+  # C++ standard library
+  - Regex: '^<[a-z_0-9]+>$'
+    Priority: 5

@@ -1,0 +1,93 @@
+# Static analysis rules. Requires clang-tidy 19 (see docs/DEVELOPMENT.md §5).
+#
+# Disabled checks and why:
+#   bugprone-easily-swappable-parameters        Too noisy; strong types (LineNumber, ByteOffset) prevent the real mistakes.
+#   cert-err58-cpp                              Flags Catch2 test registration and static Qt string literals.
+#   cppcoreguidelines-avoid-magic-numbers       Duplicate of readability-magic-numbers (disabled below).
+#   cppcoreguidelines-avoid-do-while            do/while(false) is the standard idiom for statement-like macros.
+#   cppcoreguidelines-avoid-non-const-global-variables  Flags Catch2 TEST_CASE registration.
+#   cppcoreguidelines-owning-memory             Qt parent-child ownership uses raw `new` by design.
+#   cppcoreguidelines-pro-bounds-pointer-arithmetic  Needed in buffer scanning hot paths; covered by ASan and tests.
+#   cppcoreguidelines-pro-type-reinterpret-cast Needed for std::byte/char views and OS APIs; keep usage local.
+#   cppcoreguidelines-pro-type-vararg           Flags Qt and OS logging APIs.
+#   misc-include-cleaner                        Unreliable with Qt umbrella headers and generated headers.
+#   misc-no-recursion                           The boolean expression parser is recursive descent by design.
+#   modernize-use-trailing-return-type          Style preference; we use leading return types.
+#   readability-identifier-length               Short names (i, n, it) are fine in small scopes.
+#   readability-magic-numbers                   Too noisy for constants in tests and tables.
+#   readability-redundant-access-specifiers     Conflicts with Qt `signals:` / `public slots:` sections.
+Checks: >-
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  cert-*,
+  -cert-err58-cpp,
+  concurrency-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-vararg,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-redundant-access-specifiers
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(src|tests|bench|tools)/.*'
+ExcludeHeaderFilterRegex: '.*/(build|vcpkg_installed)/.*'
+FormatStyle: file
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: '40'
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: 'true'
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantPrefix
+    value: k
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionPrefix
+    value: LV_

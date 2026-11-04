@@ -11,11 +11,12 @@ How to set up a machine, build, test, run CI, and release. Commands here are the
 | CMake | ≥ 3.28 | Presets v6 |
 | Ninja | ≥ 1.11 | Generator for all presets |
 | GCC | ≥ 13 | Linux |
-| Clang / clang-tidy / clang-format | ≥ 18 | Linux; sanitizer and tidy builds. Format rules must not depend on newer clang-format features than 18 |
+| Clang | ≥ 18 | Linux; sanitizer builds |
+| clang-format / clang-tidy | exactly 19 | Different major versions format differently; `tools/lint.py` refuses other versions. Debian 13: default packages; Ubuntu 24.04 (CI): `clang-format-19`, `clang-tidy-19` |
 | MSVC | Visual Studio 2022 17.10+ or Visual Studio 2026 (v143/v145 toolset) | Windows |
 | vcpkg | Manifest mode, baseline pinned in `vcpkg.json` (`builtin-baseline`) | Non-Qt dependencies |
 | Qt | ≥ 6.8 for development; releases use `.github/qt-version` (6.12 LTS line) | Linux dev: distribution packages; Windows and CI: `aqtinstall` |
-| Python | ≥ 3.11 | Only for `aqtinstall` and small scripts in `tools/` |
+| Python | ≥ 3.11 | `tools/lint.py`, `aqtinstall`, small scripts in `tools/` |
 
 ### Linux (Debian 13 / Ubuntu 24.04) – the agent machine
 
@@ -94,7 +95,19 @@ See `docs/PERFORMANCE.md` for budgets and the results log.
 
 - `.clang-format`: based on LLVM style, 4-space indent, 100 columns, pointer left (`int* p`), braces on own line for functions and classes, attached for control statements.
 - `.clang-tidy`: `bugprone-*`, `cert-*` (selected), `concurrency-*`, `cppcoreguidelines-*` (selected), `misc-*`, `modernize-*`, `performance-*`, `portability-*`, `readability-*` (selected); `WarningsAsErrors: '*'`. Disabled checks are listed with a reason in the file.
-- Targets: `format` (rewrite), `format-check` (CI), `tidy` (changed files vs. `origin/main`, or all with `LV_TIDY_ALL=1`).
+- `.editorconfig` sets UTF-8, LF, 4 spaces (2 for JSON/YAML) for editors; `tests/data/` is exempt.
+- Targets (defined in `cmake/LvLint.cmake`, implemented in `tools/lint.py`):
+  - `format`: rewrites all C++ files under `src/`, `tests/`, `bench/`, `tools/`.
+  - `format-check`: fails if any file is not formatted (used in CI).
+  - `tidy`: runs clang-tidy on `.cpp` files changed against the merge base with `origin/main` (all files if a header changed), or on all files with `LV_TIDY_ALL=1`. Builds the app and tests first so generated headers exist. A full run takes about 40 s on 4 cores today.
+
+```bash
+cmake --build --preset linux-gcc-debug --target format
+cmake --build --preset linux-gcc-debug --target format-check
+LV_TIDY_ALL=1 cmake --build --preset linux-gcc-debug --target tidy
+```
+
+- Fixing a finding is always preferred. If a check is wrong for a specific line, suppress it with `// NOLINT(check-name): reason` on that line; never disable a check globally without adding it with a reason to the list at the top of `.clang-tidy`.
 
 ## 6. Continuous integration (GitHub Actions)
 
