@@ -52,6 +52,9 @@ jobs:
           target: desktop
           arch: win64_msvc2022_64
           cache: true
+          # aqtinstall 3.3.0 cannot install Qt 6.12 on Windows (miurahr/aqtinstall#1047).
+          # Pinned to the commit of the fix PR miurahr/aqtinstall#1048 until a release contains it (ADR 0012).
+          aqtsource: git+https://github.com/jdpurcell/aqtinstall@6f0f842da47c744cdc814cd94da9828d934d7bf0
 
       - name: Check out vcpkg at the manifest baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

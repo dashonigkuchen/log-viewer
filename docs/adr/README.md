@@ -13,5 +13,6 @@
 | 0009 | [Dependency management with vcpkg and aqtinstall](0009-dependency-management.md) | Accepted |
 | 0010 | [No code signing for now](0010-no-code-signing-for-now.md) | Accepted |
 | 0011 | [Windows 11 primary platform and CI budget](0011-windows-primary-ci-budget.md) | Accepted |
+| 0012 | [aqtinstall pinned to an unreleased fix commit](0012-aqtinstall-pinned-to-fix-commit.md) | Accepted |
 
 Template: Status, Date, Context, Decision, Consequences, Alternatives considered. Never change the decision of an accepted ADR; supersede it with a new one.
