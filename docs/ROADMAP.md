@@ -97,7 +97,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/index/indexer.h/.cpp` (ARCHITECTURE §3.4): read-ahead thread with buffer ring, progress callback, `std::stop_token`, incremental mode from an offset.
   - Done when: result equals a naive reference index on all `tests/data/` fixtures and on 20 MB generated files of each `loggen` profile; cancellation stops within one block and leaves a consistent prefix; incremental indexing of appended data equals a full index; read errors return `Error` and keep the published prefix; benchmarks `BM_Index_small`, `BM_Index_short` recorded in the PR.
 
-- [ ] **M1-08 Line decoding and column mapping** — Depends on: M1-03
+- [x] **M1-08 Line decoding and column mapping** — Depends on: M1-03 (PR #18)
   - Scope: `src/core/encoding/decode.cpp`: raw → UTF-16 (`std::u16string`) for all encodings, invalid UTF-8 → U+FFFD (F-ENC-4), control characters and NUL mapped to visible placeholders for display (F-ROB-1), tab expansion helper, mapping between byte offset ↔ UTF-16 offset ↔ display column.
   - Done when: tests for umlauts in UTF-8/CP1252/UTF-16, surrogate pairs, invalid sequences at start/middle/end, tabs at various columns, round-trip offset mapping property tests; `BM_Decode_*` benchmarks.
 

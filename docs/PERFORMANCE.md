@@ -63,4 +63,5 @@ Append one row per measurement session. Never edit old rows.
 | 2026-11-04 | agent LXC (4 vCPU) | M1-04 | `BM_LineIndex_Append` (1M line ends, 110–150 B lines) | 1.19 bytes/line, 384 M/s | release build |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-04 | `BM_LineIndex_RandomAccess` / `LowerBound` | 89 ns / 354 ns | release build |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-07 | `BM_Index/small` (P-IDX-1) | 15 ms, 3.2 GiB/s, 1.20 B/line | read-only reference 5.1 GiB/s, warm cache |
+| 2026-11-04 | agent LXC (4 vCPU) | M1-08 | `BM_Decode_Utf8` / `Windows1252` (60 lines × 130 B with offsets) | 22 µs / 20 µs per screen | release build |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-07 | `BM_Index/short` (1 GiB) | 611 ms, 1.6 GiB/s, 0.81 B/line | read-only reference 7.1 GiB/s; P-IDX-2 not met yet (M1-10) |
