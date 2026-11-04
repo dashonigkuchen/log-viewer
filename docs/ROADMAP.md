@@ -59,9 +59,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Done when: workflow files pass `actionlint` (run locally or in CI); nightly runs green once via manual dispatch.
   - [Owner] Enable Dependabot alerts and security updates in repo settings; enable "Automatically delete head branches"; enable "Allow auto-merge" if desired.
 
-- [ ] **M0-09 Translation infrastructure** — Depends on: M0-05
-  - Scope: `qt_add_translations` with `translations/logviewer_de.ts` and `logviewer_en.ts`, loading translator by system locale with override hook, CMake target `i18n-check` that runs `lupdate` and fails on uncommitted changes or unfinished German entries (F-I18N-2), added to `format-and-tidy` CI job.
-  - Done when: German UI shows translated menu names (Qt Test with locale `de`); `i18n-check` fails when a new `tr()` string is added without updating the `.ts` file (verified once locally).
+- ~~**M0-09 Translation infrastructure**~~ — Dropped: the UI is English only (ADR 0013).
 
 **M0 exit:** CI green on Linux and Windows, an empty window starts on the owner's Windows 11 machine, Dependabot PRs appear.
 
@@ -319,9 +317,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-SET-5.
   - Done when: tests for rebinding and conflict detection.
 
-- [ ] **M6-07 German translation complete** — Depends on: M6-01
-  - Scope: translate all strings, terminology list in `translations/GLOSSARY.md`.
-  - Done when: `i18n-check` green with no unfinished entries; owner review of wording **[Owner]**.
+- ~~**M6-07 German translation complete**~~ — Dropped: the UI is English only (ADR 0013).
 
 - [ ] **M6-08 Additional code pages** — Depends on: M1-08
   - Scope: F-ENC-5.
@@ -347,7 +343,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: script `tools/perf_acceptance.ps1` that generates data, runs benchmarks, and prints a results table; owner runs it, also measures klogg for comparison.
   - Done when: all budgets met or the owner accepts documented deviations; results logged.
 
-- [ ] **M7-05 Documentation for users** — Depends on: M6-07
+- [ ] **M7-05 Documentation for users** — Depends on: M6-01
   - Scope: `docs/USER_GUIDE.md` (features, shortcuts, boolean syntax, settings, portable mode), README screenshots.
   - Done when: owner review **[Owner]**.
 

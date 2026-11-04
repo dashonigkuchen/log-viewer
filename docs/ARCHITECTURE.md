@@ -149,7 +149,7 @@ Only these. Adding one needs the owner's approval and an ADR (AGENTS.md §4.2).
 
 | Dependency | Version policy | License | Used by | Source |
 | --- | --- | --- | --- | --- |
-| Qt 6 (Core, Gui, Widgets, Network for `QLocalServer` only, Test, LinguistTools) | Build minimum 6.8; releases use the pinned version in `.github/qt-version` (currently 6.12 LTS) | LGPL-3.0, dynamic linking | model, ui, app | System packages (Linux dev), `aqtinstall` (CI, Windows) |
+| Qt 6 (Core, Gui, Widgets, Network for `QLocalServer` only, Test) | Build minimum 6.8; releases use the pinned version in `.github/qt-version` (currently 6.12 LTS) | LGPL-3.0, dynamic linking | model, ui, app | System packages (Linux dev), `aqtinstall` (CI, Windows) |
 | PCRE2 (8-bit, JIT) | Latest via vcpkg baseline | BSD-3-Clause with exception | core/search | vcpkg |
 | simdutf | Latest via vcpkg baseline | Apache-2.0 or MIT | core/encoding | vcpkg |
 | tl-expected | Latest via vcpkg baseline | CC0-1.0 | core | vcpkg |
@@ -161,7 +161,7 @@ Not used, on purpose: TBB (own small pool is enough, ADR 0008), efsw (`QFileSyst
 ## 8. Error handling
 
 - `lv_core` returns `Result<T>`; no exceptions cross module boundaries.
-- `lv_model` converts errors into `Document` states and user-facing, translated messages.
+- `lv_model` converts errors into `Document` states and user-facing English messages.
 - Programming errors use `LV_ASSERT` (abort in debug/sanitizer builds, logged in release).
 
 ## 9. Persistence

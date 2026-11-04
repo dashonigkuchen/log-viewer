@@ -24,7 +24,7 @@ These rules are **binding** for every contributor, human or AI agent. Read this 
 | Code, identifiers, comments, log messages, error messages | American English |
 | Commit messages, branch names, PR titles and bodies | American English |
 | README, AGENTS.md, everything in `docs/` except `docs/plans/` | American English |
-| User-visible UI strings | American English source text, wrapped in `tr()`; German translation in `translations/` |
+| User-visible UI strings | American English only; no translations (ADR 0013) |
 | Temporary plans (`docs/plans/`) | German, marked as temporary, deleted after implementation |
 | Chat with the owner | German |
 
@@ -103,7 +103,7 @@ A fast native desktop log viewer (C++20, Qt 6 Widgets). It indexes large text lo
 ### Qt rules
 
 - Qt 6 Widgets only (no QML). Minimum Qt for building: 6.8. CI and releases use the pinned version in `.github/qt-version`.
-- All user-visible strings use `tr()` (or `QCoreApplication::translate` outside `QObject`).
+- The UI is English only (ADR 0013). Plain string literals are fine; `tr()` is allowed but not required, and there is no translation tooling.
 - Cross-thread communication from workers to the UI uses queued signals or `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`. Never touch a widget from a worker thread.
 - Custom painting for log views (`QAbstractScrollArea`), never `QListView`/`QTableView` for log lines (they do not scale to hundreds of millions of rows).
 
@@ -153,7 +153,6 @@ src/app/         main.cpp, resources, Windows manifest and version info
 tests/core|model|ui/  tests, tests/data/ small fixtures
 bench/           Google Benchmark targets
 tools/loggen/    deterministic test log generator
-translations/    Qt Linguist .ts files
 docs/            documentation, docs/adr/ decisions, docs/plans/ temporary German plans
 .github/         CI workflows, Dependabot, PR template
 ```

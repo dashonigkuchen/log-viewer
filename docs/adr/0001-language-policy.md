@@ -1,6 +1,6 @@
 # 0001. Language policy
 
-- Status: Accepted
+- Status: Accepted; the UI translation part is superseded by 0013
 - Date: 2026-11-04
 
 ## Context

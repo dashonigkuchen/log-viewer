@@ -36,7 +36,7 @@ Machine sizing for development: at least 4 cores, 8 GB RAM, 15 GB free disk (vcp
 
 1. Visual Studio 2022 or 2026 with workload "Desktop development with C++" (includes CMake and Ninja).
 2. vcpkg: `git clone https://github.com/microsoft/vcpkg C:\dev\vcpkg` and `C:\dev\vcpkg\bootstrap-vcpkg.bat -disableMetrics`; set user environment variable `VCPKG_ROOT=C:\dev\vcpkg`.
-3. Qt: `pip install aqtinstall` then `aqt install-qt windows desktop <version from .github/qt-version> win64_msvc2022_64 -m qttranslations -O C:\dev\Qt`; set `QT_ROOT_DIR=C:\dev\Qt\<version>\msvc2022_64`.
+3. Qt: `pip install aqtinstall` then `aqt install-qt windows desktop <version from .github/qt-version> win64_msvc2022_64 -O C:\dev\Qt`; set `QT_ROOT_DIR=C:\dev\Qt\<version>\msvc2022_64`.
 4. Open "x64 Native Tools Command Prompt" (or let Visual Studio open the folder) and use the `windows-msvc-*` presets.
 
 ## 2. Build presets
@@ -165,7 +165,7 @@ Agent procedure for a Dependabot PR: check out the PR branch, build and run all 
 
 1. Owner decides to release; an agent prepares a PR that updates `CHANGELOG.md` and the version in `CMakeLists.txt` (`project(... VERSION x.y.z)`).
 2. After merge, the owner creates the tag `vX.Y.Z` on `main`.
-3. `release.yml` builds `LogViewer-X.Y.Z-windows-x64.zip`: `logviewer.exe`, Qt DLLs and plugins via `windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw` (Qt translations for de/en are added explicitly), MSVC runtime DLLs (app-local), `LICENSE`, `THIRD-PARTY-NOTICES.md`, `README.txt`. Plus `SHA256SUMS.txt`.
+3. `release.yml` builds `LogViewer-X.Y.Z-windows-x64.zip`: `logviewer.exe`, Qt DLLs and plugins via `windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw`, MSVC runtime DLLs (app-local), `LICENSE`, `THIRD-PARTY-NOTICES.md`, `README.txt`. Plus `SHA256SUMS.txt`.
 4. The release is created as a **draft**; the owner tests the zip on Windows 11 and publishes it.
 
 Versioning: Semantic Versioning, `0.x` until 1.0.
