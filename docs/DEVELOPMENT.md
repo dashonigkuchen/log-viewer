@@ -92,6 +92,11 @@ cmake --preset linux-release && cmake --build --preset linux-release
 # Live writer for manual tail tests: 5 MiB/s for 60 s, rotate every 20 MiB
 ./build/linux-release/tools/loggen/loggen --profile small --out /tmp/live.log --append-rate 5 --duration 60 --rotate-every 20
 ./build/linux-release/bench/lv_bench --benchmark_filter=Index
+# Profiles and data location (data files are generated once and reused):
+LV_BENCH_PROFILES=small,short LV_BENCH_DATA=$HOME/bench-data ./build/linux-release/bench/lv_bench
+# Compare with a baseline (fails on > 25% slowdown):
+./build/linux-release/bench/lv_bench --benchmark_repetitions=5 --benchmark_out=result.json --benchmark_out_format=json
+python3 -I tools/bench_compare.py result.json bench/baseline-ci-linux.json
 ```
 
 See `docs/PERFORMANCE.md` for budgets and the results log.

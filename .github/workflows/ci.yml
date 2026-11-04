@@ -98,7 +98,10 @@ jobs:
         with:
           cache-key: format-and-tidy
       - name: Configure
-        run: cmake --preset linux-gcc-debug -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+        # Benchmarks are enabled so clang-tidy also checks bench/.
+        run: >-
+          cmake --preset linux-gcc-debug -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+          -DLV_BUILD_BENCH=ON -DVCPKG_MANIFEST_FEATURES=bench
       - name: Format check
         run: cmake --build --preset linux-gcc-debug --target format-check
       - name: clang-tidy

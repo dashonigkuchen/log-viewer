@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import json
 import os
 import re
 import subprocess
@@ -83,7 +84,15 @@ def run_tidy(exe: str, build_dir: Path, check_all: bool, base: str, jobs: int) -
     check_version(exe)
     if not (build_dir / "compile_commands.json").is_file():
         sys.exit(f"{build_dir}/compile_commands.json not found; configure the preset first.")
+    compiled = {
+        Path(entry["file"]).resolve()
+        for entry in json.loads((build_dir / "compile_commands.json").read_text(encoding="utf-8"))
+    }
     all_cpp = [p for p in source_files() if p.suffix == ".cpp"]
+    skipped = [p for p in all_cpp if p.resolve() not in compiled]
+    for path in skipped:
+        print(f"--- {path.relative_to(REPO)}: skipped (not built in {build_dir.name})")
+    all_cpp = [p for p in all_cpp if p not in skipped]
     selected = None if check_all else changed_files(base)
     files = all_cpp if selected is None else [p for p in selected if p in set(all_cpp)]
     if not files:
