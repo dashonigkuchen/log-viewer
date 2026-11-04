@@ -32,7 +32,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Scope: `.clang-format`, `.clang-tidy` (as described in `DEVELOPMENT.md` §5, every disabled check with a reason), `.editorconfig`, CMake targets `format`, `format-check`, `tidy` (tidy on files changed vs. `origin/main`, all files with `LV_TIDY_ALL=1`).
   - Done when: all existing sources pass `format-check` and `tidy`; a deliberately misformatted file makes `format-check` fail (verified once locally, not committed).
 
-- [ ] **M0-03 Linux CI** — Depends on: M0-02
+- [x] **M0-03 Linux CI** — Depends on: M0-02 (PR #4)
   - Scope: `.github/workflows/ci.yml` with jobs `linux-gcc`, `linux-clang-asan`, `format-and-tidy`, `docs` (see `DEVELOPMENT.md` §6). Qt on CI via `jurplel/install-qt-action` with the version from `.github/qt-version` (file created here, content `6.12.0` or the latest 6.12 patch). vcpkg binary caching through the Actions cache, ccache. Actions pinned by SHA. `concurrency` and `timeout-minutes` on all jobs. Docs-only changes run only the `docs` job.
   - Done when: CI is green on the PR; a second push to the PR shows cache hits (paste timings into the PR); total runtime of `ci.yml` with warm caches ≤ 15 min.
   - [Owner] After merge: add a ruleset for `main` requiring PRs and the status checks `linux-gcc`, `linux-clang-asan`, `format-and-tidy` (with `docs` allowed to satisfy docs-only PRs — the agent documents the exact setup in the PR).
