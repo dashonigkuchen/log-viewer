@@ -1,7 +1,7 @@
 # Benchmark suite (docs/PERFORMANCE.md). Built only with LV_BUILD_BENCH (release presets).
 find_package(benchmark CONFIG REQUIRED)
 
-add_executable(lv_bench main.cpp bench_data.cpp bench_data.h read_bench.cpp read_bench.h sequence_bench.cpp
+add_executable(lv_bench main.cpp bench_data.cpp bench_data.h index_bench.cpp index_bench.h read_bench.cpp read_bench.h sequence_bench.cpp
                         sequence_bench.h)
 
 target_link_libraries(lv_bench PRIVATE lv::loggen lv::core benchmark::benchmark lv::compile_options)

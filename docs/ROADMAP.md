@@ -93,7 +93,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
   - Scope: `src/core/index/line_index.h/.cpp`: line ranges excluding terminators, `lineContaining`, `maxLineLength`, pending unterminated tail (ARCHITECTURE §3.3, F-TAIL-8), generation number.
   - Done when: tests: empty file → 0 lines; `"a"` → 1 line (pending); `"a\n"` → 1 line; `"a\r\n\r\n"` → 2 lines, second empty; tail completion appends exactly once; `lineContaining` at every byte of a small file.
 
-- [ ] **M1-07 Indexer** — Depends on: M1-02, M1-06
+- [x] **M1-07 Indexer** — Depends on: M1-02, M1-06 (PR #17)
   - Scope: `src/core/index/indexer.h/.cpp` (ARCHITECTURE §3.4): read-ahead thread with buffer ring, progress callback, `std::stop_token`, incremental mode from an offset.
   - Done when: result equals a naive reference index on all `tests/data/` fixtures and on 20 MB generated files of each `loggen` profile; cancellation stops within one block and leaves a consistent prefix; incremental indexing of appended data equals a full index; read errors return `Error` and keep the published prefix; benchmarks `BM_Index_small`, `BM_Index_short` recorded in the PR.
 

@@ -28,7 +28,9 @@ Current state of the project and notes for the next session. Update this file in
 - `.clang-tidy`: `cert-msc32-c`/`cert-msc51-cpp` disabled (deterministic seeds are intended).
 - M1-05 done: `lv::core::LineSplitter` (`src/core/index/line_splitter.h`): streaming search for line feeds with `memchr`, reports line *end offsets* (just after `\n`). CRLF needs no special case (readers drop a `\r` before `\n`); lone `\r` is not a break; the unterminated last line is not reported. UTF-16 LE/BE: only aligned `\n` code units count; an odd byte at a buffer end is carried over. BOM skipping = construct with `startOffset` = BOM length.
 - M1-06 done: `lv::core::LineIndex` (`src/core/index/line_index.h`): line end offsets in a `SortedU64Sequence`, published `Snapshot` (complete lines, indexed end, last line end, generation); the unterminated tail is derived (`indexedEnd > lastLineEnd`) and becomes a normal line once its `\n` arrives, so it is never counted twice. `rawLineRange` excludes the LF code unit but keeps a CR (LineReader strips it in M1-09). `lineContaining`, `maxLineLength`, `reset` (new generation).
-- Next step: **M1-07 Indexer** (M1-08 is also unblocked).
+- M1-07 done: `lv::core::Indexer::run(file, index, stop, progress, options)` (`src/core/index/indexer.h`): read-ahead `std::jthread` + ring of reusable 4 MiB buffers, scanning with `LineSplitter`, publish after every block, progress at most every 50 ms, cancellation per block (`kCanceled`, prefix stays valid), incremental from `index.appendedEnd()`, truncation detected as `kOutOfRange`. Benchmark `BM_Index/<profile>`.
+- Measured (release, warm cache, agent machine): `small` 50 MiB in 15 ms (3.2 GiB/s, read-only reference 5.1 GiB/s), 1.20 bytes/line; `short` 1 GiB in 611 ms (1.6 GiB/s vs. 7.1 GiB/s read-only), 0.81 bytes/line. P-IDX-1 met; P-IDX-2 (≥ 90% of read speed) is the job of M1-10 (scanner is the bottleneck for short lines).
+- Next step: **M1-08 Line decoding and column mapping** (M1-09 is also unblocked).
 
 ## Environment notes
 
