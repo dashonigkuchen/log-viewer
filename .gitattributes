@@ -1,0 +1,15 @@
+# Normalize text files to LF in the repository.
+* text=auto eol=lf
+
+# Windows-only files keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Test fixtures must stay byte-exact (CRLF, UTF-16, invalid UTF-8, ...).
+tests/data/** -text binary
+
+# Binary assets
+*.png binary
+*.ico binary
+*.svg text

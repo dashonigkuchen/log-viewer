@@ -1,0 +1,27 @@
+# Build output
+/build/
+/out/
+/cmake-build-*/
+CMakeUserPresets.json
+
+# vcpkg
+/vcpkg_installed/
+/.vcpkg/
+
+# IDEs and editors
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+.cache/
+compile_commands.json
+
+# Generated test data and benchmark results
+/testdata/generated/
+/bench-results/
+*.log.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
