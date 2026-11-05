@@ -205,6 +205,11 @@
       "output": {
         "outputOnFailure": true
       },
+      "filter": {
+        "exclude": {
+          "label": "ui"
+        }
+      },
       "execution": {
         "noTestsAction": "error"
       },

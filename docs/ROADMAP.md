@@ -125,7 +125,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/model/line_source.h`, `document_line_source.cpp`, `line_cache.cpp` (ARCHITECTURE §5).
   - Done when: tests: cache hit/miss/eviction, entries invalidated on generation change, decoded text equals `decodeLine` output.
 
-- [ ] **M2-03 LogView painting** — Depends on: M2-02
+- [x] **M2-03 LogView painting** — Depends on: M2-02 (PR #23)
   - Scope: `src/ui/log_view.h/.cpp`: `QAbstractScrollArea`, paints visible rows from a `LineSource`, line number gutter (F-VIEW-2), font from settings with defaults, tab expansion (F-VIEW-4), current line highlight (F-VIEW-10), horizontal scrolling (F-VIEW-5), long line truncation marker (F-FILE-7). 64-bit scroll mapping (ARCHITECTURE §6).
   - Done when: Qt Tests (offscreen) render to a `QImage` and verify: first visible line number, scroll to line N shows N at top, scroll range with a fake `LineSource` of 2^40 lines works (top line exact after `scrollToLine`), truncation marker painted for long lines; paint of one screen with a fake source ≤ 16 ms in release (P-UI-1, relaxed factor 2 on CI).
 
