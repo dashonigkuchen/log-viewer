@@ -41,7 +41,8 @@ Current state of the project and notes for the next session. Update this file in
 - QTest note: `QCOMPARE` on `LineNumber`/`LineCount` does not compile (ADL finds our `toString` returning `std::string`); compare `.get()` values.
 - The `linux-clang-tsan` test preset now excludes the `ui` label (Qt's uninstrumented thread pool causes false reports), matching nightly and DEVELOPMENT.md.
 - M2-04 done: `LogView` keys (Up/Down, PageUp/PageDown move the current row and scroll it into view; `Home`/`End` scroll horizontally to the line start/end; `Ctrl+Home`/`Ctrl+End` jump to the file ends; Left/Right scroll horizontally), left click sets the current row, mouse wheel uses `QApplication::wheelScrollLines()` and accumulates partial notches (Shift or horizontal wheel scrolls sideways), `goToRow` centers a row, `Ctrl+G` action `actionGoToLine` opens `GoToLineDialog` (1-based input, OK disabled when invalid). Shared test helper `tests/ui/fake_line_source.h`.
-- Next step: **M2-05 Selection and copy** (M2-06 is also unblocked).
+- M2-05 was split into M2-05a (selection and synchronous copy) and M2-05b (large copies on a worker with confirmation), because the worker-thread copy needs its own thread-safe read path.
+- Next step: **M2-05a Selection and copy** (M2-06 is also unblocked).
 
 ## Environment notes
 

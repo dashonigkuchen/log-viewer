@@ -133,9 +133,13 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: F-VIEW-6 keys, mouse wheel (smooth, respects system settings), click sets current line, Go to line dialog (`Ctrl+G`).
   - Done when: Qt Tests send key/mouse events and check current/top line for each binding, including at file start/end and with 0 lines.
 
-- [ ] **M2-05 Selection and copy** — Depends on: M2-04, M1-08
-  - Scope: F-VIEW-7/8/9: selection model in (LineNumber, UTF-16 column) coordinates, painting, word/line selection, `Ctrl+A`, copy to clipboard; large copies on a worker with progress and confirmation over 100 MiB.
-  - Done when: tests: drag selection across lines, double/triple click, shift+arrows, copy of partial lines with umlauts and tabs gives exact original text with `\n` line separators (Windows: `\r\n` on clipboard), `Ctrl+A` + copy of a 5 MB file equals file content minus CRs (normalized).
+- [ ] **M2-05a Selection and copy** — Depends on: M2-04, M1-08
+  - Scope: F-VIEW-7/9 and the synchronous part of F-VIEW-8: selection model in (row, UTF-16 column) coordinates, selection painting, drag selection, double-click word, triple-click line, `Shift`+click and `Shift`+navigation (whole lines), `Ctrl+A`, `Ctrl+C` copy of the original text (no tab expansion, no control pictures) with `\n` separators (Qt converts to `\r\n` on the Windows clipboard). `LineSource` gets a plain-text accessor for copying.
+  - Done when: tests: drag selection across lines, double/triple click, shift+arrows, copy of partial lines with umlauts and tabs gives the exact original text, `Ctrl+A` + copy of a 5 MB file equals the file content minus CRs.
+
+- [ ] **M2-05b Large copies** — Depends on: M2-05a
+  - Scope: rest of F-VIEW-8: estimate the selection size from the line index; above 100 MiB ask for confirmation; copies above a few MiB run on a worker thread (thread-safe reads through `DocumentContent`, not the UI-thread `LineSource`) with a cancellable progress dialog; the UI stays responsive.
+  - Done when: tests: size estimate within 1% of the real size, confirmation shown above the threshold (threshold injectable for tests), cancel leaves the clipboard unchanged, a 200 MB copy keeps the event loop responsive (event processed during the copy).
 
 - [ ] **M2-06 Document tab and main window integration** — Depends on: M2-03
   - Scope: `src/ui/document_tab.cpp` (only the main view for now), `MainWindow` open file (`Ctrl+O`), drag and drop, command line files (F-FILE-1), tabs (F-TAB-1, F-TAB-2 incl. reorder and keyboard switching), tab context menu (F-TAB-4), status bar (F-TAB-6), progress indicator in tab (F-TAB-3 indexing part).
@@ -149,7 +153,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/model/settings.cpp` (typed `QSettings` wrapper with schema version, portable mode detection F-SET-2), font family/size, zoom shortcuts (F-VIEW-3), tab width.
   - Done when: settings round-trip tests in a temp dir; portable mode uses the exe directory when `portable.ini` exists (test with a fake app dir).
 
-- [ ] **M2-09 First Windows preview build** — Depends on: M2-05, M2-07, M2-08, M0-04 **[Windows] [Owner]**
+- [ ] **M2-09 First Windows preview build** — Depends on: M2-05b, M2-07, M2-08, M0-04 **[Windows] [Owner]**
   - Scope: fix whatever the Windows build reveals; README "Try it" section for the artifact.
   - Done when: Windows CI artifact works; owner opens a real 50 MB log on Windows 11 and reports feedback; feedback is added to `HANDOFF.md` and, where needed, as new roadmap steps.
 
