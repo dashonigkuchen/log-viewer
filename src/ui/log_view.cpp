@@ -13,6 +13,7 @@
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -425,12 +426,147 @@ QString LogView::selectedText() const
     return out;
 }
 
-void LogView::copy() const
+LogView::~LogView()
 {
-    const QString text = selectedText();
-    if (!text.isEmpty()) {
-        QApplication::clipboard()->setText(text);
+    // Stop a background copy without emitting signals from the destructor.
+    if (m_copyThread.joinable()) {
+        m_copyThread.request_stop();
+        m_copyThread.join();
     }
+}
+
+void LogView::copy()
+{
+    if (isCopying() || m_selection.isEmpty() || m_source.isNull() || rowCount().get() == 0) {
+        return;
+    }
+    const auto reader = m_source->rowReader();
+    if (!reader) {
+        const QString text = selectedText();
+        if (!text.isEmpty()) {
+            QApplication::clipboard()->setText(text);
+        }
+        emit copyFinished(!text.isEmpty());
+        return;
+    }
+    const std::uint64_t rows = rowCount().get();
+    model::CopyRange range;
+    range.firstRow = m_selection.start().row;
+    range.lastRow = std::min(m_selection.end().row, rows - 1);
+    if (!m_selection.lineMode) {
+        range.firstColumn = m_selection.start().column;
+        range.lastColumn = m_selection.end().column;
+    }
+    const std::uint64_t bytes = model::estimateCopyBytes(*reader, range);
+    if (bytes > m_copyLimits.confirmBytes) {
+        const bool confirmed =
+            m_confirmCopy
+                ? m_confirmCopy(bytes)
+                : QMessageBox::question(
+                      this, QStringLiteral("Copy"),
+                      QStringLiteral("The selection is about %1 MiB. Copy it to the clipboard?")
+                          .arg(static_cast<double>(bytes) / (1024.0 * 1024.0), 0, 'f', 0)) ==
+                      QMessageBox::Yes;
+        if (!confirmed) {
+            emit copyFinished(false);
+            return;
+        }
+    }
+    if (bytes <= m_copyLimits.backgroundBytes) {
+        const auto text = model::extractText(*reader, range, std::stop_token{});
+        const bool copied = text.has_value() && !text->isEmpty();
+        if (copied) {
+            QApplication::clipboard()->setText(*text);
+        }
+        emit copyFinished(copied);
+        return;
+    }
+    startBackgroundCopy(*reader, range, bytes);
+}
+
+void LogView::startBackgroundCopy(model::RowReader reader, model::CopyRange range,
+                                  std::uint64_t totalBytes)
+{
+    m_copyTotal = std::max<std::uint64_t>(totalBytes, 1);
+    m_copyProcessed.store(0, std::memory_order_relaxed);
+    {
+        const std::scoped_lock lock(m_copyMutex);
+        m_copyResult.reset();
+    }
+    m_copyDialog = new QProgressDialog(QStringLiteral("Copying selection..."),
+                                       QStringLiteral("Cancel"), 0, 1000, this);
+    m_copyDialog->setObjectName(QStringLiteral("copyProgressDialog"));
+    m_copyDialog->setWindowModality(Qt::WindowModal);
+    m_copyDialog->setMinimumDuration(300);
+    m_copyDialog->setAutoClose(false);
+    m_copyDialog->setAutoReset(false);
+    connect(m_copyDialog, &QProgressDialog::canceled, this, &LogView::cancelCopy);
+
+    if (m_copyTimer == nullptr) {
+        m_copyTimer = new QTimer(this);
+        m_copyTimer->setInterval(50);
+        connect(m_copyTimer, &QTimer::timeout, this, &LogView::finishBackgroundCopy);
+    }
+    m_copyTimer->start();
+
+    m_copyThread =
+        std::jthread([this, reader = std::move(reader), range](const std::stop_token& stop) {
+            auto result = model::extractText(reader, range, stop, [this](std::uint64_t processed) {
+                m_copyProcessed.store(processed, std::memory_order_relaxed);
+            });
+            const std::scoped_lock lock(m_copyMutex);
+            m_copyResult = std::move(result);
+        });
+}
+
+void LogView::finishBackgroundCopy()
+{
+    // Polled by m_copyTimer on the UI thread: updates progress and finishes when the worker did.
+    if (!m_copyDialog.isNull()) {
+        const auto processed = m_copyProcessed.load(std::memory_order_relaxed);
+        m_copyDialog->setValue(
+            static_cast<int>(std::min<std::uint64_t>(1000, processed * 1000 / m_copyTotal)));
+    }
+    std::optional<core::Result<QString>> result;
+    {
+        const std::scoped_lock lock(m_copyMutex);
+        result.swap(m_copyResult);
+    }
+    if (!result) {
+        return;
+    }
+    m_copyThread.join();
+    m_copyThread = {};
+    m_copyTimer->stop();
+    if (!m_copyDialog.isNull()) {
+        m_copyDialog->deleteLater();
+    }
+    const bool copied = result->has_value() && !(*result)->isEmpty();
+    if (copied) {
+        QApplication::clipboard()->setText(**result);
+    }
+    emit copyFinished(copied);
+}
+
+void LogView::cancelCopy()
+{
+    if (!m_copyThread.joinable()) {
+        return;
+    }
+    m_copyThread.request_stop();
+    m_copyThread.join();
+    m_copyThread = {};
+    {
+        const std::scoped_lock lock(m_copyMutex);
+        m_copyResult.reset();
+    }
+    if (m_copyTimer != nullptr) {
+        m_copyTimer->stop();
+    }
+    if (!m_copyDialog.isNull()) {
+        m_copyDialog->deleteLater();
+    }
+    emit copyFinished(false);
 }
 
 LogView::DisplayMapping LogView::mapLine(const QString& text, bool truncated) const

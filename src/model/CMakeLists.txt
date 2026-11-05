@@ -10,6 +10,8 @@ add_library(
     line_cache.h
     line_source.h
     model_info.cpp
+    text_copy.cpp
+    text_copy.h
 )
 add_library(lv::model ALIAS lv_model)
 

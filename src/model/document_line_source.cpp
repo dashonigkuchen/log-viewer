@@ -70,6 +70,19 @@ std::vector<DisplayLine> DocumentLineSource::lines(core::LineNumber first,
     return out;
 }
 
+std::optional<RowReader> DocumentLineSource::rowReader() const
+{
+    auto content = m_document->content();
+    if (!content) {
+        return std::nullopt;
+    }
+    const auto snapshot = content->index.snapshot();
+    return RowReader{.content = std::move(content),
+                     .snapshot = snapshot,
+                     .lineForRow = [](core::LineNumber row) { return row; },
+                     .contiguous = true};
+}
+
 std::vector<DisplayLine> DocumentLineSource::plainLines(core::LineNumber first,
                                                         core::LineCount count) const
 {

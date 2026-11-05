@@ -28,6 +28,8 @@ public:
     [[nodiscard]] std::vector<DisplayLine> plainLines(core::LineNumber first,
                                                       core::LineCount count) const override;
 
+    [[nodiscard]] std::optional<RowReader> rowReader() const override;
+
     [[nodiscard]] const LineCache& cache() const noexcept { return m_cache; }
 
 private:
