@@ -99,11 +99,6 @@ jobs:
           ctest --preset windows-msvc-release
           if ($LASTEXITCODE -ne 0) {
             ctest --preset windows-msvc-release --rerun-failed --extra-verbose
-            # TEMPORARY diagnostics for M2-05a: run the failing test directly and show its exit code.
-            $env:QT_QPA_PLATFORM = "offscreen"
-            & build/windows-msvc-release/lv_ui_selection_tests.exe -o "selection.txt,txt" -o "-,txt"
-            Write-Host ("exit code: 0x{0:X8}" -f $LASTEXITCODE)
-            if (Test-Path selection.txt) { Get-Content selection.txt }
             exit 1
           }
 

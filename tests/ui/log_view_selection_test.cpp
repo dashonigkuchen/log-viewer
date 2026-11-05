@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QTest>
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -206,13 +207,27 @@ private slots:
     {
         const Fixture f({kUmlauts});
         // Every column boundary maps back to itself (tabs expanded, the emoji is two code units).
+        // Boundaries painted at the same x are ambiguous and skipped: without fonts (Qt's
+        // offscreen platform on Windows CI) missing glyphs have zero width.
+        std::vector<qsizetype> columns;
+        std::vector<int> xs;
         for (qsizetype column = 0; column <= kUmlauts.size(); ++column) {
             if (column < kUmlauts.size() && kUmlauts[column].isLowSurrogate()) {
+                continue;  // never a boundary
+            }
+            columns.push_back(column);
+            xs.push_back(f.at(0, column).x());
+        }
+        int checked = 0;
+        for (std::size_t i = 0; i < columns.size(); ++i) {
+            if (std::ranges::count(xs, xs[i]) > 1) {
                 continue;
             }
-            const TextPosition position = f.view.positionAt(f.at(0, column));
-            QCOMPARE(position.column, column);
+            const TextPosition position = f.view.positionAt(f.at(0, columns[i]));
+            QCOMPARE(position.column, columns[i]);
+            ++checked;
         }
+        QVERIFY(checked > 5);
     }
 
     static void selectAllCopiesEverything()
