@@ -121,7 +121,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/model/document.h/.cpp` (ARCHITECTURE §5): owns file, index, reader, indexer thread; states; signals with generation; encoding override and reload (F-FILE-8, F-ENC-3); clean shutdown.
   - Done when: model tests with Qt event loop: open → progress signals → `Ready` with correct line count; reload resets generation; close during indexing joins threads within 1 s; open errors produce `Error` state with message (F-FILE-12).
 
-- [ ] **M2-02 LineSource and LineCache** — Depends on: M2-01
+- [x] **M2-02 LineSource and LineCache** — Depends on: M2-01 (PR #22)
   - Scope: `src/model/line_source.h`, `document_line_source.cpp`, `line_cache.cpp` (ARCHITECTURE §5).
   - Done when: tests: cache hit/miss/eviction, entries invalidated on generation change, decoded text equals `decodeLine` output.
 

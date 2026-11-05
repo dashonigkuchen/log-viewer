@@ -36,7 +36,8 @@ Current state of the project and notes for the next session. Update this file in
 - **M1 is complete.**
 - M2-01 done: `lv::model::Document` (`src/model/document.h`): `open/reload/setEncodingOverride/close`, states `kClosed/kIndexing/kReady/kError`, signals `stateChanged`, `indexingProgress`, `linesAppended`, `reset(generation)`. Worker `std::jthread` runs open → encoding detection (override skips a BOM only if it matches) → `Indexer::run`; results go through a mutex-protected event queue drained on the UI thread, events of old generations are dropped. `DocumentContent` (file + index + reader + generation) is a `shared_ptr` handed to views; a reload creates a new one. Model tests now use their own `main.cpp` with a `QCoreApplication`.
 - TSan: `tools/sanitizers/tsan.supp` suppresses only `QCoreApplicationPrivate::sendPostedEvents` (Qt is not TSan-instrumented, so its posted-event mutex is invisible); wired into the `linux-clang-tsan` test preset.
-- Next step: **M2-02 LineSource and LineCache**.
+- M2-02 done: `lv::model::LineSource` (abstract `QObject`: `lineCount`, `originalLineNumber`, `lines(first, count)` → `DisplayLine{text, truncated, partial, unavailable}`, signals `linesAppended`, `reset`), `LineCache` (LRU per generation, default 10,000 lines, hit/miss counters), `DocumentLineSource` (full file; reads missing rows in contiguous runs, decodes with visible control characters, never caches the partial last line). Note: a file with invalid UTF-8 is detected as Windows-1252 (F-ENC-2), so tests that need U+FFFD set the UTF-8 override.
+- Next step: **M2-03 LogView painting**.
 
 ## Environment notes
 
