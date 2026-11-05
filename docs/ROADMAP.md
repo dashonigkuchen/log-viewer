@@ -133,7 +133,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: F-VIEW-6 keys, mouse wheel (smooth, respects system settings), click sets current line, Go to line dialog (`Ctrl+G`).
   - Done when: Qt Tests send key/mouse events and check current/top line for each binding, including at file start/end and with 0 lines.
 
-- [ ] **M2-05a Selection and copy** — Depends on: M2-04, M1-08
+- [x] **M2-05a Selection and copy** — Depends on: M2-04, M1-08 (PR #26)
   - Scope: F-VIEW-7/9 and the synchronous part of F-VIEW-8: selection model in (row, UTF-16 column) coordinates, selection painting, drag selection, double-click word, triple-click line, `Shift`+click and `Shift`+navigation (whole lines), `Ctrl+A`, `Ctrl+C` copy of the original text (no tab expansion, no control pictures) with `\n` separators (Qt converts to `\r\n` on the Windows clipboard). `LineSource` gets a plain-text accessor for copying.
   - Done when: tests: drag selection across lines, double/triple click, shift+arrows, copy of partial lines with umlauts and tabs gives the exact original text, `Ctrl+A` + copy of a 5 MB file equals the file content minus CRs.
 

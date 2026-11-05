@@ -44,6 +44,11 @@ public:
     [[nodiscard]] virtual std::vector<DisplayLine> lines(core::LineNumber first,
                                                          core::LineCount count) const = 0;
 
+    // Same rows with the original text for copying: control characters are not replaced by
+    // visible symbols (the UTF-16 columns are the same as in lines()). Not cached.
+    [[nodiscard]] virtual std::vector<DisplayLine> plainLines(core::LineNumber first,
+                                                              core::LineCount count) const = 0;
+
 signals:
     // Rows were added at the end; `lineCount` is the new count.
     void linesAppended(quint64 lineCount);

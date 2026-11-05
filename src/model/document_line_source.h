@@ -25,6 +25,9 @@ public:
     [[nodiscard]] std::vector<DisplayLine> lines(core::LineNumber first,
                                                  core::LineCount count) const override;
 
+    [[nodiscard]] std::vector<DisplayLine> plainLines(core::LineNumber first,
+                                                      core::LineCount count) const override;
+
     [[nodiscard]] const LineCache& cache() const noexcept { return m_cache; }
 
 private:

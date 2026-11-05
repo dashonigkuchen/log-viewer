@@ -21,3 +21,13 @@ add_test(NAME ui.LogViewNavigation COMMAND lv_ui_navigation_tests)
 set_tests_properties(
     ui.LogViewNavigation PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
+
+qt_add_executable(lv_ui_selection_tests log_view_selection_test.cpp fake_line_source.h)
+set_target_properties(lv_ui_selection_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(
+    lv_ui_selection_tests PRIVATE lv::ui lv::loggen lv_test_support Qt6::Test lv::compile_options
+)
+add_test(NAME ui.LogViewSelection COMMAND lv_ui_selection_tests)
+set_tests_properties(
+    ui.LogViewSelection PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)

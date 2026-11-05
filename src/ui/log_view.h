@@ -2,13 +2,16 @@
 
 #include "core/util/strong_types.h"
 #include "model/line_source.h"
+#include "ui/text_selection.h"
 
 #include <QAbstractScrollArea>
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QString>
 
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 namespace lv::ui
 {
@@ -64,6 +67,27 @@ public:
     // Opens the "Go to line" dialog (Ctrl+G).
     void showGoToLineDialog();
 
+    // Selection (SPEC F-VIEW-7/8/9). Columns are UTF-16 offsets into the decoded row text.
+    [[nodiscard]] const TextSelection& selection() const noexcept { return m_selection; }
+
+    void setSelection(const TextSelection& selection);
+    void clearSelection();
+    void selectAll();
+
+    // The selected original text: rows separated by "\n", complete lines in line mode end with
+    // "\n" (a partial last line of the file does not). Qt converts to "\r\n" on the Windows
+    // clipboard.
+    [[nodiscard]] QString selectedText() const;
+
+    // Copies selectedText() to the clipboard (Ctrl+C).
+    void copy() const;
+
+    // Text position under a viewport point (clamped to existing rows and columns).
+    [[nodiscard]] TextPosition positionAt(QPoint point) const;
+
+    // Viewport point of a text position (vertical center of the row); for tests.
+    [[nodiscard]] QPoint pointForPosition(TextPosition position) const;
+
     // Number of rows that fit completely into the viewport (at least 1).
     [[nodiscard]] std::uint64_t pageRows() const;
 
@@ -99,6 +123,9 @@ signals:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
@@ -106,6 +133,16 @@ protected:
     void scrollContentsBy(int dx, int dy) override;
 
 private:
+    // Display text of a row and the display offset of every original column (size + 1 entries).
+    struct DisplayMapping
+    {
+        QString text;
+        std::vector<qsizetype> displayOffsets;
+    };
+
+    [[nodiscard]] DisplayMapping mapLine(const QString& text, bool truncated) const;
+    [[nodiscard]] QString rowText(std::uint64_t row) const;
+    void updateSelectionAfterMove(bool extend, std::optional<core::LineNumber> before);
     void onRowsAppended();
     void onReset();
     void updateMetrics();
@@ -126,6 +163,10 @@ private:
     bool m_updatingScrollBars = false;
     int m_wheelRemainder = 0;  // angle delta not yet turned into rows (smooth wheels, touchpads)
     std::int64_t m_lastPaintUs = 0;
+    TextSelection m_selection;
+    bool m_dragging = false;
+    QElapsedTimer m_tripleClickTimer;  // started on a double click
+    std::uint64_t m_doubleClickRow = 0;
 };
 
 }  // namespace lv::ui
