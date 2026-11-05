@@ -129,7 +129,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/ui/log_view.h/.cpp`: `QAbstractScrollArea`, paints visible rows from a `LineSource`, line number gutter (F-VIEW-2), font from settings with defaults, tab expansion (F-VIEW-4), current line highlight (F-VIEW-10), horizontal scrolling (F-VIEW-5), long line truncation marker (F-FILE-7). 64-bit scroll mapping (ARCHITECTURE §6).
   - Done when: Qt Tests (offscreen) render to a `QImage` and verify: first visible line number, scroll to line N shows N at top, scroll range with a fake `LineSource` of 2^40 lines works (top line exact after `scrollToLine`), truncation marker painted for long lines; paint of one screen with a fake source ≤ 16 ms in release (P-UI-1, relaxed factor 2 on CI).
 
-- [ ] **M2-04 Keyboard and mouse navigation** — Depends on: M2-03
+- [x] **M2-04 Keyboard and mouse navigation** — Depends on: M2-03 (PR #24)
   - Scope: F-VIEW-6 keys, mouse wheel (smooth, respects system settings), click sets current line, Go to line dialog (`Ctrl+G`).
   - Done when: Qt Tests send key/mouse events and check current/top line for each binding, including at file start/end and with 0 lines.
 

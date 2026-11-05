@@ -40,7 +40,8 @@ Current state of the project and notes for the next session. Update this file in
 - M2-03 done: `lv::ui::LogView` (`src/ui/log_view.h`): `QAbstractScrollArea` that requests only the visible rows from its `LineSource`, line number gutter (toggle), current row highlight, tab expansion (default 8), column limit (default 100,000) with `…` marker also for reader-truncated lines, horizontal scrolling from the widest painted line, 64-bit top row with a scaled scroll bar above 2^30 rows. Font: system fixed font (settings come in M2-08). Screen paint ≈ 3.5 ms in release (1000×500, real log). Tests in `tests/ui/log_view_test.cpp` use a `FakeLineSource`.
 - QTest note: `QCOMPARE` on `LineNumber`/`LineCount` does not compile (ADL finds our `toString` returning `std::string`); compare `.get()` values.
 - The `linux-clang-tsan` test preset now excludes the `ui` label (Qt's uninstrumented thread pool causes false reports), matching nightly and DEVELOPMENT.md.
-- Next step: **M2-04 Keyboard and mouse navigation**.
+- M2-04 done: `LogView` keys (Up/Down, PageUp/PageDown move the current row and scroll it into view; `Home`/`End` scroll horizontally to the line start/end; `Ctrl+Home`/`Ctrl+End` jump to the file ends; Left/Right scroll horizontally), left click sets the current row, mouse wheel uses `QApplication::wheelScrollLines()` and accumulates partial notches (Shift or horizontal wheel scrolls sideways), `goToRow` centers a row, `Ctrl+G` action `actionGoToLine` opens `GoToLineDialog` (1-based input, OK disabled when invalid). Shared test helper `tests/ui/fake_line_source.h`.
+- Next step: **M2-05 Selection and copy** (M2-06 is also unblocked).
 
 ## Environment notes
 

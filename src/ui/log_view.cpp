@@ -3,15 +3,21 @@
 #include "core/encoding/decode.h"
 #include "core/util/assert.h"
 #include "model/line_source.h"
+#include "ui/go_to_line_dialog.h"
 
+#include <QAction>
+#include <QApplication>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFontMetricsF>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPalette>
 #include <QScrollBar>
+#include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -45,6 +51,13 @@ LogView::LogView(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     viewport()->setAutoFillBackground(true);
     viewport()->setBackgroundRole(QPalette::Base);
+
+    auto* goToLine = new QAction(QStringLiteral("Go to Line..."), this);
+    goToLine->setObjectName(QStringLiteral("actionGoToLine"));
+    goToLine->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
+    goToLine->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(goToLine, &QAction::triggered, this, &LogView::showGoToLineDialog);
+    addAction(goToLine);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     updateMetrics();
@@ -103,6 +116,145 @@ void LogView::setCurrentRow(core::LineNumber row)
         emit currentRowChanged(clamped);
         viewport()->update();
     }
+}
+
+void LogView::ensureRowVisible(core::LineNumber row)
+{
+    const std::uint64_t top = m_topRow.get();
+    const std::uint64_t page = pageRows();
+    if (row.get() < top) {
+        scrollToRow(row);
+    } else if (row.get() >= top + page) {
+        scrollToRow(core::LineNumber(row.get() - page + 1));
+    }
+}
+
+void LogView::moveCurrentRow(core::LineNumber row)
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        return;
+    }
+    const core::LineNumber clamped(std::min(row.get(), rows - 1));
+    setCurrentRow(clamped);
+    ensureRowVisible(clamped);
+}
+
+void LogView::goToRow(core::LineNumber row)
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        return;
+    }
+    const core::LineNumber clamped(std::min(row.get(), rows - 1));
+    setCurrentRow(clamped);
+    const std::uint64_t half = pageRows() / 2;
+    scrollToRow(core::LineNumber(clamped.get() > half ? clamped.get() - half : 0));
+}
+
+void LogView::showGoToLineDialog()
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        return;
+    }
+    const std::uint64_t current = m_currentRow ? m_currentRow->get() + 1 : 1;
+    GoToLineDialog dialog(rows, current, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        if (const auto line = dialog.line()) {
+            goToRow(core::LineNumber(*line - 1));
+        }
+    }
+}
+
+void LogView::keyPressEvent(QKeyEvent* event)
+{
+    const std::uint64_t rows = rowCount().get();
+    const bool control = event->modifiers().testFlag(Qt::ControlModifier);
+    const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
+    const std::uint64_t page = pageRows();
+    auto* horizontal = horizontalScrollBar();
+    switch (event->key()) {
+    case Qt::Key_Up:
+        moveCurrentRow(core::LineNumber(current > 0 ? current - 1 : 0));
+        break;
+    case Qt::Key_Down:
+        moveCurrentRow(core::LineNumber(current + 1));
+        break;
+    case Qt::Key_PageUp:
+        moveCurrentRow(core::LineNumber(current > page ? current - page : 0));
+        break;
+    case Qt::Key_PageDown:
+        moveCurrentRow(core::LineNumber(current + page));
+        break;
+    case Qt::Key_Home:
+        if (control) {
+            moveCurrentRow(core::LineNumber(0));
+        }
+        horizontal->setValue(0);
+        break;
+    case Qt::Key_End:
+        if (control) {
+            moveCurrentRow(core::LineNumber(rows > 0 ? rows - 1 : 0));
+            horizontal->setValue(0);
+        } else {
+            horizontal->setValue(horizontal->maximum());
+        }
+        break;
+    case Qt::Key_Left:
+        horizontal->setValue(horizontal->value() - horizontal->singleStep());
+        break;
+    case Qt::Key_Right:
+        horizontal->setValue(horizontal->value() + horizontal->singleStep());
+        break;
+    default:
+        QAbstractScrollArea::keyPressEvent(event);
+        return;
+    }
+    event->accept();
+}
+
+void LogView::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        const auto offset =
+            static_cast<std::uint64_t>(std::max(0, event->position().toPoint().y()) / m_lineHeight);
+        const std::uint64_t row = m_topRow.get() + offset;
+        if (row < rowCount().get()) {
+            setCurrentRow(core::LineNumber(row));
+        }
+        setFocus(Qt::MouseFocusReason);
+        event->accept();
+        return;
+    }
+    QAbstractScrollArea::mousePressEvent(event);
+}
+
+void LogView::wheelEvent(QWheelEvent* event)
+{
+    // Horizontal wheels and Shift+wheel scroll sideways (handled by the scroll area).
+    const QPoint angle = event->angleDelta();
+    if (angle.y() == 0 || event->modifiers().testFlag(Qt::ShiftModifier)) {
+        QAbstractScrollArea::wheelEvent(event);
+        return;
+    }
+    // Rows are counted from the angle in 1/8 degree units (120 per notch), using the system's
+    // lines-per-notch setting; fractions of a notch accumulate (smooth wheels, touchpads).
+    constexpr int kNotch = 120;
+    const int linesPerNotch = std::max(1, QApplication::wheelScrollLines());
+    m_wheelRemainder += angle.y() * linesPerNotch;
+    const int rows = m_wheelRemainder / kNotch;
+    m_wheelRemainder -= rows * kNotch;
+    if (rows != 0) {
+        const std::uint64_t top = m_topRow.get();
+        const auto steps = static_cast<std::uint64_t>(std::abs(rows));
+        if (rows > 0) {
+            scrollToRow(core::LineNumber(top > steps ? top - steps : 0));
+        } else {
+            scrollToRow(core::LineNumber(top + steps));
+        }
+    }
+    event->accept();
 }
 
 void LogView::setLineNumbersVisible(bool visible)

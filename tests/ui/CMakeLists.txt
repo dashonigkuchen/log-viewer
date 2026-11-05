@@ -8,8 +8,16 @@ set_tests_properties(
     ui.MainWindow PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
-qt_add_executable(lv_ui_log_view_tests log_view_test.cpp)
+qt_add_executable(lv_ui_log_view_tests log_view_test.cpp fake_line_source.h)
 set_target_properties(lv_ui_log_view_tests PROPERTIES WIN32_EXECUTABLE OFF)
 target_link_libraries(lv_ui_log_view_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
 add_test(NAME ui.LogView COMMAND lv_ui_log_view_tests)
 set_tests_properties(ui.LogView PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+qt_add_executable(lv_ui_navigation_tests log_view_navigation_test.cpp fake_line_source.h)
+set_target_properties(lv_ui_navigation_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_navigation_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
+add_test(NAME ui.LogViewNavigation COMMAND lv_ui_navigation_tests)
+set_tests_properties(
+    ui.LogViewNavigation PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
