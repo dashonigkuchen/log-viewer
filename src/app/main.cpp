@@ -52,14 +52,9 @@ int main(int argc, char* argv[])
     lv::core::log(
         lv::core::LogLevel::kInfo,
         QStringLiteral("Log Viewer %1 starting").arg(lv::model::versionString()).toStdString());
-    if (!parser.positionalArguments().isEmpty()) {
-        // Opening files from the command line arrives in roadmap step M2-06.
-        lv::core::log(lv::core::LogLevel::kWarning,
-                      "Opening files from the command line is not implemented yet");
-    }
-
     lv::ui::MainWindow window;
     window.show();
+    window.openFiles(parser.positionalArguments());  // F-FILE-1
     const int exitCode = QApplication::exec();
 
     lv::core::log(lv::core::LogLevel::kInfo, "Log Viewer exiting");

@@ -1,5 +1,7 @@
 add_library(
     lv_ui STATIC
+    document_tab.cpp
+    document_tab.h
     go_to_line_dialog.cpp
     go_to_line_dialog.h
     log_view.cpp
