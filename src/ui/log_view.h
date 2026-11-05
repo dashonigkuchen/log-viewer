@@ -52,6 +52,18 @@ public:
 
     void setCurrentRow(core::LineNumber row);
 
+    // Makes `row` current and scrolls so that it is visible (F-VIEW-6, F-VIEW-10).
+    void moveCurrentRow(core::LineNumber row);
+
+    // Scrolls the least amount so that `row` is visible.
+    void ensureRowVisible(core::LineNumber row);
+
+    // Makes `row` current and shows it in the middle of the view (go to line).
+    void goToRow(core::LineNumber row);
+
+    // Opens the "Go to line" dialog (Ctrl+G).
+    void showGoToLineDialog();
+
     // Number of rows that fit completely into the viewport (at least 1).
     [[nodiscard]] std::uint64_t pageRows() const;
 
@@ -85,6 +97,9 @@ signals:
     void currentRowChanged(lv::core::LineNumber row);
 
 protected:
+    void keyPressEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* event) override;
@@ -109,6 +124,7 @@ private:
     int m_ascent = 0;
     int m_maxTextWidth = 0;  // widest painted line so far, for the horizontal range
     bool m_updatingScrollBars = false;
+    int m_wheelRemainder = 0;  // angle delta not yet turned into rows (smooth wheels, touchpads)
     std::int64_t m_lastPaintUs = 0;
 };
 
