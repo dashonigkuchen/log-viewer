@@ -1,14 +1,31 @@
 #include "ui/main_window.h"
 
+#include "model/document.h"
 #include "model/model_info.h"
+#include "ui/document_tab.h"
+#include "ui/log_view.h"
 
 #include <QAction>
+#include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QKeySequence>
+#include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QMouseEvent>
+#include <QProcess>
 #include <QStatusBar>
+#include <QStyle>
+#include <QTabBar>
 #include <QTabWidget>
+#include <QUrl>
 #include <QtVersion>
 
 namespace lv::ui
@@ -17,62 +34,276 @@ namespace lv::ui
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , m_tabs(new QTabWidget(this))
+    , m_status(new QLabel(this))
 {
     setObjectName(QStringLiteral("mainWindow"));
-    setWindowTitle(tr("Log Viewer %1").arg(lv::model::versionString()));
+    setWindowTitle(QStringLiteral("Log Viewer %1").arg(lv::model::versionString()));
     resize(1024, 768);
+    setAcceptDrops(true);
 
     m_tabs->setObjectName(QStringLiteral("documentTabs"));
     m_tabs->setDocumentMode(true);
     m_tabs->setTabsClosable(true);
     m_tabs->setMovable(true);
+    m_tabs->tabBar()->setContextMenuPolicy(Qt::CustomContextMenu);
     setCentralWidget(m_tabs);
+    connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
+    connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateStatus);
+    connect(m_tabs->tabBar(), &QTabBar::customContextMenuRequested, this,
+            &MainWindow::showTabContextMenu);
+    // Middle click closes a tab (F-TAB-2).
+    m_tabs->tabBar()->installEventFilter(this);
 
+    m_status->setObjectName(QStringLiteral("documentStatus"));
+    statusBar()->addWidget(m_status, 1);
     createMenus();
-    statusBar()->showMessage(tr("Ready"));
+    updateStatus();
 }
 
 void MainWindow::createMenus()
 {
-    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
+    QMenu* fileMenu = menuBar()->addMenu(QStringLiteral("&File"));
     fileMenu->setObjectName(QStringLiteral("menuFile"));
 
-    QAction* openAction = fileMenu->addAction(tr("&Open..."));
+    QAction* openAction = fileMenu->addAction(QStringLiteral("&Open..."));
     openAction->setObjectName(QStringLiteral("actionOpen"));
     openAction->setShortcut(QKeySequence::Open);
-    openAction->setEnabled(false);  // Opening files arrives in roadmap step M2-06.
+    connect(openAction, &QAction::triggered, this, &MainWindow::showOpenDialog);
+
+    QAction* closeAction = fileMenu->addAction(QStringLiteral("&Close"));
+    closeAction->setObjectName(QStringLiteral("actionClose"));
+    closeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_W));
+    connect(closeAction, &QAction::triggered, this, [this] { closeTab(m_tabs->currentIndex()); });
+
+    QAction* closeAllAction = fileMenu->addAction(QStringLiteral("Close &All"));
+    closeAllAction->setObjectName(QStringLiteral("actionCloseAll"));
+    connect(closeAllAction, &QAction::triggered, this, &MainWindow::closeAllTabs);
 
     fileMenu->addSeparator();
 
-    QAction* exitAction = fileMenu->addAction(tr("E&xit"));
+    QAction* exitAction = fileMenu->addAction(QStringLiteral("E&xit"));
     exitAction->setObjectName(QStringLiteral("actionExit"));
     exitAction->setShortcut(QKeySequence::Quit);
     exitAction->setMenuRole(QAction::QuitRole);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
-    QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+    // Ctrl+Tab / Ctrl+Shift+Tab switch tabs (F-TAB-2).
+    auto* nextTab = new QAction(QStringLiteral("Next Tab"), this);
+    nextTab->setObjectName(QStringLiteral("actionNextTab"));
+    nextTab->setShortcuts({QKeySequence(Qt::CTRL | Qt::Key_Tab), QKeySequence::NextChild});
+    connect(nextTab, &QAction::triggered, this, [this] {
+        if (m_tabs->count() > 1) {
+            m_tabs->setCurrentIndex((m_tabs->currentIndex() + 1) % m_tabs->count());
+        }
+    });
+    addAction(nextTab);
+    auto* previousTab = new QAction(QStringLiteral("Previous Tab"), this);
+    previousTab->setObjectName(QStringLiteral("actionPreviousTab"));
+    previousTab->setShortcuts(
+        {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Backtab), QKeySequence::PreviousChild});
+    connect(previousTab, &QAction::triggered, this, [this] {
+        if (m_tabs->count() > 1) {
+            m_tabs->setCurrentIndex((m_tabs->currentIndex() + m_tabs->count() - 1) %
+                                    m_tabs->count());
+        }
+    });
+    addAction(previousTab);
+
+    QMenu* helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
     helpMenu->setObjectName(QStringLiteral("menuHelp"));
 
-    QAction* aboutAction = helpMenu->addAction(tr("&About Log Viewer"));
+    QAction* aboutAction = helpMenu->addAction(QStringLiteral("&About Log Viewer"));
     aboutAction->setObjectName(QStringLiteral("actionAbout"));
     aboutAction->setMenuRole(QAction::AboutRole);
     connect(aboutAction, &QAction::triggered, this, &MainWindow::showAbout);
 }
 
+DocumentTab* MainWindow::documentTab(int index) const
+{
+    return qobject_cast<DocumentTab*>(m_tabs->widget(index));
+}
+
+DocumentTab* MainWindow::currentDocumentTab() const
+{
+    return documentTab(m_tabs->currentIndex());
+}
+
+DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
+{
+    const auto normalized = normalizedPath(path);
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (auto* tab = documentTab(i); tab != nullptr && tab->canonicalPath() == normalized) {
+            m_tabs->setCurrentIndex(i);
+            return tab;
+        }
+    }
+    auto* tab = new DocumentTab(normalized, m_tabs);
+    const int index = m_tabs->addTab(tab, tab->title());
+    m_tabs->setTabToolTip(index, tab->toolTip());
+    connect(tab, &DocumentTab::statusChanged, this, [this, tab] {
+        updateTabState(tab);
+        if (tab == currentDocumentTab()) {
+            updateStatus();
+        }
+    });
+    m_tabs->setCurrentIndex(index);
+    tab->setFocus();
+    updateTabState(tab);
+    updateStatus();
+    return tab;
+}
+
+void MainWindow::openFiles(const QStringList& paths)
+{
+    for (const QString& path : paths) {
+        openFile(std::filesystem::path(path.toStdU16String()));
+    }
+}
+
+void MainWindow::showOpenDialog()
+{
+    const QStringList files = QFileDialog::getOpenFileNames(
+        this, QStringLiteral("Open Log Files"), QString(),
+        QStringLiteral("Log files (*.log *.txt *.out);;All files (*)"));
+    openFiles(files);
+}
+
+void MainWindow::closeTab(int index)
+{
+    auto* tab = documentTab(index);
+    if (tab == nullptr) {
+        return;
+    }
+    m_tabs->removeTab(index);
+    delete tab;  // joins the indexer and releases the file now
+    updateStatus();
+}
+
+void MainWindow::closeOtherTabs(int index)
+{
+    auto* keep = documentTab(index);
+    for (int i = m_tabs->count() - 1; i >= 0; --i) {
+        if (documentTab(i) != keep) {
+            closeTab(i);
+        }
+    }
+}
+
+void MainWindow::closeAllTabs()
+{
+    while (m_tabs->count() > 0) {
+        closeTab(m_tabs->count() - 1);
+    }
+}
+
+void MainWindow::updateTabState(DocumentTab* tab)
+{
+    const int index = m_tabs->indexOf(tab);
+    if (index < 0) {
+        return;
+    }
+    using State = model::Document::State;
+    const State state = tab->document().state();
+    QString title = tab->title();
+    if (state == State::kIndexing) {
+        title += QStringLiteral(" \u23F3");  // hourglass while indexing (F-TAB-3)
+    } else if (state == State::kError) {
+        title += QStringLiteral(" \u26A0");
+    }
+    m_tabs->setTabText(index, title);
+}
+
+QString MainWindow::statusText() const
+{
+    const auto* tab = currentDocumentTab();
+    return tab == nullptr ? QStringLiteral("Ready") : tab->statusText();
+}
+
+void MainWindow::updateStatus()
+{
+    m_status->setText(statusText());
+}
+
+void MainWindow::showTabContextMenu(const QPoint& position)
+{
+    const int index = m_tabs->tabBar()->tabAt(position);
+    auto* tab = documentTab(index);
+    if (tab == nullptr) {
+        return;
+    }
+    QMenu menu(this);
+    menu.addAction(QStringLiteral("Copy Full Path"), this,
+                   [tab] { QApplication::clipboard()->setText(tab->toolTip()); });
+    menu.addAction(QStringLiteral("Open Containing Folder"), this, [tab] {
+        const QString path = tab->toolTip();
+#ifdef Q_OS_WIN
+        QProcess::startDetached(QStringLiteral("explorer.exe"), {QStringLiteral("/select,"), path});
+#else
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+#endif
+    });
+    menu.addAction(QStringLiteral("Reload"), this, [tab] { tab->document().reload(); });
+    menu.addSeparator();
+    menu.addAction(QStringLiteral("Close"), this, [this, tab] { closeTab(m_tabs->indexOf(tab)); });
+    menu.addAction(QStringLiteral("Close Others"), this,
+                   [this, tab] { closeOtherTabs(m_tabs->indexOf(tab)); });
+    menu.addAction(QStringLiteral("Close All"), this, &MainWindow::closeAllTabs);
+    menu.exec(m_tabs->tabBar()->mapToGlobal(position));
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_tabs->tabBar() && event->type() == QEvent::MouseButtonRelease) {
+        const auto* mouse = dynamic_cast<QMouseEvent*>(event);
+        if (mouse != nullptr && mouse->button() == Qt::MiddleButton) {
+            const int index = m_tabs->tabBar()->tabAt(mouse->position().toPoint());
+            if (index >= 0) {
+                closeTab(index);
+                return true;
+            }
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent* event)
+{
+    openDroppedUrls(event->mimeData()->urls());
+    event->acceptProposedAction();
+}
+
+void MainWindow::openDroppedUrls(const QList<QUrl>& urls)
+{
+    QStringList files;
+    for (const QUrl& url : urls) {
+        if (url.isLocalFile()) {
+            files << url.toLocalFile();
+        }
+    }
+    openFiles(files);
+}
+
 QString MainWindow::aboutText()
 {
-    return tr("<h3>Log Viewer %1</h3>"
-              "<p>A fast native viewer for large log files.</p>"
-              "<p>Licensed under the MIT License. Qt is used under the GNU LGPL v3.</p>"
-              "<p>Built with Qt %2, running on Qt %3.</p>"
-              "<p>Developed with AI coding agents.</p>")
+    return QStringLiteral("<h3>Log Viewer %1</h3>"
+                          "<p>A fast native viewer for large log files.</p>"
+                          "<p>Licensed under the MIT License. Qt is used under the GNU LGPL v3.</p>"
+                          "<p>Built with Qt %2, running on Qt %3.</p>"
+                          "<p>Developed with AI coding agents.</p>")
         .arg(lv::model::versionString(), QStringLiteral(QT_VERSION_STR),
              QString::fromLatin1(qVersion()));
 }
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, tr("About Log Viewer"), aboutText());
+    QMessageBox::about(this, QStringLiteral("About Log Viewer"), aboutText());
 }
 
 }  // namespace lv::ui

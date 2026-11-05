@@ -141,7 +141,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: rest of F-VIEW-8: estimate the selection size from the line index; above 100 MiB ask for confirmation; copies above a few MiB run on a worker thread (thread-safe reads through `DocumentContent`, not the UI-thread `LineSource`) with a cancellable progress dialog; the UI stays responsive.
   - Done when: tests: size estimate within 1% of the real size, confirmation shown above the threshold (threshold injectable for tests), cancel leaves the clipboard unchanged, a 200 MB copy keeps the event loop responsive (event processed during the copy).
 
-- [ ] **M2-06 Document tab and main window integration** — Depends on: M2-03
+- [x] **M2-06 Document tab and main window integration** — Depends on: M2-03 (PR #28)
   - Scope: `src/ui/document_tab.cpp` (only the main view for now), `MainWindow` open file (`Ctrl+O`), drag and drop, command line files (F-FILE-1), tabs (F-TAB-1, F-TAB-2 incl. reorder and keyboard switching), tab context menu (F-TAB-4), status bar (F-TAB-6), progress indicator in tab (F-TAB-3 indexing part).
   - Done when: Qt Tests open two fixture files via the API used by drag and drop and command line, verify tab titles/tooltips, opening the same path twice activates the existing tab, closing tabs releases documents.
 

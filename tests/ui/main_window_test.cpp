@@ -38,12 +38,12 @@ private slots:
         QCOMPARE(window.menuBar()->actions().size(), 2);
     }
 
-    static void openActionIsDisabledUntilFilesCanBeOpened()
+    static void openActionHasTheStandardShortcut()
     {
         const lv::ui::MainWindow window;
         const auto* open = window.findChild<QAction*>(QStringLiteral("actionOpen"));
         QVERIFY(open != nullptr);
-        QVERIFY(!open->isEnabled());
+        QVERIFY(open->isEnabled());
         QCOMPARE(open->shortcut(), QKeySequence(QKeySequence::Open));
     }
 
