@@ -1,4 +1,16 @@
-add_library(lv_model STATIC app_paths.cpp document.cpp document.h file_log_sink.cpp model_info.cpp)
+add_library(
+    lv_model STATIC
+    app_paths.cpp
+    document.cpp
+    document.h
+    document_line_source.cpp
+    document_line_source.h
+    file_log_sink.cpp
+    line_cache.cpp
+    line_cache.h
+    line_source.h
+    model_info.cpp
+)
 add_library(lv::model ALIAS lv_model)
 
 target_link_libraries(
