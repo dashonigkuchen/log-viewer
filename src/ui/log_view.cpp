@@ -7,6 +7,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFontDatabase>
@@ -58,6 +59,20 @@ LogView::LogView(QWidget* parent)
     goToLine->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     connect(goToLine, &QAction::triggered, this, &LogView::showGoToLineDialog);
     addAction(goToLine);
+
+    auto* copyAction = new QAction(QStringLiteral("Copy"), this);
+    copyAction->setObjectName(QStringLiteral("actionCopy"));
+    copyAction->setShortcut(QKeySequence::Copy);
+    copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(copyAction, &QAction::triggered, this, &LogView::copy);
+    addAction(copyAction);
+
+    auto* selectAllAction = new QAction(QStringLiteral("Select All"), this);
+    selectAllAction->setObjectName(QStringLiteral("actionSelectAll"));
+    selectAllAction->setShortcut(QKeySequence::SelectAll);
+    selectAllAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(selectAllAction, &QAction::triggered, this, &LogView::selectAll);
+    addAction(selectAllAction);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     updateMetrics();
@@ -174,6 +189,9 @@ void LogView::keyPressEvent(QKeyEvent* event)
     const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
     const std::uint64_t page = pageRows();
     auto* horizontal = horizontalScrollBar();
+    const bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
+    const std::optional<core::LineNumber> before = m_currentRow;
+    bool movesRow = true;
     switch (event->key()) {
     case Qt::Key_Up:
         moveCurrentRow(core::LineNumber(current > 0 ? current - 1 : 0));
@@ -190,6 +208,8 @@ void LogView::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Home:
         if (control) {
             moveCurrentRow(core::LineNumber(0));
+        } else {
+            movesRow = false;
         }
         horizontal->setValue(0);
         break;
@@ -198,36 +218,309 @@ void LogView::keyPressEvent(QKeyEvent* event)
             moveCurrentRow(core::LineNumber(rows > 0 ? rows - 1 : 0));
             horizontal->setValue(0);
         } else {
+            movesRow = false;
             horizontal->setValue(horizontal->maximum());
         }
         break;
     case Qt::Key_Left:
+        movesRow = false;
         horizontal->setValue(horizontal->value() - horizontal->singleStep());
         break;
     case Qt::Key_Right:
+        movesRow = false;
         horizontal->setValue(horizontal->value() + horizontal->singleStep());
         break;
     default:
         QAbstractScrollArea::keyPressEvent(event);
         return;
     }
+    if (movesRow) {
+        updateSelectionAfterMove(shift, before);
+    }
     event->accept();
+}
+
+void LogView::updateSelectionAfterMove(bool extend, std::optional<core::LineNumber> before)
+{
+    if (!m_currentRow) {
+        return;
+    }
+    if (!extend) {
+        // Empty selection at the new row: a later Shift+click extends from its start.
+        const TextPosition here{.row = m_currentRow->get(), .column = 0};
+        setSelection(TextSelection::characters(here, here));
+        return;
+    }
+    // Shift+navigation selects whole lines from where the keyboard selection started.
+    const bool continues = m_selection.lineMode && !m_selection.isEmpty() && before &&
+                           m_selection.cursor.row == before->get();
+    const std::uint64_t anchor =
+        continues ? m_selection.anchor.row : before.value_or(*m_currentRow).get();
+    setSelection(TextSelection::lines(anchor, m_currentRow->get()));
 }
 
 void LogView::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
-        const auto offset =
-            static_cast<std::uint64_t>(std::max(0, event->position().toPoint().y()) / m_lineHeight);
-        const std::uint64_t row = m_topRow.get() + offset;
-        if (row < rowCount().get()) {
-            setCurrentRow(core::LineNumber(row));
+    if (event->button() != Qt::LeftButton) {
+        QAbstractScrollArea::mousePressEvent(event);
+        return;
+    }
+    setFocus(Qt::MouseFocusReason);
+    event->accept();
+    if (rowCount().get() == 0) {
+        return;
+    }
+    const QPoint point = event->position().toPoint();
+    const auto clickedRow =
+        m_topRow.get() + static_cast<std::uint64_t>(std::max(0, point.y()) / m_lineHeight);
+    if (clickedRow >= rowCount().get()) {
+        clearSelection();
+        return;  // below the last row: keep the current row
+    }
+    const TextPosition position = positionAt(point);
+    const bool tripleClick = m_tripleClickTimer.isValid() &&
+                             m_tripleClickTimer.elapsed() < QApplication::doubleClickInterval() &&
+                             position.row == m_doubleClickRow;
+    m_tripleClickTimer.invalidate();
+    if (tripleClick) {
+        setSelection(TextSelection::lines(position.row, position.row));
+    } else if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+        // Extend from the last click position (an empty character selection keeps it), or
+        // from the start of the current row after keyboard or line selections.
+        TextPosition anchor = m_selection.anchor;
+        if (m_selection.lineMode) {
+            anchor = {.row = m_currentRow.value_or(core::LineNumber(0)).get(), .column = 0};
         }
-        setFocus(Qt::MouseFocusReason);
+        setSelection(TextSelection::characters(anchor, position));
+        m_dragging = true;
+    } else {
+        setSelection(TextSelection::characters(position, position));
+        m_dragging = true;
+    }
+    setCurrentRow(core::LineNumber(position.row));
+}
+
+void LogView::mouseMoveEvent(QMouseEvent* event)
+{
+    if (!m_dragging || !event->buttons().testFlag(Qt::LeftButton)) {
+        QAbstractScrollArea::mouseMoveEvent(event);
+        return;
+    }
+    const QPoint point = event->position().toPoint();
+    // Dragging above or below the viewport scrolls one row per event.
+    if (point.y() < 0 && m_topRow.get() > 0) {
+        scrollToRow(core::LineNumber(m_topRow.get() - 1));
+    } else if (point.y() >= viewport()->height()) {
+        scrollToRow(core::LineNumber(m_topRow.get() + 1));
+    }
+    TextSelection selection = m_selection;
+    selection.cursor = positionAt(point);
+    setSelection(selection);
+    setCurrentRow(core::LineNumber(selection.cursor.row));
+    event->accept();
+}
+
+void LogView::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        m_dragging = false;
         event->accept();
         return;
     }
-    QAbstractScrollArea::mousePressEvent(event);
+    QAbstractScrollArea::mouseReleaseEvent(event);
+}
+
+void LogView::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton || rowCount().get() == 0) {
+        QAbstractScrollArea::mouseDoubleClickEvent(event);
+        return;
+    }
+    event->accept();
+    m_dragging = false;
+    const TextPosition position = positionAt(event->position().toPoint());
+    m_doubleClickRow = position.row;
+    m_tripleClickTimer.start();
+    // Select the word under the click: letters, digits, and '_'; any other character alone.
+    const QString text = rowText(position.row);
+    if (text.isEmpty()) {
+        return;
+    }
+    const qsizetype at = std::min(position.column, text.size() - 1);
+    auto isWord = [](QChar c) {
+        return c.isLetterOrNumber() || c == u'_';
+    };
+    qsizetype from = at;
+    qsizetype to = at + 1;
+    if (isWord(text[at])) {
+        while (from > 0 && isWord(text[from - 1])) {
+            --from;
+        }
+        while (to < text.size() && isWord(text[to])) {
+            ++to;
+        }
+    }
+    setSelection(TextSelection::characters({.row = position.row, .column = from},
+                                           {.row = position.row, .column = to}));
+}
+
+void LogView::setSelection(const TextSelection& selection)
+{
+    if (selection != m_selection) {
+        m_selection = selection;
+        viewport()->update();
+    }
+}
+
+void LogView::clearSelection()
+{
+    setSelection(TextSelection{});
+}
+
+void LogView::selectAll()
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows > 0) {
+        setSelection(TextSelection::lines(0, rows - 1));
+    }
+}
+
+QString LogView::rowText(std::uint64_t row) const
+{
+    if (m_source.isNull() || row >= rowCount().get()) {
+        return {};
+    }
+    auto lines = m_source->plainLines(core::LineNumber(row), core::LineCount(1));
+    return lines.empty() ? QString() : std::move(lines.front().text);
+}
+
+QString LogView::selectedText() const
+{
+    const std::uint64_t rows = rowCount().get();
+    if (m_selection.isEmpty() || m_source.isNull() || rows == 0) {
+        return {};
+    }
+    const std::uint64_t first = m_selection.start().row;
+    const std::uint64_t last = std::min(m_selection.end().row, rows - 1);
+    if (first > last) {
+        return {};
+    }
+    constexpr std::uint64_t kChunkRows = 4096;
+    QString out;
+    for (std::uint64_t chunk = first; chunk <= last; chunk += kChunkRows) {
+        const std::uint64_t count = std::min(kChunkRows, last - chunk + 1);
+        const auto lines = m_source->plainLines(core::LineNumber(chunk), core::LineCount(count));
+        for (std::size_t i = 0; i < lines.size(); ++i) {
+            const auto& line = lines[i];
+            const auto columns = m_selection.columnsForRow(chunk + i, line.text.size());
+            if (!columns) {
+                continue;
+            }
+            out += QStringView(line.text).mid(columns->from, columns->to - columns->from);
+            if (columns->lineEnd && !line.partial) {
+                out += u'\n';
+            }
+        }
+    }
+    return out;
+}
+
+void LogView::copy() const
+{
+    const QString text = selectedText();
+    if (!text.isEmpty()) {
+        QApplication::clipboard()->setText(text);
+    }
+}
+
+LogView::DisplayMapping LogView::mapLine(const QString& text, bool truncated) const
+{
+    DisplayMapping mapping;
+    const auto limit = static_cast<qsizetype>(m_columnLimit);
+    mapping.displayOffsets.reserve(static_cast<std::size_t>(text.size()) + 1);
+    mapping.text.reserve(std::min(text.size(), limit) + 1);
+    qsizetype column = 0;
+    bool cut = false;
+    for (qsizetype i = 0; i < text.size(); ++i) {
+        mapping.displayOffsets.push_back(std::min(mapping.text.size(), limit));
+        if (cut) {
+            continue;
+        }
+        const QChar c = text[i];
+        if (c == u'\t') {
+            const qsizetype next = ((column / m_tabWidth) + 1) * m_tabWidth;
+            mapping.text.append(QString(next - column, u' '));
+            column = next;
+        } else {
+            mapping.text.append(c);
+            if (!c.isLowSurrogate()) {
+                ++column;
+            }
+        }
+        if (mapping.text.size() >= limit) {
+            cut = mapping.text.size() > limit || i + 1 < text.size();
+            mapping.text.truncate(limit);
+        }
+    }
+    mapping.displayOffsets.push_back(std::min(mapping.text.size(), limit));
+    if (cut || truncated) {
+        mapping.text.append(QChar(kTruncationMarker));
+    }
+    return mapping;
+}
+
+TextPosition LogView::positionAt(QPoint point) const
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        return {};
+    }
+    const std::uint64_t offset = static_cast<std::uint64_t>(std::max(0, point.y())) /
+                                 static_cast<std::uint64_t>(m_lineHeight);
+    const std::uint64_t row = std::min(m_topRow.get() + offset, rows - 1);
+    const auto lines = m_source->lines(core::LineNumber(row), core::LineCount(1));
+    const QString& text = lines.front().text;
+    const DisplayMapping mapping = mapLine(text, lines.front().truncated);
+    const double x = point.x() - gutterWidth() - kTextMargin + horizontalOffset();
+    if (x <= 0) {
+        return {.row = row, .column = 0};
+    }
+    // Nearest original column boundary by its painted x position (binary search on prefixes).
+    const QFontMetricsF metrics(font());
+    auto xOf = [&](qsizetype column) {
+        return metrics.horizontalAdvance(
+            mapping.text.left(mapping.displayOffsets[static_cast<std::size_t>(column)]));
+    };
+    qsizetype low = 0;
+    qsizetype high = text.size();
+    while (low < high) {
+        const qsizetype middle = low + ((high - low) / 2);
+        if (xOf(middle) < x) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    if (low > 0 && (x - xOf(low - 1)) < (xOf(low) - x)) {
+        --low;
+    }
+    if (low > 0 && low < text.size() && text[low].isLowSurrogate()) {
+        --low;  // never between the halves of a surrogate pair
+    }
+    return {.row = row, .column = low};
+}
+
+QPoint LogView::pointForPosition(TextPosition position) const
+{
+    const auto lines = m_source->lines(core::LineNumber(position.row), core::LineCount(1));
+    const DisplayMapping mapping = mapLine(lines.front().text, lines.front().truncated);
+    const QFontMetricsF metrics(font());
+    const auto column = std::min<qsizetype>(position.column, lines.front().text.size());
+    const double x = metrics.horizontalAdvance(
+        mapping.text.left(mapping.displayOffsets[static_cast<std::size_t>(column)]));
+    const auto rowOffset = static_cast<int>(position.row - m_topRow.get());
+    return {gutterWidth() + kTextMargin - horizontalOffset() + static_cast<int>(std::lround(x)),
+            (rowOffset * m_lineHeight) + (m_lineHeight / 2)};
 }
 
 void LogView::wheelEvent(QWheelEvent* event)
@@ -298,19 +591,7 @@ int LogView::gutterWidth() const
 
 QString LogView::displayText(const QString& text, bool truncatedByReader) const
 {
-    const auto limit = static_cast<std::size_t>(m_columnLimit);
-    // Cut before expanding tabs: a line can only grow by expansion.
-    const bool cut = static_cast<std::size_t>(text.size()) > limit;
-    const std::u16string_view raw(reinterpret_cast<const char16_t*>(text.utf16()),
-                                  cut ? limit : static_cast<std::size_t>(text.size()));
-    std::u16string expanded = core::expandTabs(raw, static_cast<std::uint32_t>(m_tabWidth));
-    if (expanded.size() > limit) {
-        expanded.resize(limit);
-    }
-    if (cut || truncatedByReader) {
-        expanded.push_back(kTruncationMarker);
-    }
-    return QString::fromUtf16(expanded.data(), static_cast<qsizetype>(expanded.size()));
+    return mapLine(text, truncatedByReader).text;
 }
 
 void LogView::updateMetrics()
@@ -392,6 +673,8 @@ void LogView::onReset()
 {
     m_topRow = core::LineNumber(0);
     m_currentRow.reset();
+    m_selection = TextSelection{};
+    m_dragging = false;
     m_maxTextWidth = 0;
     if (rowCount().get() > 0) {
         m_currentRow = core::LineNumber(0);
@@ -450,11 +733,29 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
                                  colors.color(QPalette::Highlight).lighter(170));
             }
             const auto& line = lines[i];
-            const QString text = displayText(line.text, line.truncated);
+            const DisplayMapping mapping = mapLine(line.text, line.truncated);
+            const QString& text = mapping.text;
             painter.setPen(
                 colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text));
             painter.setClipRect(gutter, 0, width - gutter, height);
             painter.drawText(textX, y + m_ascent, text);
+            if (const auto selected = m_selection.columnsForRow(row, line.text.size())) {
+                // Selected part: highlight background and redraw the text in the highlight color.
+                const auto from = mapping.displayOffsets[static_cast<std::size_t>(selected->from)];
+                const auto to = mapping.displayOffsets[static_cast<std::size_t>(selected->to)];
+                const double left = textX + metrics.horizontalAdvance(text.left(from));
+                double right = textX + metrics.horizontalAdvance(text.left(to));
+                if (selected->lineEnd) {
+                    right += metrics.horizontalAdvance(u' ');
+                }
+                const QRectF area(left, y, right - left, m_lineHeight);
+                painter.fillRect(area, colors.color(QPalette::Highlight));
+                painter.save();
+                painter.setClipRect(area.intersected(QRectF(gutter, 0, width - gutter, height)));
+                painter.setPen(colors.color(QPalette::HighlightedText));
+                painter.drawText(textX, y + m_ascent, text);
+                painter.restore();
+            }
             painter.setClipping(false);
             widest = std::max(widest, static_cast<int>(std::ceil(metrics.horizontalAdvance(text))));
 

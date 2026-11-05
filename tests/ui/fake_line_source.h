@@ -59,6 +59,12 @@ public:
         return out;
     }
 
+    [[nodiscard]] std::vector<lv::model::DisplayLine>
+    plainLines(core::LineNumber first, core::LineCount count) const override
+    {
+        return lines(first, count);
+    }
+
     [[nodiscard]] int requests() const noexcept { return m_requests; }
 
     [[nodiscard]] std::uint64_t lastFirst() const noexcept { return m_lastFirst; }

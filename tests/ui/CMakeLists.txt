@@ -1,23 +1,40 @@
+# Qt's offscreen platform finds no fonts on Windows (Qt no longer ships any), so glyphs get zero
+# width and text layout tests break. Point it at the system fonts.
+set(LV_UI_TEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+if(WIN32)
+    list(APPEND LV_UI_TEST_ENVIRONMENT "QT_QPA_FONTDIR=C:/Windows/Fonts")
+endif()
+
 qt_add_executable(lv_ui_tests main_window_test.cpp)
 set_target_properties(lv_ui_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 target_link_libraries(lv_ui_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
 
-add_test(NAME ui.MainWindow COMMAND lv_ui_tests)
+add_test(NAME ui.MainWindow COMMAND lv_ui_tests -o "-,txt")
 set_tests_properties(
-    ui.MainWindow PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    ui.MainWindow PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
 )
 
 qt_add_executable(lv_ui_log_view_tests log_view_test.cpp fake_line_source.h)
 set_target_properties(lv_ui_log_view_tests PROPERTIES WIN32_EXECUTABLE OFF)
 target_link_libraries(lv_ui_log_view_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
-add_test(NAME ui.LogView COMMAND lv_ui_log_view_tests)
-set_tests_properties(ui.LogView PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_test(NAME ui.LogView COMMAND lv_ui_log_view_tests -o "-,txt")
+set_tests_properties(ui.LogView PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
 
 qt_add_executable(lv_ui_navigation_tests log_view_navigation_test.cpp fake_line_source.h)
 set_target_properties(lv_ui_navigation_tests PROPERTIES WIN32_EXECUTABLE OFF)
 target_link_libraries(lv_ui_navigation_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
-add_test(NAME ui.LogViewNavigation COMMAND lv_ui_navigation_tests)
+add_test(NAME ui.LogViewNavigation COMMAND lv_ui_navigation_tests -o "-,txt")
 set_tests_properties(
-    ui.LogViewNavigation PROPERTIES LABELS ui ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    ui.LogViewNavigation PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
+)
+
+qt_add_executable(lv_ui_selection_tests log_view_selection_test.cpp fake_line_source.h)
+set_target_properties(lv_ui_selection_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(
+    lv_ui_selection_tests PRIVATE lv::ui lv::loggen lv_test_support Qt6::Test lv::compile_options
+)
+add_test(NAME ui.LogViewSelection COMMAND lv_ui_selection_tests -o "-,txt")
+set_tests_properties(
+    ui.LogViewSelection PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
 )

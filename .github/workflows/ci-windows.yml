@@ -94,7 +94,13 @@ jobs:
         run: cmake --build --preset windows-msvc-release
 
       - name: Test
-        run: ctest --preset windows-msvc-release
+        # On failure, rerun the failed tests verbosely so their output and exit code are visible.
+        run: |
+          ctest --preset windows-msvc-release
+          if ($LASTEXITCODE -ne 0) {
+            ctest --preset windows-msvc-release --rerun-failed --extra-verbose
+            exit 1
+          }
 
       - name: Install and deploy Qt
         run: |

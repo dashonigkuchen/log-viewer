@@ -70,6 +70,34 @@ std::vector<DisplayLine> DocumentLineSource::lines(core::LineNumber first,
     return out;
 }
 
+std::vector<DisplayLine> DocumentLineSource::plainLines(core::LineNumber first,
+                                                        core::LineCount count) const
+{
+    LV_ASSERT(first.get() + count.get() <= lineCount().get());
+    std::vector<DisplayLine> out(static_cast<std::size_t>(count.get()));
+    const auto content = m_document->content();
+    if (!content) {
+        return out;
+    }
+    const auto snapshot = content->index.snapshot();
+    const auto block = content->reader.readLines(snapshot, first, count);
+    if (!block) {
+        for (auto& line : out) {
+            line.unavailable = true;
+        }
+        return out;
+    }
+    std::u16string text;
+    for (std::size_t i = 0; i < block->lines.size(); ++i) {
+        core::decodeLine(block->line(i), content->index.encoding(), text);
+        auto& line = out[i];
+        line.text = QString::fromUtf16(text.data(), static_cast<qsizetype>(text.size()));
+        line.truncated = block->lines[i].truncated;
+        line.partial = first.get() + i >= snapshot.completeLines.get();
+    }
+    return out;
+}
+
 void DocumentLineSource::load(core::LineNumber first, core::LineCount count,
                               std::vector<DisplayLine>& out, std::size_t offset) const
 {

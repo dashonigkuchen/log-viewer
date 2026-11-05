@@ -6,6 +6,8 @@ add_library(
     log_view.h
     main_window.cpp
     main_window.h
+    text_selection.cpp
+    text_selection.h
 )
 add_library(lv::ui ALIAS lv_ui)
 
