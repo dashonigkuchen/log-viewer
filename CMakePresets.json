@@ -209,7 +209,7 @@
         "noTestsAction": "error"
       },
       "environment": {
-        "TSAN_OPTIONS": "halt_on_error=1"
+        "TSAN_OPTIONS": "halt_on_error=1 suppressions=${sourceDir}/tools/sanitizers/tsan.supp"
       }
     },
     {
