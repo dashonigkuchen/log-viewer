@@ -1,10 +1,12 @@
 #pragma once
 
 #include "core/util/strong_types.h"
+#include "model/text_copy.h"
 
 #include <QObject>
 #include <QString>
 
+#include <optional>
 #include <vector>
 
 namespace lv::model
@@ -48,6 +50,10 @@ public:
     // visible symbols (the UTF-16 columns are the same as in lines()). Not cached.
     [[nodiscard]] virtual std::vector<DisplayLine> plainLines(core::LineNumber first,
                                                               core::LineCount count) const = 0;
+
+    // Thread-safe access to the rows for large copies on a worker (SPEC F-VIEW-8), or nullopt
+    // if the source has no file behind it (copies then run synchronously).
+    [[nodiscard]] virtual std::optional<RowReader> rowReader() const { return std::nullopt; }
 
 signals:
     // Rows were added at the end; `lineCount` is the new count.

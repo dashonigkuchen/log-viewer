@@ -38,3 +38,13 @@ add_test(NAME ui.LogViewSelection COMMAND lv_ui_selection_tests -o "-,txt")
 set_tests_properties(
     ui.LogViewSelection PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
 )
+
+qt_add_executable(lv_ui_copy_tests log_view_copy_test.cpp)
+set_target_properties(lv_ui_copy_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(
+    lv_ui_copy_tests PRIVATE lv::ui lv::loggen lv_test_support Qt6::Test lv::compile_options
+)
+add_test(NAME ui.LogViewCopy COMMAND lv_ui_copy_tests -o "-,txt")
+set_tests_properties(
+    ui.LogViewCopy PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
+)

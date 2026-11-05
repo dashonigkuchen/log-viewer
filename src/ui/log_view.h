@@ -7,10 +7,16 @@
 #include <QAbstractScrollArea>
 #include <QElapsedTimer>
 #include <QPointer>
+#include <QProgressDialog>
 #include <QString>
+#include <QTimer>
 
+#include <atomic>
 #include <cstdint>
+#include <functional>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <vector>
 
 namespace lv::ui
@@ -34,6 +40,20 @@ public:
     static constexpr char16_t kTruncationMarker = u'\u2026';
 
     explicit LogView(QWidget* parent = nullptr);
+    LogView(const LogView&) = delete;
+    LogView& operator=(const LogView&) = delete;
+    LogView(LogView&&) = delete;
+    LogView& operator=(LogView&&) = delete;
+    ~LogView() override;
+
+    // Size limits for copying (SPEC F-VIEW-8), in raw file bytes (see model::estimateCopyBytes).
+    struct CopyLimits
+    {
+        // Larger copies run on a worker thread with a cancellable progress dialog.
+        std::uint64_t backgroundBytes = std::uint64_t{4} * 1024 * 1024;
+        // Larger copies ask for confirmation first.
+        std::uint64_t confirmBytes = std::uint64_t{100} * 1024 * 1024;
+    };
 
     // The view does not own the source; it is released when the source is destroyed.
     void setLineSource(model::LineSource* source);
@@ -79,8 +99,23 @@ public:
     // clipboard.
     [[nodiscard]] QString selectedText() const;
 
-    // Copies selectedText() to the clipboard (Ctrl+C).
-    void copy() const;
+    // Copies the selection to the clipboard (Ctrl+C). Large selections ask for confirmation and
+    // are copied in the background; see CopyLimits.
+    void copy();
+
+    // Cancels a running background copy; the clipboard stays unchanged.
+    void cancelCopy();
+
+    [[nodiscard]] bool isCopying() const noexcept { return m_copyThread.joinable(); }
+
+    void setCopyLimits(CopyLimits limits) { m_copyLimits = limits; }
+
+    // Asked before copying more than CopyLimits::confirmBytes; returns true to continue.
+    // The default shows a message box. Tests replace it.
+    void setCopyConfirmation(std::function<bool(std::uint64_t bytes)> confirm)
+    {
+        m_confirmCopy = std::move(confirm);
+    }
 
     // Text position under a viewport point (clamped to existing rows and columns).
     [[nodiscard]] TextPosition positionAt(QPoint point) const;
@@ -119,6 +154,8 @@ public:
 signals:
     void topRowChanged(lv::core::LineNumber row);
     void currentRowChanged(lv::core::LineNumber row);
+    // A copy finished: `copied` is false when it was declined, canceled, or failed.
+    void copyFinished(bool copied);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -142,6 +179,9 @@ private:
 
     [[nodiscard]] DisplayMapping mapLine(const QString& text, bool truncated) const;
     [[nodiscard]] QString rowText(std::uint64_t row) const;
+    void startBackgroundCopy(model::RowReader reader, model::CopyRange range,
+                             std::uint64_t totalBytes);
+    void finishBackgroundCopy();
     void updateSelectionAfterMove(bool extend, std::optional<core::LineNumber> before);
     void onRowsAppended();
     void onReset();
@@ -167,6 +207,16 @@ private:
     bool m_dragging = false;
     QElapsedTimer m_tripleClickTimer;  // started on a double click
     std::uint64_t m_doubleClickRow = 0;
+
+    CopyLimits m_copyLimits;
+    std::function<bool(std::uint64_t)> m_confirmCopy;
+    std::atomic<std::uint64_t> m_copyProcessed{0};
+    std::uint64_t m_copyTotal = 0;
+    std::mutex m_copyMutex;
+    std::optional<core::Result<QString>> m_copyResult;  // guarded by m_copyMutex
+    QPointer<QProgressDialog> m_copyDialog;
+    QTimer* m_copyTimer = nullptr;
+    std::jthread m_copyThread;  // joined in the destructor before members are destroyed
 };
 
 }  // namespace lv::ui

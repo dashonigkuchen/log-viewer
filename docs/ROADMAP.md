@@ -137,7 +137,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: F-VIEW-7/9 and the synchronous part of F-VIEW-8: selection model in (row, UTF-16 column) coordinates, selection painting, drag selection, double-click word, triple-click line, `Shift`+click and `Shift`+navigation (whole lines), `Ctrl+A`, `Ctrl+C` copy of the original text (no tab expansion, no control pictures) with `\n` separators (Qt converts to `\r\n` on the Windows clipboard). `LineSource` gets a plain-text accessor for copying.
   - Done when: tests: drag selection across lines, double/triple click, shift+arrows, copy of partial lines with umlauts and tabs gives the exact original text, `Ctrl+A` + copy of a 5 MB file equals the file content minus CRs.
 
-- [ ] **M2-05b Large copies** — Depends on: M2-05a
+- [x] **M2-05b Large copies** — Depends on: M2-05a (PR #27)
   - Scope: rest of F-VIEW-8: estimate the selection size from the line index; above 100 MiB ask for confirmation; copies above a few MiB run on a worker thread (thread-safe reads through `DocumentContent`, not the UI-thread `LineSource`) with a cancellable progress dialog; the UI stays responsive.
   - Done when: tests: size estimate within 1% of the real size, confirmation shown above the threshold (threshold injectable for tests), cancel leaves the clipboard unchanged, a 200 MB copy keeps the event loop responsive (event processed during the copy).
 
