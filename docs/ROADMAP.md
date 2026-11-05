@@ -117,7 +117,7 @@ Goal: `lv_core` can open any file, detect its encoding, index it at disk speed w
 
 Goal: a usable read-only viewer with tabs (no filtering yet). First build the owner can try on Windows.
 
-- [ ] **M2-01 Document model** — Depends on: M1-09, M0-05
+- [x] **M2-01 Document model** — Depends on: M1-09, M0-05 (PR #21)
   - Scope: `src/model/document.h/.cpp` (ARCHITECTURE §5): owns file, index, reader, indexer thread; states; signals with generation; encoding override and reload (F-FILE-8, F-ENC-3); clean shutdown.
   - Done when: model tests with Qt event loop: open → progress signals → `Ready` with correct line count; reload resets generation; close during indexing joins threads within 1 s; open errors produce `Error` state with message (F-FILE-12).
 

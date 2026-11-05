@@ -1,6 +1,8 @@
-add_executable(lv_model_tests app_paths_test.cpp file_log_sink_test.cpp)
+add_executable(lv_model_tests main.cpp app_paths_test.cpp document_test.cpp file_log_sink_test.cpp)
 
-target_link_libraries(lv_model_tests PRIVATE lv::model lv::compile_options Catch2::Catch2WithMain)
+target_link_libraries(
+    lv_model_tests PRIVATE lv::model lv::loggen lv_test_support Qt6::Test lv::compile_options Catch2::Catch2
+)
 
 catch_discover_tests(
     lv_model_tests

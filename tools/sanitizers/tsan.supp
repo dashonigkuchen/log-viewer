@@ -1,0 +1,7 @@
+# ThreadSanitizer suppressions (docs/DEVELOPMENT.md).
+#
+# Qt is not built with TSan, so TSan cannot see the mutex in Qt's posted-event queue: an event
+# allocated by a worker in QMetaObject::invokeMethod(..., Qt::QueuedConnection) and deleted by
+# the UI thread in sendPostedEvents is reported as a race. Our own shared state is protected by
+# std::mutex and stays fully checked.
+race:QCoreApplicationPrivate::sendPostedEvents
