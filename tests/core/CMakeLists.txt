@@ -1,4 +1,4 @@
-add_executable(lv_core_tests decode_test.cpp encoding_test.cpp line_index_test.cpp line_splitter_test.cpp log_test.cpp sorted_u64_sequence_test.cpp util_test.cpp version_test.cpp)
+add_executable(lv_core_tests decode_test.cpp encoding_test.cpp line_index_test.cpp line_splitter_test.cpp literal_matcher_test.cpp log_test.cpp sorted_u64_sequence_test.cpp util_test.cpp version_test.cpp)
 
 target_link_libraries(lv_core_tests PRIVATE lv::core lv::compile_options Catch2::Catch2WithMain)
 

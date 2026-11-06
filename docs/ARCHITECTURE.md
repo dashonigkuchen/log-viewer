@@ -80,7 +80,7 @@ All in namespace `lv::core`. Every module has its own directory under `src/core/
 
 ### 3.6 `search/` – matching and filtering
 
-- `Matcher` interface: `bool matches(std::string_view line, MatchScratch&) const` and `void collectRanges(std::string_view line, std::vector<ByteRange>&) const` (for highlighting). Matchers are immutable and shared between threads; per-thread mutable state lives in `MatchScratch` (for example PCRE2 match data and JIT stack).
+- `Matcher` interface: `bool matches(std::string_view line, MatchScratch&) const` and `void collectRanges(std::string_view line, MatchScratch&, std::vector<MatchRange>&) const` (for highlighting; the scratch is needed by PCRE2). Matchers are immutable and shared between threads; per-thread mutable state lives in `MatchScratch` (for example PCRE2 match data and JIT stack).
 - `LiteralMatcher`: case-sensitive via `std::boyer_moore_horspool_searcher` or `memchr`-based search; case-insensitive ASCII fast path; non-ASCII case-insensitive literals are compiled to a PCRE2 pattern.
 - `RegexMatcher` (PCRE2, 8-bit library, `PCRE2_UTF` for UTF-8 input, JIT compiled, `PCRE2_NO_UTF_CHECK` after the line was validated or sanitized). Match and depth limits are set (F-ROB-3); lines exceeding them count as "skipped".
 - `BoolExpr`: tokenizer + recursive descent parser for SPEC §5.1 producing an AST (`And`, `Or`, `Not`, `Term`). Errors carry a character position. Evaluation short-circuits; cheap literal terms are evaluated before regex terms where semantics allow.

@@ -165,7 +165,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
 
 Goal: the filtered view with literal, regex, and boolean filters, running on all cores, plus filter history and quick find.
 
-- [ ] **M3-01 Matcher interface and LiteralMatcher** — Depends on: M1-01
+- [x] **M3-01 Matcher interface and LiteralMatcher** — Depends on: M1-01 (PR #32)
   - Scope: `src/core/search/matcher.h`, `literal_matcher.cpp` (ARCHITECTURE §3.6), case-insensitive ASCII path, whole word option.
   - Done when: table tests incl. empty pattern (matches everything), patterns longer than line, case folding of ASCII, whole-word boundaries (underscore and digits count as word chars), `collectRanges` returns all non-overlapping matches.
 
