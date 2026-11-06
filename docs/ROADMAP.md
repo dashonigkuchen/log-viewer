@@ -37,7 +37,7 @@ Goal: an empty but complete project: builds on Linux and Windows, tests run, CI 
   - Done when: CI is green on the PR; a second push to the PR shows cache hits (paste timings into the PR); total runtime of `ci.yml` with warm caches ≤ 15 min.
   - [Owner] After merge: add a ruleset for `main` requiring PRs and the status checks `linux-gcc`, `linux-clang-asan`, `format-and-tidy` (with `docs` allowed to satisfy docs-only PRs — the agent documents the exact setup in the PR).
 
-- [x] **M0-04 Windows CI and portable package** — Depends on: M0-03 **[Windows]** (PR #5; owner start test pending)
+- [x] **M0-04 Windows CI and portable package** — Depends on: M0-03 **[Windows]** (PR #5; owner start test done in M2-09)
   - Scope: `.github/workflows/ci-windows.yml` (triggers from `DEVELOPMENT.md` §6), MSVC release build via presets, tests, `cmake --install` + `windeployqt` into `dist/`, upload zip artifact (retention 7 days). `src/app/resources/logviewer.rc` with `VERSIONINFO` generated from the CMake project version, `src/app/resources/logviewer.manifest` (longPathAware, PerMonitorV2, `activeCodePage` UTF-8, supportedOS Windows 10/11), placeholder icon.
   - Done when: Windows job green; the artifact zip contains `logviewer.exe` with version info visible in Explorer properties.
   - [Owner] Download the artifact, start `logviewer.exe` on Windows 11, confirm an (empty) window opens.
@@ -153,7 +153,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/model/settings.cpp` (typed `QSettings` wrapper with schema version, portable mode detection F-SET-2), font family/size, zoom shortcuts (F-VIEW-3), tab width.
   - Done when: settings round-trip tests in a temp dir; portable mode uses the exe directory when `portable.ini` exists (test with a fake app dir).
 
-- [ ] **M2-09 First Windows preview build** — Depends on: M2-05b, M2-07, M2-08, M0-04 **[Windows] [Owner]**
+- [x] **M2-09 First Windows preview build** — Depends on: M2-05b, M2-07, M2-08, M0-04 **[Windows] [Owner]** (PR #31)
   - Scope: fix whatever the Windows build reveals; README "Try it" section for the artifact.
   - Done when: Windows CI artifact works; owner opens a real 50 MB log on Windows 11 and reports feedback; feedback is added to `HANDOFF.md` and, where needed, as new roadmap steps.
 
