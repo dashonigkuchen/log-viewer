@@ -145,7 +145,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/ui/document_tab.cpp` (only the main view for now), `MainWindow` open file (`Ctrl+O`), drag and drop, command line files (F-FILE-1), tabs (F-TAB-1, F-TAB-2 incl. reorder and keyboard switching), tab context menu (F-TAB-4), status bar (F-TAB-6), progress indicator in tab (F-TAB-3 indexing part).
   - Done when: Qt Tests open two fixture files via the API used by drag and drop and command line, verify tab titles/tooltips, opening the same path twice activates the existing tab, closing tabs releases documents.
 
-- [ ] **M2-07 Recent files and encoding menu** — Depends on: M2-06
+- [x] **M2-07 Recent files and encoding menu** — Depends on: M2-06 (PR #29)
   - Scope: `src/model/recent_files.cpp` (F-FILE-9), File → Recent menu, View → Encoding menu (F-ENC-3), Reload (`F5`).
   - Done when: tests for recent list ordering, deduplication, limit 20, missing files disabled; encoding switch re-indexes and changes displayed text of a CP1252 fixture.
 

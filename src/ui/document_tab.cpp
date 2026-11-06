@@ -47,7 +47,51 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
                 emit statusChanged();
             });
     connect(m_view, &LogView::currentRowChanged, this, &DocumentTab::statusChanged);
+    connect(m_document.get(), &model::Document::stateChanged, this,
+            [this](model::Document::State state) {
+                if (state == model::Document::State::kReady) {
+                    restorePosition();
+                }
+            });
     m_document->open();
+}
+
+void DocumentTab::rememberPosition()
+{
+    if (m_restoreTop) {
+        return;  // a reload is already pending; keep the original position
+    }
+    m_restoreTop = m_view->topRow();
+    m_restoreCurrent = m_view->currentRow();
+}
+
+void DocumentTab::restorePosition()
+{
+    if (!m_restoreTop) {
+        return;
+    }
+    // Rows that no longer exist are clamped by the view.
+    if (m_restoreCurrent) {
+        m_view->setCurrentRow(*m_restoreCurrent);
+    }
+    m_view->scrollToRow(*m_restoreTop);
+    m_restoreTop.reset();
+    m_restoreCurrent.reset();
+}
+
+void DocumentTab::reload()
+{
+    rememberPosition();
+    m_document->reload();
+}
+
+void DocumentTab::setEncodingOverride(std::optional<core::Encoding> encoding)
+{
+    if (encoding == m_document->encodingOverride()) {
+        return;
+    }
+    rememberPosition();
+    m_document->setEncodingOverride(encoding);
 }
 
 DocumentTab::~DocumentTab()
