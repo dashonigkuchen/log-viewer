@@ -17,6 +17,36 @@ A fast, native desktop log viewer for large text log files, written in C++20 and
 
 See [docs/VISION.md](docs/VISION.md) for the full scope and [docs/SPEC.md](docs/SPEC.md) for the detailed behavior.
 
+## Try it
+
+There is no release yet. Preview builds for Windows 11 (x64) are produced by CI:
+
+1. Open the latest successful [CI Windows run on `main`](https://github.com/dashonigkuchen/log-viewer/actions/workflows/ci-windows.yml?query=branch%3Amain+is%3Asuccess) (requires access to this repository).
+2. Download the artifact `LogViewer-<version>-<sha>-windows-x64` (kept for 7 days) and unzip it.
+3. Start `logviewer.exe`. The executable is not signed yet, so SmartScreen may ask: choose "More info", then "Run anyway".
+4. Open a log file with `Ctrl+O`, drag and drop, or `logviewer.exe path\to\file.log`.
+
+Put an empty `portable.ini` next to `logviewer.exe` to keep settings in that folder instead of `%APPDATA%\LogViewer`.
+
+To generate a test log of about 60 MB in PowerShell:
+
+```powershell
+$path = "$env:USERPROFILE\Desktop\test.log"
+$w = [System.IO.StreamWriter]::new($path, $false, [System.Text.UTF8Encoding]::new($false))
+$levels = 'INFO','INFO','INFO','DEBUG','WARN','ERROR'
+$rnd = [Random]::new(42)
+$t = [datetime]'2026-11-06 08:00:00'
+for ($i = 0; $i -lt 500000; $i++) {
+  $t = $t.AddMilliseconds($rnd.Next(1, 50))
+  $lvl = $levels[$rnd.Next($levels.Count)]
+  $line = "{0:yyyy-MM-dd HH:mm:ss.fff} [{1,-5}] [thread-{2}] OrderService - Processed request id={3} duration={4}ms" -f $t, $lvl, $rnd.Next(1,16), $i, $rnd.Next(1,900)
+  $w.WriteLine($line)
+}
+$w.Close()
+```
+
+Filtering (M3) and live tailing (M4) are not available yet; see [the roadmap](docs/ROADMAP.md).
+
 ## How this project is built
 
 This project is developed almost entirely by AI coding agents (mainly [Hermes Agent](https://github.com/NousResearch/hermes-agent), sometimes Claude Code). A human owner sets the direction, reviews, and tests.
