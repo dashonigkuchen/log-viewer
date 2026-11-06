@@ -177,7 +177,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `bool_expr.cpp`: tokenizer, recursive descent parser for SPEC §5.1, AST, evaluator with short-circuit, `collectRanges` for positive terms only, error messages with character positions.
   - Done when: parser tests for precedence, parentheses, escapes, keyword case-insensitivity, all error cases (unterminated literal/regex, missing operand, unbalanced parentheses, unknown flag); evaluator truth-table tests; property test comparing evaluator with a naive reference over random expressions and lines.
 
-- [ ] **M3-04 Query compilation** — Depends on: M3-03
+- [x] **M3-04 Query compilation** — Depends on: M3-03 (PR #35)
   - Scope: `query.h/.cpp`: `Query` (text, mode Literal/Regex/Boolean, case sensitive, whole word, invert) → `CompiledQuery`; equality and hashing (for history and caching).
   - Done when: tests for every mode/option combination and invert semantics.
 
