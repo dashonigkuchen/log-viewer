@@ -3,6 +3,7 @@
 #include "model/document.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
+#include "model/settings.h"
 #include "ui/document_tab.h"
 #include "ui/log_view.h"
 
@@ -16,6 +17,7 @@
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QKeySequence>
 #include <QLabel>
 #include <QMenu>
@@ -129,6 +131,35 @@ void MainWindow::createMenus()
 
     QMenu* viewMenu = menuBar()->addMenu(QStringLiteral("&View"));
     viewMenu->setObjectName(QStringLiteral("menuView"));
+    QAction* zoomIn = viewMenu->addAction(QStringLiteral("Zoom &In"));
+    zoomIn->setObjectName(QStringLiteral("actionZoomIn"));
+    zoomIn->setShortcuts({QKeySequence::ZoomIn, QKeySequence(Qt::CTRL | Qt::Key_Equal)});
+    connect(zoomIn, &QAction::triggered, this, [this] { changeZoom(1); });
+    QAction* zoomOut = viewMenu->addAction(QStringLiteral("Zoom &Out"));
+    zoomOut->setObjectName(QStringLiteral("actionZoomOut"));
+    zoomOut->setShortcut(QKeySequence::ZoomOut);
+    connect(zoomOut, &QAction::triggered, this, [this] { changeZoom(-1); });
+    QAction* zoomReset = viewMenu->addAction(QStringLiteral("&Reset Zoom"));
+    zoomReset->setObjectName(QStringLiteral("actionZoomReset"));
+    zoomReset->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_0));
+    connect(zoomReset, &QAction::triggered, this, [this] {
+        if (m_settings != nullptr) {
+            m_settings->setZoom(0);
+        }
+    });
+    m_lineNumbersAction = viewMenu->addAction(QStringLiteral("&Line Numbers"));
+    m_lineNumbersAction->setObjectName(QStringLiteral("actionLineNumbers"));
+    m_lineNumbersAction->setCheckable(true);
+    m_lineNumbersAction->setChecked(true);
+    connect(m_lineNumbersAction, &QAction::toggled, this, [this](bool visible) {
+        if (m_settings != nullptr) {
+            m_settings->setLineNumbersVisible(visible);
+        } else {
+            applyViewSettings();
+        }
+    });
+    viewMenu->addSeparator();
+
     m_encodingMenu = viewMenu->addMenu(QStringLiteral("&Encoding"));
     m_encodingMenu->setObjectName(QStringLiteral("menuEncoding"));
     m_encodingGroup = new QActionGroup(this);
@@ -166,6 +197,61 @@ void MainWindow::createMenus()
 void MainWindow::setRecentFiles(model::RecentFiles* recent)
 {
     m_recent = recent;
+}
+
+void MainWindow::setSettings(model::Settings* settings)
+{
+    if (m_settings != nullptr) {
+        disconnect(m_settings, nullptr, this, nullptr);
+    }
+    m_settings = settings;
+    if (m_settings != nullptr) {
+        connect(m_settings, &model::Settings::viewSettingsChanged, this,
+                qOverload<>(&MainWindow::applyViewSettings));
+        m_lineNumbersAction->setChecked(m_settings->lineNumbersVisible());
+    }
+    applyViewSettings();
+}
+
+QFont MainWindow::viewFont() const
+{
+    QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    if (m_settings != nullptr) {
+        if (!m_settings->fontFamily().isEmpty()) {
+            font.setFamily(m_settings->fontFamily());
+        }
+        font.setPointSize(m_settings->effectiveFontSize());
+    }
+    return font;
+}
+
+void MainWindow::changeZoom(int delta)
+{
+    if (m_settings != nullptr) {
+        m_settings->setZoom(m_settings->zoom() + delta);
+    }
+}
+
+void MainWindow::applyViewSettings()
+{
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        applyViewSettings(documentTab(i));
+    }
+}
+
+void MainWindow::applyViewSettings(DocumentTab* tab)
+{
+    if (tab == nullptr) {
+        return;
+    }
+    LogView* view = tab->mainView();
+    if (m_settings != nullptr) {
+        view->setFont(viewFont());
+        view->setTabWidth(m_settings->tabWidth());
+        view->setLineNumbersVisible(m_settings->lineNumbersVisible());
+    } else {
+        view->setLineNumbersVisible(m_lineNumbersAction->isChecked());
+    }
 }
 
 void MainWindow::updateRecentMenu()
@@ -243,6 +329,7 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
             updateStatus();
         }
     });
+    applyViewSettings(tab);
     m_tabs->setCurrentIndex(index);
     updateEncodingMenu();
     tab->setFocus();

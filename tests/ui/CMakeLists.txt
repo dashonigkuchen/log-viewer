@@ -64,3 +64,11 @@ add_test(NAME ui.MainWindowRecent COMMAND lv_ui_recent_tests -o "-,txt")
 set_tests_properties(
     ui.MainWindowRecent PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
 )
+
+qt_add_executable(lv_ui_settings_tests main_window_settings_test.cpp)
+set_target_properties(lv_ui_settings_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_settings_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
+add_test(NAME ui.MainWindowSettings COMMAND lv_ui_settings_tests -o "-,txt")
+set_tests_properties(
+    ui.MainWindowSettings PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
+)

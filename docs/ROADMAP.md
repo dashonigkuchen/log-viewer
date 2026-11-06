@@ -149,7 +149,7 @@ Goal: a usable read-only viewer with tabs (no filtering yet). First build the ow
   - Scope: `src/model/recent_files.cpp` (F-FILE-9), File → Recent menu, View → Encoding menu (F-ENC-3), Reload (`F5`).
   - Done when: tests for recent list ordering, deduplication, limit 20, missing files disabled; encoding switch re-indexes and changes displayed text of a CP1252 fixture.
 
-- [ ] **M2-08 Font, zoom, and minimal settings** — Depends on: M2-06
+- [x] **M2-08 Font, zoom, and minimal settings** — Depends on: M2-06 (PR #30)
   - Scope: `src/model/settings.cpp` (typed `QSettings` wrapper with schema version, portable mode detection F-SET-2), font family/size, zoom shortcuts (F-VIEW-3), tab width.
   - Done when: settings round-trip tests in a temp dir; portable mode uses the exe directory when `portable.ini` exists (test with a fake app dir).
 
