@@ -49,7 +49,8 @@ TEST_CASE("thread pool default size", "[concurrency][pool]")
 TEST_CASE("stop token cancels running and queued tasks", "[concurrency][pool]")
 {
     ThreadPool pool(1);
-    const std::stop_source search;
+    // NOLINTNEXTLINE(misc-const-correctness): request_stop() is non-const in MSVC's STL
+    std::stop_source search;
     std::latch running(1);
     std::atomic<bool> sawStopWhileRunning{false};
     std::atomic<bool> queuedSawStop{false};
@@ -80,8 +81,10 @@ TEST_CASE("stop token cancels running and queued tasks", "[concurrency][pool]")
 TEST_CASE("other tasks are not affected by a stopped search", "[concurrency][pool]")
 {
     ThreadPool pool(2);
-    const std::stop_source a;
-    const std::stop_source b;
+    // NOLINTNEXTLINE(misc-const-correctness): request_stop() is non-const in MSVC's STL
+    std::stop_source a;
+    // NOLINTNEXTLINE(misc-const-correctness): request_stop() is non-const in MSVC's STL
+    std::stop_source b;
     a.request_stop();
     std::atomic<bool> aStopped{false};
     std::atomic<bool> bStopped{true};
