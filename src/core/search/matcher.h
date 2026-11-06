@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -37,6 +38,10 @@ public:
 class MatchScratch
 {
 public:
+    // Lines that could not be evaluated (regex limits, invalid UTF-8; F-ROB-3). Incremented by
+    // Matcher::matches, read and reset by the search engine.
+    std::uint64_t skippedLines = 0;
+
     // Returns the data stored for `owner`, creating it with `create()` on first use.
     template <typename T, typename Create>
     T& get(const void* owner, Create&& create)

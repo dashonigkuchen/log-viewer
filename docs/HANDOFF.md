@@ -53,7 +53,8 @@ Current state of the project and notes for the next session. Update this file in
 - Owner test data on Windows: no `loggen` in the package; the README shows a PowerShell snippet. Build each line into a variable before `WriteLine` (comma-separated `-f` arguments inside a method call are parsed as method arguments).
 - **M2 is complete.**
 - M3-01 done: `src/core/search/matcher.h` (`MatchRange`, `ScratchData`, `MatchScratch::get<T>(owner, create)` keyed by matcher address, abstract `Matcher::matches` / `collectRanges(line, scratch, out)`), `literal_matcher.{h,cpp}` (`LiteralOptions{caseSensitive=false, wholeWord=false}`; case-sensitive via `string_view::find`, case-insensitive ASCII via dual `memchr` + folded compare; word chars = ASCII alnum, `_`, and every byte ≥ 0x80; empty pattern matches all lines with no ranges; `isAscii()` for M3-04 routing of non-ASCII case-insensitive patterns to regex).
-- Next step: **M3-02 RegexMatcher (PCRE2)** (M3-05 thread pool is also unblocked).
+- M3-02 done: `core/search/regex_matcher.{h,cpp}`: `RegexMatcher::compile(pattern, RegexOptions{caseSensitive=false, matchLimit=1e6, depthLimit=1e4})` → `tl::expected<unique_ptr, PatternError{message, offset}>`; flags `PCRE2_UTF|PCRE2_UCP` (+`CASELESS`), JIT complete mode (`jitCompiled()` checks `PCRE2_INFO_JITSIZE`). Per-thread `Scratch` (match data, match context with limits, 32 KiB–1 MiB JIT stack) lives in `MatchScratch`. `match()` → `RegexOutcome{kNoMatch,kMatch,kSkipped}`; `matches()` counts skipped lines in `MatchScratch::skippedLines` (limits or invalid UTF-8). `collectRanges` skips empty matches and advances by a code point. PCRE2 offsets for errors point where PCRE2 detected the problem (for `*abc` that is 1, not 0). `(a+)+$` on 5000 chars is skipped in well under 100 ms.
+- Next step: **M3-03 Boolean expression parser and evaluator** (M3-05 thread pool is also unblocked).
 
 ## Environment notes
 

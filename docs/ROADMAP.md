@@ -169,7 +169,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `src/core/search/matcher.h`, `literal_matcher.cpp` (ARCHITECTURE §3.6), case-insensitive ASCII path, whole word option.
   - Done when: table tests incl. empty pattern (matches everything), patterns longer than line, case folding of ASCII, whole-word boundaries (underscore and digits count as word chars), `collectRanges` returns all non-overlapping matches.
 
-- [ ] **M3-02 RegexMatcher (PCRE2)** — Depends on: M3-01
+- [x] **M3-02 RegexMatcher (PCRE2)** — Depends on: M3-01 (PR #33)
   - Scope: `regex_matcher.cpp`: compile with UTF and JIT, per-thread scratch, case-insensitive option, match limits (F-ROB-3) with "skipped" reporting, compile errors with offset.
   - Done when: tests: common log patterns, Unicode case folding (`/über/i` matches `ÜBER`), invalid regex error and position, catastrophic pattern `(a+)+$` on a long line returns "skipped" within 100 ms, JIT used when available (assert via `pcre2_pattern_info`).
 
