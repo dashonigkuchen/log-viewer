@@ -2,13 +2,16 @@
 
 #include "model/document.h"
 #include "model/model_info.h"
+#include "model/recent_files.h"
 #include "ui/document_tab.h"
 #include "ui/log_view.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -35,6 +38,7 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
     , m_tabs(new QTabWidget(this))
     , m_status(new QLabel(this))
+    , m_recent(new model::RecentFiles(this))
 {
     setObjectName(QStringLiteral("mainWindow"));
     setWindowTitle(QStringLiteral("Log Viewer %1").arg(lv::model::versionString()));
@@ -49,6 +53,7 @@ MainWindow::MainWindow(QWidget* parent)
     setCentralWidget(m_tabs);
     connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
     connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateStatus);
+    connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateEncodingMenu);
     connect(m_tabs->tabBar(), &QTabBar::customContextMenuRequested, this,
             &MainWindow::showTabContextMenu);
     // Middle click closes a tab (F-TAB-2).
@@ -69,6 +74,19 @@ void MainWindow::createMenus()
     openAction->setObjectName(QStringLiteral("actionOpen"));
     openAction->setShortcut(QKeySequence::Open);
     connect(openAction, &QAction::triggered, this, &MainWindow::showOpenDialog);
+
+    m_recentMenu = fileMenu->addMenu(QStringLiteral("Recent &Files"));
+    m_recentMenu->setObjectName(QStringLiteral("menuRecentFiles"));
+    connect(m_recentMenu, &QMenu::aboutToShow, this, &MainWindow::updateRecentMenu);
+
+    QAction* reloadAction = fileMenu->addAction(QStringLiteral("&Reload"));
+    reloadAction->setObjectName(QStringLiteral("actionReload"));
+    reloadAction->setShortcut(QKeySequence(Qt::Key_F5));
+    connect(reloadAction, &QAction::triggered, this, [this] {
+        if (auto* tab = currentDocumentTab()) {
+            tab->reload();
+        }
+    });
 
     QAction* closeAction = fileMenu->addAction(QStringLiteral("&Close"));
     closeAction->setObjectName(QStringLiteral("actionClose"));
@@ -109,6 +127,33 @@ void MainWindow::createMenus()
     });
     addAction(previousTab);
 
+    QMenu* viewMenu = menuBar()->addMenu(QStringLiteral("&View"));
+    viewMenu->setObjectName(QStringLiteral("menuView"));
+    m_encodingMenu = viewMenu->addMenu(QStringLiteral("&Encoding"));
+    m_encodingMenu->setObjectName(QStringLiteral("menuEncoding"));
+    m_encodingGroup = new QActionGroup(this);
+    m_encodingGroup->setExclusive(true);
+    auto addEncoding = [this](const QString& text, std::optional<core::Encoding> encoding) {
+        QAction* action = m_encodingMenu->addAction(text);
+        action->setCheckable(true);
+        action->setData(encoding ? QVariant(static_cast<int>(*encoding)) : QVariant());
+        m_encodingGroup->addAction(action);
+        connect(action, &QAction::triggered, this, [this, encoding] {
+            if (auto* tab = currentDocumentTab()) {
+                tab->setEncodingOverride(encoding);
+            }
+            updateEncodingMenu();
+        });
+    };
+    addEncoding(QStringLiteral("&Auto-detect"), std::nullopt);
+    m_encodingMenu->addSeparator();
+    for (const auto encoding :
+         {core::Encoding::kUtf8, core::Encoding::kUtf16Le, core::Encoding::kUtf16Be,
+          core::Encoding::kWindows1252, core::Encoding::kIso88591}) {
+        addEncoding(QString::fromUtf8(core::displayName(encoding).data()), encoding);
+    }
+    updateEncodingMenu();
+
     QMenu* helpMenu = menuBar()->addMenu(QStringLiteral("&Help"));
     helpMenu->setObjectName(QStringLiteral("menuHelp"));
 
@@ -116,6 +161,55 @@ void MainWindow::createMenus()
     aboutAction->setObjectName(QStringLiteral("actionAbout"));
     aboutAction->setMenuRole(QAction::AboutRole);
     connect(aboutAction, &QAction::triggered, this, &MainWindow::showAbout);
+}
+
+void MainWindow::setRecentFiles(model::RecentFiles* recent)
+{
+    m_recent = recent;
+}
+
+void MainWindow::updateRecentMenu()
+{
+    m_recentMenu->clear();
+    if (m_recent == nullptr || m_recent->paths().isEmpty()) {
+        m_recentMenu->addAction(QStringLiteral("(empty)"))->setEnabled(false);
+        return;
+    }
+    int number = 1;
+    for (const QString& path : m_recent->paths()) {
+        const QString label = number <= 9 ? QStringLiteral("&%1 %2").arg(number).arg(path)
+                                          : QStringLiteral("%1 %2").arg(number).arg(path);
+        QAction* action = m_recentMenu->addAction(QDir::toNativeSeparators(label));
+        action->setData(path);
+        action->setEnabled(QFileInfo::exists(path));  // missing files are shown disabled
+        connect(action, &QAction::triggered, this, [this, path] { openFiles({path}); });
+        ++number;
+    }
+    m_recentMenu->addSeparator();
+    QAction* removeMissing = m_recentMenu->addAction(QStringLiteral("Remove Missing Files"));
+    removeMissing->setObjectName(QStringLiteral("actionRemoveMissingRecent"));
+    connect(removeMissing, &QAction::triggered, m_recent, &model::RecentFiles::removeMissing);
+    QAction* clear = m_recentMenu->addAction(QStringLiteral("Clear List"));
+    clear->setObjectName(QStringLiteral("actionClearRecent"));
+    connect(clear, &QAction::triggered, m_recent, &model::RecentFiles::clear);
+}
+
+void MainWindow::updateEncodingMenu()
+{
+    const auto* tab = currentDocumentTab();
+    m_encodingMenu->setEnabled(tab != nullptr);
+    if (tab == nullptr) {
+        return;
+    }
+    const auto current = tab->document().encodingOverride();
+    for (QAction* action : m_encodingGroup->actions()) {
+        const QVariant value = action->data();
+        bool matches = !value.isValid();
+        if (current) {
+            matches = value.isValid() && value.toInt() == static_cast<int>(*current);
+        }
+        action->setChecked(matches);
+    }
 }
 
 DocumentTab* MainWindow::documentTab(int index) const
@@ -137,6 +231,9 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
             return tab;
         }
     }
+    if (m_recent != nullptr) {
+        m_recent->add(QString::fromStdString(normalized.string()));
+    }
     auto* tab = new DocumentTab(normalized, m_tabs);
     const int index = m_tabs->addTab(tab, tab->title());
     m_tabs->setTabToolTip(index, tab->toolTip());
@@ -147,6 +244,7 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
         }
     });
     m_tabs->setCurrentIndex(index);
+    updateEncodingMenu();
     tab->setFocus();
     updateTabState(tab);
     updateStatus();
@@ -242,7 +340,7 @@ void MainWindow::showTabContextMenu(const QPoint& position)
         QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
 #endif
     });
-    menu.addAction(QStringLiteral("Reload"), this, [tab] { tab->document().reload(); });
+    menu.addAction(QStringLiteral("Reload"), this, [tab] { tab->reload(); });
     menu.addSeparator();
     menu.addAction(QStringLiteral("Close"), this, [this, tab] { closeTab(m_tabs->indexOf(tab)); });
     menu.addAction(QStringLiteral("Close Others"), this,

@@ -10,6 +10,8 @@ add_library(
     line_cache.h
     line_source.h
     model_info.cpp
+    recent_files.cpp
+    recent_files.h
     text_copy.cpp
     text_copy.h
 )

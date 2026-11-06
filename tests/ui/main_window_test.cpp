@@ -35,7 +35,7 @@ private slots:
         const lv::ui::MainWindow window;
         QVERIFY(window.findChild<QMenu*>(QStringLiteral("menuFile")) != nullptr);
         QVERIFY(window.findChild<QMenu*>(QStringLiteral("menuHelp")) != nullptr);
-        QCOMPARE(window.menuBar()->actions().size(), 2);
+        QCOMPARE(window.menuBar()->actions().size(), 3);  // File, View, Help
     }
 
     static void openActionHasTheStandardShortcut()

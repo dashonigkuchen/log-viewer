@@ -6,9 +6,16 @@
 
 #include <filesystem>
 
+class QActionGroup;
 class QLabel;
+class QMenu;
 class QUrl;
 class QTabWidget;
+
+namespace lv::model
+{
+class RecentFiles;
+}
 
 namespace lv::ui
 {
@@ -24,6 +31,19 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget* parent = nullptr);
+
+    // The recent files list shown in File > Recent Files (F-FILE-9). By default the window owns
+    // an in-memory list; the application installs one that is persisted in the settings.
+    void setRecentFiles(model::RecentFiles* recent);
+
+    [[nodiscard]] model::RecentFiles* recentFiles() const noexcept { return m_recent; }
+
+    // Rebuilds File > Recent Files (called before the menu is shown).
+    void updateRecentMenu();
+
+    [[nodiscard]] QMenu* recentMenu() const noexcept { return m_recentMenu; }
+
+    [[nodiscard]] QMenu* encodingMenu() const noexcept { return m_encodingMenu; }
 
     [[nodiscard]] QTabWidget* tabWidget() const noexcept { return m_tabs; }
 
@@ -62,9 +82,14 @@ private:
     void showTabContextMenu(const QPoint& position);
     void updateTabState(DocumentTab* tab);
     void updateStatus();
+    void updateEncodingMenu();
 
     QTabWidget* m_tabs = nullptr;
     QLabel* m_status = nullptr;
+    model::RecentFiles* m_recent = nullptr;
+    QMenu* m_recentMenu = nullptr;
+    QMenu* m_encodingMenu = nullptr;
+    QActionGroup* m_encodingGroup = nullptr;
 };
 
 }  // namespace lv::ui

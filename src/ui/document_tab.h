@@ -1,10 +1,14 @@
 #pragma once
 
+#include "core/encoding/encoding.h"
+#include "core/util/strong_types.h"
+
 #include <QString>
 #include <QWidget>
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 namespace lv::model
 {
@@ -43,6 +47,12 @@ public:
     [[nodiscard]] QString title() const;    // file name
     [[nodiscard]] QString toolTip() const;  // full native path
 
+    // Re-indexes the file and restores the top and current line afterwards (F-FILE-8).
+    void reload();
+
+    // Overrides the encoding (nullopt = detect) and re-indexes, keeping the position (F-ENC-3).
+    void setEncodingOverride(std::optional<core::Encoding> encoding);
+
     // Status bar text: size, lines, encoding, current line, indexing progress (F-TAB-6).
     [[nodiscard]] QString statusText() const;
 
@@ -57,6 +67,12 @@ private:
     LogView* m_view = nullptr;
     quint64 m_indexedBytes = 0;
     quint64 m_totalBytes = 0;
+
+    // Position to restore once a reload has finished.
+    void rememberPosition();
+    void restorePosition();
+    std::optional<core::LineNumber> m_restoreTop;
+    std::optional<core::LineNumber> m_restoreCurrent;
 };
 
 // Absolute, lexically normalized form of `path` (also resolves symlinks when the file exists).

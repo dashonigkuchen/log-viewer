@@ -2,11 +2,13 @@
 #include "model/app_paths.h"
 #include "model/file_log_sink.h"
 #include "model/model_info.h"
+#include "model/recent_files.h"
 #include "ui/main_window.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QSettings>
 #include <QStringList>
 
 #include <memory>
@@ -52,7 +54,16 @@ int main(int argc, char* argv[])
     lv::core::log(
         lv::core::LogLevel::kInfo,
         QStringLiteral("Log Viewer %1 starting").arg(lv::model::versionString()).toStdString());
+    // Settings file next to the application log (typed settings follow in M2-08).
+    QSettings settings(lv::model::settingsDirectory() + QStringLiteral("/logviewer.ini"),
+                       QSettings::IniFormat);
+    lv::model::RecentFiles recent;
+    recent.load(settings);
+    QObject::connect(&recent, &lv::model::RecentFiles::changed,
+                     [&recent, &settings] { recent.save(settings); });
+
     lv::ui::MainWindow window;
+    window.setRecentFiles(&recent);
     window.show();
     window.openFiles(parser.positionalArguments());  // F-FILE-1
     const int exitCode = QApplication::exec();
