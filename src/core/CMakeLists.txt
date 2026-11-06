@@ -19,7 +19,9 @@ add_library(
     index/sorted_u64_sequence.cpp
     platform/file_common.cpp
     reader/line_reader.cpp
+    search/bool_expr.cpp
     search/literal_matcher.cpp
+    search/literal_term.cpp
     search/regex_matcher.cpp
     $<IF:$<BOOL:${WIN32}>,platform/file_win32.cpp,platform/file_posix.cpp>
     util/assert.cpp

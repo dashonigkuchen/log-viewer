@@ -173,7 +173,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `regex_matcher.cpp`: compile with UTF and JIT, per-thread scratch, case-insensitive option, match limits (F-ROB-3) with "skipped" reporting, compile errors with offset.
   - Done when: tests: common log patterns, Unicode case folding (`/über/i` matches `ÜBER`), invalid regex error and position, catastrophic pattern `(a+)+$` on a long line returns "skipped" within 100 ms, JIT used when available (assert via `pcre2_pattern_info`).
 
-- [ ] **M3-03 Boolean expression parser and evaluator** — Depends on: M3-02
+- [x] **M3-03 Boolean expression parser and evaluator** — Depends on: M3-02 (PR #34)
   - Scope: `bool_expr.cpp`: tokenizer, recursive descent parser for SPEC §5.1, AST, evaluator with short-circuit, `collectRanges` for positive terms only, error messages with character positions.
   - Done when: parser tests for precedence, parentheses, escapes, keyword case-insensitivity, all error cases (unterminated literal/regex, missing operand, unbalanced parentheses, unknown flag); evaluator truth-table tests; property test comparing evaluator with a naive reference over random expressions and lines.
 
