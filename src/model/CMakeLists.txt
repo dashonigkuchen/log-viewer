@@ -12,6 +12,8 @@ add_library(
     model_info.cpp
     recent_files.cpp
     recent_files.h
+    settings.cpp
+    settings.h
     text_copy.cpp
     text_copy.h
 )

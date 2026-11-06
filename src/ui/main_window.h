@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QFont>
 #include <QMainWindow>
 #include <QString>
 #include <QStringList>
@@ -15,7 +16,8 @@ class QTabWidget;
 namespace lv::model
 {
 class RecentFiles;
-}
+class Settings;
+}  // namespace lv::model
 
 namespace lv::ui
 {
@@ -37,6 +39,15 @@ public:
     void setRecentFiles(model::RecentFiles* recent);
 
     [[nodiscard]] model::RecentFiles* recentFiles() const noexcept { return m_recent; }
+
+    // View settings (font, zoom, tab width, line numbers; F-VIEW-3, F-SET-1) applied to every
+    // log view. Without settings, views use their defaults and zoom is kept in memory only.
+    void setSettings(model::Settings* settings);
+
+    [[nodiscard]] model::Settings* settings() const noexcept { return m_settings; }
+
+    // Font used by log views: the settings' family (or the system fixed font) at the zoomed size.
+    [[nodiscard]] QFont viewFont() const;
 
     // Rebuilds File > Recent Files (called before the menu is shown).
     void updateRecentMenu();
@@ -83,6 +94,9 @@ private:
     void updateTabState(DocumentTab* tab);
     void updateStatus();
     void updateEncodingMenu();
+    void applyViewSettings();
+    void applyViewSettings(DocumentTab* tab);
+    void changeZoom(int delta);
 
     QTabWidget* m_tabs = nullptr;
     QLabel* m_status = nullptr;
@@ -90,6 +104,8 @@ private:
     QMenu* m_recentMenu = nullptr;
     QMenu* m_encodingMenu = nullptr;
     QActionGroup* m_encodingGroup = nullptr;
+    model::Settings* m_settings = nullptr;
+    QAction* m_lineNumbersAction = nullptr;
 };
 
 }  // namespace lv::ui
