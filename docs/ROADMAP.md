@@ -181,7 +181,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `query.h/.cpp`: `Query` (text, mode Literal/Regex/Boolean, case sensitive, whole word, invert) → `CompiledQuery`; equality and hashing (for history and caching).
   - Done when: tests for every mode/option combination and invert semantics.
 
-- [ ] **M3-05 Thread pool** — Depends on: M1-01
+- [x] **M3-05 Thread pool** — Depends on: M1-01 (PR #36)
   - Scope: `src/core/concurrency/thread_pool.cpp` (ARCHITECTURE §3.6), configurable size (0 = auto).
   - Done when: tests: tasks run, stop tokens cancel queued and running tasks cooperatively, destruction joins, no deadlock with more tasks than threads; runs clean under TSan (nightly).
 

@@ -11,6 +11,7 @@ find_package(pcre2 CONFIG REQUIRED)
 add_library(
     lv_core STATIC
     version.cpp
+    concurrency/thread_pool.cpp
     encoding/decode.cpp
     encoding/encoding.cpp
     index/indexer.cpp
