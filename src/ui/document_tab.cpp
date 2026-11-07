@@ -6,6 +6,7 @@
 #include "model/filtered_document.h"
 #include "model/filtered_line_source.h"
 #include "model/search_pool.h"
+#include "ui/filter_bar.h"
 #include "ui/log_view.h"
 
 #include <QDir>
@@ -37,8 +38,16 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_filteredSource(std::make_unique<model::FilteredLineSource>(*m_filter, *m_source))
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
-    , m_filteredView(new LogView(m_splitter))
 {
+    auto* pane = new QWidget(m_splitter);
+    pane->setObjectName(QStringLiteral("filterPane"));
+    m_filterBar = new FilterBar(*m_filter, pane);
+    m_filteredView = new LogView(pane);
+    auto* paneLayout = new QVBoxLayout(pane);
+    paneLayout->setContentsMargins(0, 0, 0, 0);
+    paneLayout->setSpacing(0);
+    paneLayout->addWidget(m_filterBar);
+    paneLayout->addWidget(m_filteredView, 1);
     m_view->setObjectName(QStringLiteral("mainView"));
     m_view->setLineSource(m_source.get());
     m_filteredView->setObjectName(QStringLiteral("filteredView"));
@@ -46,7 +55,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);
-    m_splitter->addWidget(m_filteredView);
+    m_splitter->addWidget(pane);
     m_splitter->setStretchFactor(0, 3);
     m_splitter->setStretchFactor(1, 1);
     auto* layout = new QVBoxLayout(this);

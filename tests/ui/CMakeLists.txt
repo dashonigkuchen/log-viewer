@@ -80,3 +80,9 @@ add_test(NAME ui.DocumentTabFilter COMMAND lv_ui_filter_tests -o "-,txt")
 set_tests_properties(
     ui.DocumentTabFilter PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}"
 )
+
+qt_add_executable(lv_ui_filter_bar_tests filter_bar_test.cpp)
+set_target_properties(lv_ui_filter_bar_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_filter_bar_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
+add_test(NAME ui.FilterBar COMMAND lv_ui_filter_bar_tests -o "-,txt")
+set_tests_properties(ui.FilterBar PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")

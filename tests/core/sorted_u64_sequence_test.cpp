@@ -206,7 +206,11 @@ TEST_CASE("concurrent readers see a consistent prefix while the writer appends",
         readers.emplace_back([&, r] {
             std::mt19937_64 random(static_cast<std::uint64_t>(r));
             std::vector<std::uint64_t> window(64);
-            while (!done.load(std::memory_order_acquire)) {
+            // Each reader checks at least once after the writer finished, even if it was only
+            // scheduled then (slow CI runners), so `checks` is never zero.
+            bool last = false;
+            while (!last) {
+                last = done.load(std::memory_order_acquire);
                 const std::size_t size = sequence.size();
                 if (size == 0) {
                     continue;

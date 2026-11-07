@@ -5,6 +5,7 @@
 #include "model/recent_files.h"
 #include "model/settings.h"
 #include "ui/document_tab.h"
+#include "ui/filter_bar.h"
 #include "ui/log_view.h"
 
 #include <QAction>
@@ -20,6 +21,7 @@
 #include <QFontDatabase>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -157,6 +159,18 @@ void MainWindow::createMenus()
             m_settings->setLineNumbersVisible(visible);
         } else {
             applyViewSettings();
+        }
+    });
+    viewMenu->addSeparator();
+
+    // Focus the filter field of the current tab (Ctrl+Shift+F; Ctrl+F is the find bar, F-FIND-1).
+    QAction* focusFilter = viewMenu->addAction(QStringLiteral("&Filter..."));
+    focusFilter->setObjectName(QStringLiteral("actionFocusFilter"));
+    focusFilter->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F));
+    connect(focusFilter, &QAction::triggered, this, [this] {
+        if (auto* tab = currentDocumentTab()) {
+            tab->filterBar()->input()->setFocus(Qt::ShortcutFocusReason);
+            tab->filterBar()->input()->selectAll();
         }
     });
     viewMenu->addSeparator();

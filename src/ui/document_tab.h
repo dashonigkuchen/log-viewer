@@ -23,13 +23,14 @@ class FilteredLineSource;
 namespace lv::ui
 {
 
+class FilterBar;
 class LogView;
 
 // One opened file in the main window (ARCHITECTURE §6): owns the Document and its filter, and
 // shows the main view above the filtered view in a splitter (F-FILT-1). Both views follow each
 // other (F-FILT-7): making a filtered row current moves the main view to its line; moving in
-// the main view selects the nearest match at or before the current line. The filter bar joins
-// in M3-09.
+// the main view selects the nearest match at or before the current line. The filter bar sits
+// above the filtered view (pane `filterPane`).
 //
 // Thread-safety: UI thread only.
 class DocumentTab : public QWidget
@@ -49,6 +50,8 @@ public:
     [[nodiscard]] LogView* mainView() const noexcept { return m_view; }
 
     [[nodiscard]] LogView* filteredView() const noexcept { return m_filteredView; }
+
+    [[nodiscard]] FilterBar* filterBar() const noexcept { return m_filterBar; }
 
     [[nodiscard]] model::FilteredDocument& filter() const noexcept { return *m_filter; }
 
@@ -84,6 +87,7 @@ private:
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;
+    FilterBar* m_filterBar = nullptr;
     bool m_syncing = false;  // guards the two-way view synchronization
 
     void syncMainToFiltered(core::LineNumber line);
