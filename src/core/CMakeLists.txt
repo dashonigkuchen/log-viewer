@@ -26,6 +26,7 @@ add_library(
     search/query.cpp
     search/regex_matcher.cpp
     search/search_engine.cpp
+    tail/change_detector.cpp
     $<IF:$<BOOL:${WIN32}>,platform/file_win32.cpp,platform/file_posix.cpp>
     util/assert.cpp
     util/log.cpp
