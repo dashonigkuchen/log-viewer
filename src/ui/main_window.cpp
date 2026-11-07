@@ -26,6 +26,7 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QProcess>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTabBar>
@@ -244,13 +245,14 @@ void MainWindow::applyViewSettings(DocumentTab* tab)
     if (tab == nullptr) {
         return;
     }
-    LogView* view = tab->mainView();
-    if (m_settings != nullptr) {
-        view->setFont(viewFont());
-        view->setTabWidth(m_settings->tabWidth());
-        view->setLineNumbersVisible(m_settings->lineNumbersVisible());
-    } else {
-        view->setLineNumbersVisible(m_lineNumbersAction->isChecked());
+    for (LogView* view : {tab->mainView(), tab->filteredView()}) {
+        if (m_settings != nullptr) {
+            view->setFont(viewFont());
+            view->setTabWidth(m_settings->tabWidth());
+            view->setLineNumbersVisible(m_settings->lineNumbersVisible());
+        } else {
+            view->setLineNumbersVisible(m_lineNumbersAction->isChecked());
+        }
     }
 }
 
@@ -330,6 +332,25 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
         }
     });
     applyViewSettings(tab);
+    if (m_settings != nullptr) {
+        const QByteArray state = m_settings->filterSplitterState();
+        if (!state.isEmpty()) {
+            tab->splitter()->restoreState(state);
+        }
+    }
+    connect(tab, &DocumentTab::splitterMoved, this, [this, tab] {
+        if (m_settings == nullptr) {
+            return;
+        }
+        const QByteArray state = tab->splitter()->saveState();
+        m_settings->setFilterSplitterState(state);
+        // Keep the other tabs in line with the last moved splitter.
+        for (int i = 0; i < m_tabs->count(); ++i) {
+            if (auto* other = documentTab(i); other != nullptr && other != tab) {
+                other->splitter()->restoreState(state);
+            }
+        }
+    });
     m_tabs->setCurrentIndex(index);
     updateEncodingMenu();
     tab->setFocus();

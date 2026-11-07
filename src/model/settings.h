@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 
@@ -62,6 +63,10 @@ public:
     [[nodiscard]] bool lineNumbersVisible() const noexcept { return m_lineNumbers; }
 
     void setLineNumbersVisible(bool visible);
+
+    // Saved QSplitter state between main and filtered view (F-FILT-1); empty if never saved.
+    [[nodiscard]] QByteArray filterSplitterState() const;
+    void setFilterSplitterState(const QByteArray& state);
 
     // Writes pending changes to disk.
     void sync();

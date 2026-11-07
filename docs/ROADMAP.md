@@ -193,7 +193,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `src/model/filtered_document.cpp`: apply/clear filter, cancel previous search on new filter, generation handling, match list, `FilteredLineSource` (original line numbers), progress and match count signals.
   - Done when: model tests: apply → results; apply new filter while running → old results never appear; document reload clears and re-runs filter.
 
-- [ ] **M3-08 Filtered view and synchronization** — Depends on: M3-07, M2-06
+- [x] **M3-08 Filtered view and synchronization** — Depends on: M3-07, M2-06 (PR #39)
   - Scope: `DocumentTab` with splitter (position persisted), filtered `LogView` with original line numbers, sync in both directions (F-FILT-1, F-FILT-7).
   - Done when: Qt Tests: click in filtered view scrolls main view to the line and makes it current; moving in main view selects nearest match at or before it in the filtered view.
 

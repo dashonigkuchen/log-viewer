@@ -111,6 +111,16 @@ void Settings::setLineNumbersVisible(bool visible)
     emit viewSettingsChanged();
 }
 
+QByteArray Settings::filterSplitterState() const
+{
+    return m_store->value(key("View/filterSplitter")).toByteArray();
+}
+
+void Settings::setFilterSplitterState(const QByteArray& state)
+{
+    m_store->setValue(key("View/filterSplitter"), state);
+}
+
 void Settings::sync()
 {
     m_store->sync();

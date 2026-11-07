@@ -720,7 +720,11 @@ int LogView::gutterWidth() const
         return 0;
     }
     const QFontMetricsF metrics(font());
-    const int digits = digitCount(std::max<std::uint64_t>(rowCount().get(), 1));
+    // Rows show original line numbers; the last row has the largest one (ascending sources).
+    const std::uint64_t rows = rowCount().get();
+    const std::uint64_t largest =
+        rows == 0 ? 1 : m_source->originalLineNumber(core::LineNumber(rows - 1)).get() + 1;
+    const int digits = digitCount(largest);
     return static_cast<int>(std::ceil(metrics.horizontalAdvance(QString(digits, u'9')))) +
            (2 * kGutterPadding);
 }
