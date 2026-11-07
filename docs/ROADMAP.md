@@ -189,7 +189,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `search_engine.cpp`: chunking by lines, per-worker reads, UTF-8 conversion for non-UTF-8 documents, reorder buffer, ordered `ResultSink` into a `SortedU64Sequence`, progress, cancellation, line range limit (F-FILT-11 core part), skipped-line counting.
   - Done when: results equal a single-threaded reference on all `loggen` profiles (20 MB) for literal, regex, and boolean queries with 1, 2, and 8 threads; partial results are always an ordered prefix (checked during the run); cancellation leaves a consistent prefix; benchmarks `BM_Search_*` recorded.
 
-- [ ] **M3-07 FilteredDocument** — Depends on: M3-06, M2-01
+- [x] **M3-07 FilteredDocument** — Depends on: M3-06, M2-01 (PR #38)
   - Scope: `src/model/filtered_document.cpp`: apply/clear filter, cancel previous search on new filter, generation handling, match list, `FilteredLineSource` (original line numbers), progress and match count signals.
   - Done when: model tests: apply → results; apply new filter while running → old results never appear; document reload clears and re-runs filter.
 
