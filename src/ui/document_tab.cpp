@@ -5,6 +5,7 @@
 #include "model/document_line_source.h"
 #include "model/filtered_document.h"
 #include "model/filtered_line_source.h"
+#include "model/match_highlighter.h"
 #include "model/search_pool.h"
 #include "ui/filter_bar.h"
 #include "ui/log_view.h"
@@ -36,6 +37,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_source(std::make_unique<model::DocumentLineSource>(*m_document))
     , m_filter(std::make_unique<model::FilteredDocument>(*m_document, model::searchThreadPool()))
     , m_filteredSource(std::make_unique<model::FilteredLineSource>(*m_filter, *m_source))
+    , m_highlighter(std::make_unique<model::MatchHighlighter>(*m_filter))
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
 {
@@ -52,6 +54,8 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_view->setLineSource(m_source.get());
     m_filteredView->setObjectName(QStringLiteral("filteredView"));
     m_filteredView->setLineSource(m_filteredSource.get());
+    m_view->setHighlighter(m_highlighter.get());
+    m_filteredView->setHighlighter(m_highlighter.get());
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);

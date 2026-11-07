@@ -201,7 +201,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `src/ui/filter_bar.cpp`: mode selector, options, apply on Enter, `Esc` restores, Clear, progress, match count, skipped count, inline error with position (F-FILT-2, F-FILT-5, F-FILT-6, F-FILT-10).
   - Done when: Qt Tests for apply/escape/clear, error display for invalid regex and invalid boolean expression, mode switching keeps text.
 
-- [ ] **M3-10 Match highlighting** — Depends on: M3-09
+- [x] **M3-10 Match highlighting** — Depends on: M3-09 (PR #41)
   - Scope: highlight match ranges (positive terms) in both views (F-FILT-8), computed per visible line via `collectRanges`, cached with the line cache.
   - Done when: rendering tests check highlighted cell positions for ASCII, umlauts, tabs, and multiple matches per line.
 

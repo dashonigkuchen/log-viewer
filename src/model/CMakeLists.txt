@@ -13,6 +13,8 @@ add_library(
     line_cache.cpp
     line_cache.h
     line_source.h
+    match_highlighter.cpp
+    match_highlighter.h
     model_info.cpp
     recent_files.cpp
     recent_files.h
