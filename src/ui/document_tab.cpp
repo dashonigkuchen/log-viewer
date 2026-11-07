@@ -3,10 +3,14 @@
 #include "core/encoding/encoding.h"
 #include "model/document.h"
 #include "model/document_line_source.h"
+#include "model/filtered_document.h"
+#include "model/filtered_line_source.h"
+#include "model/search_pool.h"
 #include "ui/log_view.h"
 
 #include <QDir>
 #include <QLocale>
+#include <QSplitter>
 #include <QVBoxLayout>
 
 #include <system_error>
@@ -29,14 +33,29 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_path(normalizedPath(path))
     , m_document(std::make_unique<model::Document>(m_path))
     , m_source(std::make_unique<model::DocumentLineSource>(*m_document))
-    , m_view(new LogView(this))
+    , m_filter(std::make_unique<model::FilteredDocument>(*m_document, model::searchThreadPool()))
+    , m_filteredSource(std::make_unique<model::FilteredLineSource>(*m_filter, *m_source))
+    , m_splitter(new QSplitter(Qt::Vertical, this))
+    , m_view(new LogView(m_splitter))
+    , m_filteredView(new LogView(m_splitter))
 {
     m_view->setObjectName(QStringLiteral("mainView"));
     m_view->setLineSource(m_source.get());
+    m_filteredView->setObjectName(QStringLiteral("filteredView"));
+    m_filteredView->setLineSource(m_filteredSource.get());
+    m_splitter->setObjectName(QStringLiteral("filterSplitter"));
+    m_splitter->setChildrenCollapsible(false);
+    m_splitter->addWidget(m_view);
+    m_splitter->addWidget(m_filteredView);
+    m_splitter->setStretchFactor(0, 3);
+    m_splitter->setStretchFactor(1, 1);
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(m_view);
+    layout->addWidget(m_splitter);
     setFocusProxy(m_view);
+    connect(m_splitter, &QSplitter::splitterMoved, this, &DocumentTab::splitterMoved);
+    connect(m_filteredView, &LogView::currentRowChanged, this, &DocumentTab::syncFilteredToMain);
+    connect(m_view, &LogView::currentRowChanged, this, &DocumentTab::syncMainToFiltered);
 
     connect(m_document.get(), &model::Document::stateChanged, this, &DocumentTab::statusChanged);
     connect(m_document.get(), &model::Document::linesAppended, this, &DocumentTab::statusChanged);
@@ -54,6 +73,33 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
                 }
             });
     m_document->open();
+}
+
+void DocumentTab::syncFilteredToMain(core::LineNumber row)
+{
+    if (m_syncing || row.get() >= m_filteredSource->lineCount().get()) {
+        return;
+    }
+    m_syncing = true;
+    m_view->goToRow(m_filteredSource->originalLineNumber(row));
+    m_syncing = false;
+}
+
+void DocumentTab::syncMainToFiltered(core::LineNumber line)
+{
+    if (m_syncing) {
+        return;
+    }
+    // Nearest match at or before `line`: the one before the first match after it.
+    const std::uint64_t after = m_filter->lowerBound(core::LineNumber(line.get() + 1));
+    if (after == 0) {
+        return;  // no match at or before the line
+    }
+    const core::LineNumber row(after - 1);
+    m_syncing = true;
+    m_filteredView->setCurrentRow(row);
+    m_filteredView->ensureRowVisible(row);
+    m_syncing = false;
 }
 
 void DocumentTab::rememberPosition()
