@@ -205,7 +205,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: highlight match ranges (positive terms) in both views (F-FILT-8), computed per visible line via `collectRanges`, cached with the line cache.
   - Done when: rendering tests check highlighted cell positions for ASCII, umlauts, tabs, and multiple matches per line.
 
-- [ ] **M3-11 Search performance pass** — Depends on: M3-06, M0-07
+- [x] **M3-11 Search performance pass** — Depends on: M3-06, M0-07 (PR #42)
   - Scope: chunk-wide matching optimization (ARCHITECTURE §3.6), literal prefilter for regexes where safe, tuning of chunk size; record P-SRCH results.
   - Done when: P-SRCH-1 … P-SRCH-5 met on the agent machine (or documented with profiles and a plan); results logged in `PERFORMANCE.md`.
 

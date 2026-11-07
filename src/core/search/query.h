@@ -68,6 +68,9 @@ public:
     [[nodiscard]] const Query& query() const noexcept { return m_query; }
 
     [[nodiscard]] bool matches(std::string_view line, MatchScratch& scratch) const override;
+    // Forwarded from the underlying matcher; inverted queries cannot skip lines.
+    [[nodiscard]] bool hasCandidateScan() const noexcept override;
+    [[nodiscard]] std::size_t nextCandidate(std::string_view text, std::size_t from) const override;
 
     // Highlight ranges of the underlying matcher; empty for inverted queries (a non-matching
     // line has nothing to highlight).

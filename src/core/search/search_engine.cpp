@@ -146,6 +146,79 @@ bool searchableInPlace(std::span<const std::byte> data, Encoding encoding)
     return false;
 }
 
+const Error kChanged{
+    .code = ErrorCode::kOutOfRange, .systemCode = 0, .message = "the file changed while searching"};
+
+// Fast path for single-byte, in-place searchable chunks with a candidate scan: the matcher
+// skips over many lines at once, and only lines containing a candidate are confirmed.
+void scanChunk(const SearchRequest& request, std::string_view all, const std::stop_token& stop,
+               ChunkResult& result, MatchScratch& scratch)
+{
+    const ChunkJob& job = result.job;
+    const Matcher& matcher = *request.matcher;
+    std::uint64_t line = job.firstLine;
+    std::size_t lineStart = 0;
+    std::size_t pos = 0;
+    std::uint64_t iterations = 0;
+    while (pos < all.size()) {
+        if (++iterations % kStopCheckInterval == 0 && stop.stop_requested()) {
+            result.canceled = true;
+            return;
+        }
+        const std::size_t hit = matcher.nextCandidate(all, pos);
+        if (hit == std::string_view::npos) {
+            break;
+        }
+        // Move to the line containing the candidate.
+        if (hit > lineStart) {
+            const auto feeds = std::count(all.begin() + static_cast<std::ptrdiff_t>(lineStart),
+                                          all.begin() + static_cast<std::ptrdiff_t>(hit), '\n');
+            if (feeds > 0) {
+                line += static_cast<std::uint64_t>(feeds);
+                lineStart = all.rfind('\n', hit - 1) + 1;
+            }
+        }
+        const std::size_t lineFeed = all.find('\n', hit);
+        std::size_t end = lineFeed == std::string_view::npos ? all.size() : lineFeed;
+        if (lineFeed != std::string_view::npos && end > lineStart && all[end - 1] == '\r') {
+            --end;
+        }
+        if (line >= job.endLine) {
+            result.error = kChanged;
+            return;
+        }
+        if (matcher.matches(all.substr(lineStart, end - lineStart), scratch)) {
+            result.matches.push_back(line);
+        }
+        ++line;
+        lineStart = lineFeed == std::string_view::npos ? all.size() : lineFeed + 1;
+        pos = lineStart;
+        if (lineFeed == std::string_view::npos && !job.endsWithTail) {
+            result.error = kChanged;
+            return;
+        }
+    }
+    // Count the remaining lines to check the chunk against the index.
+    if (lineStart < all.size()) {
+        const auto feeds =
+            std::count(all.begin() + static_cast<std::ptrdiff_t>(lineStart), all.end(), '\n');
+        line += static_cast<std::uint64_t>(feeds);
+        const bool tail = all.back() != '\n';
+        if (tail) {
+            ++line;
+            if (!job.endsWithTail) {
+                result.error = kChanged;
+                return;
+            }
+        }
+    }
+    if (line != job.endLine) {
+        result.error = kChanged;
+        return;
+    }
+    result.skipped = scratch.skippedLines;
+}
+
 void searchChunk(const SearchRequest& request, const std::stop_token& stop, ChunkResult& result)
 {
     const ChunkJob& job = result.job;
@@ -170,6 +243,10 @@ void searchChunk(const SearchRequest& request, const std::stop_token& stop, Chun
     const std::size_t unit = traits(encoding).codeUnitSize;
     const bool inPlace = searchableInPlace(data, encoding);
     MatchScratch scratch;
+    if (inPlace && unit == 1 && request.matcher->hasCandidateScan()) {
+        scanChunk(request, std::string_view(asChars(data.data()), size), stop, result, scratch);
+        return;
+    }
     std::size_t position = 0;
     for (std::uint64_t line = job.firstLine; line < job.endLine; ++line) {
         if ((line - job.firstLine) % kStopCheckInterval == 0 && stop.stop_requested()) {
