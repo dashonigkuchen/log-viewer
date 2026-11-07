@@ -79,6 +79,18 @@ public:
     // of empty length are not reported.
     virtual void collectRanges(std::string_view line, MatchScratch& scratch,
                                std::vector<MatchRange>& out) const = 0;
+
+    // Chunk prefilter (ARCHITECTURE §3.6, M3-11): true if nextCandidate() can skip over text
+    // spanning many lines. A line can only match if it contains a candidate position; the
+    // search engine confirms every candidate line with matches().
+    [[nodiscard]] virtual bool hasCandidateScan() const noexcept { return false; }
+
+    // First byte at or after `from` in `text` (UTF-8, may contain line feeds) where a match
+    // could start, or std::string_view::npos. Only called if hasCandidateScan().
+    [[nodiscard]] virtual std::size_t nextCandidate(std::string_view text, std::size_t from) const
+    {
+        return from < text.size() ? from : std::string_view::npos;
+    }
 };
 
 }  // namespace lv::core

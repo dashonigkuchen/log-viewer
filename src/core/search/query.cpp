@@ -98,6 +98,16 @@ CompiledQuery::CompiledQuery(Query query, std::unique_ptr<Matcher> matcher)
 
 CompiledQuery::~CompiledQuery() = default;
 
+bool CompiledQuery::hasCandidateScan() const noexcept
+{
+    return !m_query.invert && m_matcher->hasCandidateScan();
+}
+
+std::size_t CompiledQuery::nextCandidate(std::string_view text, std::size_t from) const
+{
+    return m_matcher->nextCandidate(text, from);
+}
+
 bool CompiledQuery::matches(std::string_view line, MatchScratch& scratch) const
 {
     return m_matcher->matches(line, scratch) != m_query.invert;

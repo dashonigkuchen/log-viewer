@@ -35,6 +35,9 @@ public:
     [[nodiscard]] static bool isAscii(std::string_view pattern) noexcept;
 
     [[nodiscard]] bool matches(std::string_view line, MatchScratch& scratch) const override;
+    // Candidates are raw occurrences of the pattern (whole-word is checked per line).
+    [[nodiscard]] bool hasCandidateScan() const noexcept override;
+    [[nodiscard]] std::size_t nextCandidate(std::string_view text, std::size_t from) const override;
     void collectRanges(std::string_view line, MatchScratch& scratch,
                        std::vector<MatchRange>& out) const override;
 

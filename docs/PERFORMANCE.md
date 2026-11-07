@@ -75,5 +75,18 @@ Append one row per measurement session. Never edit old rows.
 | 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Regex/large` (P-SRCH-2) | 855 ms, 1.17 GiB/s, 3 threads | budget 1.0 s met |
 | 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Boolean/large` (P-SRCH-3) | 789 ms, 1.27 GiB/s, 3 threads | budget 1.2 s met |
 | 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Literal_1T/large` vs `BM_Search_Literal/large` (P-SRCH-4) | 1458 ms vs 546 ms = 2.7× with 3 threads | default pool is cores − 1 = 3 here, so the 4-thread criterion is not measurable on this machine; check on `owner-notebook`, chunk-level scanning follows in M3-11 |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Literal/small` (P-SRCH-1) | 13.6 ms, 3.6 GiB/s, 3 threads | was 27 ms; chunk-wide candidate scan + SSE2 two-byte prefilter |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Literal/large` | 250 ms, 4.0 GiB/s, 3 threads | was 546 ms |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Regex/large` (P-SRCH-2) | 862 ms, 3 threads | met; unchanged (per-line PCRE2 JIT), see note |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Boolean/large` (P-SRCH-3) | 785 ms, 3 threads | met |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Literal_1T/large` vs 3 threads (P-SRCH-4) | 669 ms vs 250 ms = 2.7× | 3 workers (cores − 1); criterion is 4 threads, verify on `owner-notebook` |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | match list memory (P-SRCH-5), `ERROR` on large (165k matches) | 1.27 bytes/match | met |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-11 | chunk size sweep (large, literal / regex) | 256 KiB 249/837 ms, 1 MiB 251/836 ms, 4 MiB 380/880 ms | default stays 1 MiB |
 
 M1-10 notes: block size was the biggest factor (4 MiB → 512 KiB: `large` 287 → 118 ms) because the scanned block is still in L2/L3 after the read. The SSE2 newline scan with branch-light position extraction replaced one `memchr` call per line (split 450 → 185 ms per GiB on `short`), and bulk append with a word-wise bit packer halved the index append cost (260 → 105 ms per GiB). `short` (≈ 20 bytes per line, 54 M lines per GiB) is bound by per-line work, not I/O; P-IDX-2 is met through its 2 GB/s floor. Further gains (AVX2, parallel scanning of blocks) are not worth it for the owner's ~50 MB files (7 ms).
+
+### Search notes (M3-11)
+
+- Literal filters (and literal-only `CompiledQuery`s) scan a whole chunk with `Matcher::nextCandidate` and only confirm lines that contain a candidate; the literal search compares the first two pattern bytes 16 positions at a time with SSE2 (both cases for case-insensitive search). Non-ASCII chunks of single-byte encodings and UTF-16 files use the per-line path.
+- Regex and boolean filters still match line by line with PCRE2 JIT and already meet P-SRCH-2/3 here. Plan if `owner-notebook` misses them: a required-literal prefilter for regexes (`PCRE2_INFO_FIRSTCODEUNIT` / a literal extracted from the pattern) feeding `nextCandidate`, and the same for boolean `AND` nodes with a literal child.
+- P-SRCH-4 cannot be measured with 4 workers on the 4-vCPU agent machine (default pool = cores − 1); 1→3 threads gives 2.7×.

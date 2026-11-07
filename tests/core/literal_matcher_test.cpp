@@ -147,3 +147,34 @@ TEST_CASE("scratch keeps one entry per owner", "[search][literal]")
     CHECK(scratch.get<Data>(&ownerB, create).value == 2);
     CHECK(creations == 2);
 }
+
+TEST_CASE("vectorized search agrees with std::string_view::find on long texts", "[search][literal]")
+{
+    std::mt19937 rng(11);
+    const std::string alphabet = "abAB\n_";
+    for (int i = 0; i < 500; ++i) {
+        std::string text;
+        const std::size_t length = rng() % 200;
+        for (std::size_t k = 0; k < length; ++k) {
+            text += alphabet[rng() % alphabet.size()];
+        }
+        std::string pattern;
+        const std::size_t patternLength = 2 + (rng() % 4);
+        for (std::size_t k = 0; k < patternLength; ++k) {
+            pattern += std::string_view("abAB").at(rng() % 4);
+        }
+        CAPTURE(text, pattern);
+        const LiteralMatcher sensitive(pattern, {.caseSensitive = true, .wholeWord = false});
+        for (std::size_t from = 0; from <= text.size(); from += 7) {
+            const std::size_t expected = std::string_view(text).find(pattern, from);
+            REQUIRE(sensitive.nextCandidate(text, from) == expected);
+        }
+    }
+}
+
+TEST_CASE("candidate scan is disabled for patterns that cannot skip lines", "[search][literal]")
+{
+    CHECK(LiteralMatcher("abc", {}).hasCandidateScan());
+    CHECK_FALSE(LiteralMatcher("", {}).hasCandidateScan());
+    CHECK_FALSE(LiteralMatcher("a\nb", {}).hasCandidateScan());
+}
