@@ -85,7 +85,8 @@ private slots:
         QCOMPARE(filtered->gutterWidth(), tab.mainView()->gutterWidth());
         QCOMPARE(tab.splitter()->count(), 2);
         QCOMPARE(tab.splitter()->widget(0), tab.mainView());
-        QCOMPARE(tab.splitter()->widget(1), filtered);
+        QCOMPARE(tab.splitter()->widget(1)->objectName(), QStringLiteral("filterPane"));
+        QVERIFY(tab.splitter()->widget(1)->isAncestorOf(filtered));
     }
 
     static void clickInFilteredViewMovesTheMainView()

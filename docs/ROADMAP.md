@@ -197,7 +197,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `DocumentTab` with splitter (position persisted), filtered `LogView` with original line numbers, sync in both directions (F-FILT-1, F-FILT-7).
   - Done when: Qt Tests: click in filtered view scrolls main view to the line and makes it current; moving in main view selects nearest match at or before it in the filtered view.
 
-- [ ] **M3-09 Filter bar** — Depends on: M3-08
+- [x] **M3-09 Filter bar** — Depends on: M3-08 (PR #40)
   - Scope: `src/ui/filter_bar.cpp`: mode selector, options, apply on Enter, `Esc` restores, Clear, progress, match count, skipped count, inline error with position (F-FILT-2, F-FILT-5, F-FILT-6, F-FILT-10).
   - Done when: Qt Tests for apply/escape/clear, error display for invalid regex and invalid boolean expression, mode switching keeps text.
 
