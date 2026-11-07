@@ -229,7 +229,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/core/tail/change_detector.cpp` (ARCHITECTURE §3.7).
   - Done when: unit tests with fake observations for every classification; `fs` integration tests with real files for grow, truncate, replace (rename + recreate), delete, recreate. **[Windows]**
 
-- [ ] **M4-02 File watcher** — Depends on: M4-01, M2-01
+- [x] **M4-02 File watcher** — Depends on: M4-01, M2-01 (PR #46)
   - Scope: `src/model/file_watcher.cpp`: `QFileSystemWatcher` on file and directory, polling timer fallback (F-TAIL-2), coalescing.
   - Done when: model tests with a writer thread: change events arrive with notifications and with notifications disabled (polling only); burst of 10,000 appends yields bounded number of checks.
 
