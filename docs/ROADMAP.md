@@ -185,7 +185,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `src/core/concurrency/thread_pool.cpp` (ARCHITECTURE §3.6), configurable size (0 = auto).
   - Done when: tests: tasks run, stop tokens cancel queued and running tasks cooperatively, destruction joins, no deadlock with more tasks than threads; runs clean under TSan (nightly).
 
-- [ ] **M3-06 Search engine** — Depends on: M3-04, M3-05, M1-09
+- [x] **M3-06 Search engine** — Depends on: M3-04, M3-05, M1-09 (PR #37)
   - Scope: `search_engine.cpp`: chunking by lines, per-worker reads, UTF-8 conversion for non-UTF-8 documents, reorder buffer, ordered `ResultSink` into a `SortedU64Sequence`, progress, cancellation, line range limit (F-FILT-11 core part), skipped-line counting.
   - Done when: results equal a single-threaded reference on all `loggen` profiles (20 MB) for literal, regex, and boolean queries with 1, 2, and 8 threads; partial results are always an ordered prefix (checked during the run); cancellation leaves a consistent prefix; benchmarks `BM_Search_*` recorded.
 

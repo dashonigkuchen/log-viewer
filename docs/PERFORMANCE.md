@@ -71,5 +71,9 @@ Append one row per measurement session. Never edit old rows.
 | 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/large` (P-IDX-2) | 118 ms, 8.5 GiB/s, 1.19 B/line | read-only 6.7 GiB/s; faster than the reference because 512 KiB blocks stay in cache |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/short` (P-IDX-2) | 315 ms, 3.2 GiB/s, 0.81 B/line | read-only 5.8 GiB/s (55%); meets the 2 GB/s floor, see note below |
 | 2026-11-04 | agent LXC (4 vCPU) | M1-10 | `BM_Index/utf16` | 26 ms, 7.4 GiB/s, 1.32 B/line | read-only 6.3 GiB/s |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Literal/small` (P-SRCH-1, `ERROR`) | 27 ms, 1.8 GiB/s, 3 threads | budget 100 ms met; read-only 7.4 ms |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Regex/large` (P-SRCH-2) | 855 ms, 1.17 GiB/s, 3 threads | budget 1.0 s met |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Boolean/large` (P-SRCH-3) | 789 ms, 1.27 GiB/s, 3 threads | budget 1.2 s met |
+| 2026-11-07 | agent LXC (4 vCPU) | M3-06 | `BM_Search_Literal_1T/large` vs `BM_Search_Literal/large` (P-SRCH-4) | 1458 ms vs 546 ms = 2.7× with 3 threads | default pool is cores − 1 = 3 here, so the 4-thread criterion is not measurable on this machine; check on `owner-notebook`, chunk-level scanning follows in M3-11 |
 
 M1-10 notes: block size was the biggest factor (4 MiB → 512 KiB: `large` 287 → 118 ms) because the scanned block is still in L2/L3 after the read. The SSE2 newline scan with branch-light position extraction replaced one `memchr` call per line (split 450 → 185 ms per GiB on `short`), and bulk append with a word-wise bit packer halved the index append cost (260 → 105 ms per GiB). `short` (≈ 20 bytes per line, 54 M lines per GiB) is bound by per-line work, not I/O; P-IDX-2 is met through its 2 GB/s floor. Further gains (AVX2, parallel scanning of blocks) are not worth it for the owner's ~50 MB files (7 ms).
