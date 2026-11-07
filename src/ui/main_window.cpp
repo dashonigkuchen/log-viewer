@@ -1,6 +1,7 @@
 #include "ui/main_window.h"
 
 #include "model/document.h"
+#include "model/filter_history.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
 #include "model/settings.h"
@@ -44,6 +45,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_tabs(new QTabWidget(this))
     , m_status(new QLabel(this))
     , m_recent(new model::RecentFiles(this))
+    , m_filterHistory(new model::FilterHistory(this))
 {
     setObjectName(QStringLiteral("mainWindow"));
     setWindowTitle(QStringLiteral("Log Viewer %1").arg(lv::model::versionString()));
@@ -173,6 +175,13 @@ void MainWindow::createMenus()
             tab->filterBar()->input()->selectAll();
         }
     });
+    QAction* clearHistory = viewMenu->addAction(QStringLiteral("Clear Filter &History"));
+    clearHistory->setObjectName(QStringLiteral("actionClearFilterHistory"));
+    connect(clearHistory, &QAction::triggered, this, [this] {
+        if (m_filterHistory != nullptr) {
+            m_filterHistory->clear();
+        }
+    });
     viewMenu->addSeparator();
 
     m_encodingMenu = viewMenu->addMenu(QStringLiteral("&Encoding"));
@@ -270,6 +279,16 @@ void MainWindow::applyViewSettings(DocumentTab* tab)
     }
 }
 
+void MainWindow::setFilterHistory(model::FilterHistory* history)
+{
+    m_filterHistory = history;
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (auto* tab = documentTab(i)) {
+            tab->filterBar()->setHistory(history);
+        }
+    }
+}
+
 void MainWindow::updateRecentMenu()
 {
     m_recentMenu->clear();
@@ -346,6 +365,7 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
         }
     });
     applyViewSettings(tab);
+    tab->filterBar()->setHistory(m_filterHistory);
     if (m_settings != nullptr) {
         const QByteArray state = m_settings->filterSplitterState();
         if (!state.isEmpty()) {
