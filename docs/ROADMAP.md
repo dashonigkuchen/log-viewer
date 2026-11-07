@@ -213,7 +213,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: `src/model/filter_history.cpp` (F-HIST-1 … F-HIST-4), editable combo box with dropdown, `Up`/`Down` cycling, completion, delete entry, clear in settings (settings dialog comes later; provide a menu action for now).
   - Done when: model tests for ordering, dedup by (text, mode, options), limit, persistence; Qt Tests for dropdown selection applying the filter and `Up`/`Down` cycling.
 
-- [ ] **M3-13 Quick find** — Depends on: M3-06, M3-10
+- [x] **M3-13 Quick find** — Depends on: M3-06, M3-10 (PR #44)
   - Scope: `src/ui/find_bar.cpp` (F-FIND-1 … F-FIND-4): search forward/backward from current line using the search engine with a line range, wrap-around notice, highlight visible matches.
   - Done when: Qt Tests: next/previous match in main and filtered view, wrap-around, invalid regex error.
 

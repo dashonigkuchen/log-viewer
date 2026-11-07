@@ -8,6 +8,7 @@
 #include "model/match_highlighter.h"
 #include "model/search_pool.h"
 #include "ui/filter_bar.h"
+#include "ui/find_bar.h"
 #include "ui/log_view.h"
 
 #include <QDir>
@@ -62,8 +63,12 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_splitter->addWidget(pane);
     m_splitter->setStretchFactor(0, 3);
     m_splitter->setStretchFactor(1, 1);
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer): needs the views created above
+    m_findBar = new FindBar(*m_document, *m_filter, *m_view, *m_filteredView, this);
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(m_findBar);
     layout->addWidget(m_splitter);
     setFocusProxy(m_view);
     connect(m_splitter, &QSplitter::splitterMoved, this, &DocumentTab::splitterMoved);
@@ -86,6 +91,18 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
                 }
             });
     m_document->open();
+}
+
+void DocumentTab::openFindBar()
+{
+    LogView* target = m_view;
+    if (m_filteredView->hasFocus() || m_filteredView->isAncestorOf(focusWidget())) {
+        target = m_filteredView;
+    } else if (m_findBar->isVisible() &&
+               (m_findBar->isAncestorOf(focusWidget()) || m_findBar->hasFocus())) {
+        target = m_findBar->target();  // already open: keep its view
+    }
+    m_findBar->open(target);
 }
 
 void DocumentTab::syncFilteredToMain(core::LineNumber row)
@@ -155,6 +172,8 @@ void DocumentTab::setEncodingOverride(std::optional<core::Encoding> encoding)
 
 DocumentTab::~DocumentTab()
 {
+    delete m_findBar;  // detaches its highlighter from the views first
+    m_findBar = nullptr;
     // The view refers to the source, the source to the document: detach before destroying them.
     m_view->setLineSource(nullptr);
 }

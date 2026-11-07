@@ -25,6 +25,7 @@ namespace lv::ui
 {
 
 class FilterBar;
+class FindBar;
 class LogView;
 
 // One opened file in the main window (ARCHITECTURE §6): owns the Document and its filter, and
@@ -53,6 +54,11 @@ public:
     [[nodiscard]] LogView* filteredView() const noexcept { return m_filteredView; }
 
     [[nodiscard]] FilterBar* filterBar() const noexcept { return m_filterBar; }
+
+    [[nodiscard]] FindBar* findBar() const noexcept { return m_findBar; }
+
+    // Opens the find bar for the view that has focus (main view otherwise; Ctrl+F, F-FIND-1).
+    void openFindBar();
 
     [[nodiscard]] model::FilteredDocument& filter() const noexcept { return *m_filter; }
 
@@ -95,6 +101,7 @@ private:
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;
     FilterBar* m_filterBar = nullptr;
+    FindBar* m_findBar = nullptr;
     bool m_syncing = false;  // guards the two-way view synchronization
 
     void syncMainToFiltered(core::LineNumber line);

@@ -7,6 +7,7 @@
 #include "model/settings.h"
 #include "ui/document_tab.h"
 #include "ui/filter_bar.h"
+#include "ui/find_bar.h"
 #include "ui/log_view.h"
 
 #include <QAction>
@@ -173,6 +174,30 @@ void MainWindow::createMenus()
         if (auto* tab = currentDocumentTab()) {
             tab->filterBar()->input()->setFocus(Qt::ShortcutFocusReason);
             tab->filterBar()->input()->selectAll();
+        }
+    });
+    QAction* find = viewMenu->addAction(QStringLiteral("F&ind..."));
+    find->setObjectName(QStringLiteral("actionFind"));
+    find->setShortcut(QKeySequence::Find);
+    connect(find, &QAction::triggered, this, [this] {
+        if (auto* tab = currentDocumentTab()) {
+            tab->openFindBar();
+        }
+    });
+    QAction* findNext = viewMenu->addAction(QStringLiteral("Find &Next"));
+    findNext->setObjectName(QStringLiteral("actionFindNext"));
+    findNext->setShortcut(QKeySequence(Qt::Key_F3));
+    connect(findNext, &QAction::triggered, this, [this] {
+        if (auto* tab = currentDocumentTab()) {
+            tab->findBar()->findNext();
+        }
+    });
+    QAction* findPrevious = viewMenu->addAction(QStringLiteral("Find &Previous"));
+    findPrevious->setObjectName(QStringLiteral("actionFindPrevious"));
+    findPrevious->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
+    connect(findPrevious, &QAction::triggered, this, [this] {
+        if (auto* tab = currentDocumentTab()) {
+            tab->findBar()->findPrevious();
         }
     });
     QAction* clearHistory = viewMenu->addAction(QStringLiteral("Clear Filter &History"));
