@@ -2,12 +2,15 @@
 
 #include "core/util/strong_types.h"
 #include "model/line_source.h"
+#include "model/match_highlighter.h"
 #include "ui/text_selection.h"
 
 #include <QAbstractScrollArea>
+#include <QColor>
 #include <QElapsedTimer>
 #include <QPointer>
 #include <QProgressDialog>
+#include <QRectF>
 #include <QString>
 #include <QTimer>
 
@@ -59,6 +62,16 @@ public:
     void setLineSource(model::LineSource* source);
 
     [[nodiscard]] model::LineSource* lineSource() const noexcept { return m_source; }
+
+    // Match highlighting of the current filter (F-FILT-8); null = none. Not owned.
+    void setHighlighter(const model::MatchHighlighter* highlighter);
+
+    [[nodiscard]] QColor matchHighlightColor() const { return m_matchColor; }
+
+    void setMatchHighlightColor(const QColor& color);
+
+    // Viewport rectangles of the highlighted matches in a visible row (for tests).
+    [[nodiscard]] std::vector<QRectF> matchRects(core::LineNumber row) const;
 
     [[nodiscard]] core::LineCount rowCount() const;
 
@@ -179,6 +192,10 @@ private:
 
     [[nodiscard]] DisplayMapping mapLine(const QString& text, bool truncated) const;
     [[nodiscard]] QString rowText(std::uint64_t row) const;
+    // Highlight rectangles of one painted row at vertical position `y`.
+    [[nodiscard]] std::vector<QRectF> highlightRects(std::uint64_t row,
+                                                     const model::DisplayLine& line,
+                                                     const DisplayMapping& mapping, int y) const;
     void startBackgroundCopy(model::RowReader reader, model::CopyRange range,
                              std::uint64_t totalBytes);
     void finishBackgroundCopy();
@@ -192,6 +209,8 @@ private:
     [[nodiscard]] std::uint64_t rowForScrollValue(int value) const;
 
     QPointer<model::LineSource> m_source;
+    QPointer<const model::MatchHighlighter> m_highlighter;
+    QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
     core::LineNumber m_topRow;
     std::optional<core::LineNumber> m_currentRow;
     bool m_lineNumbersVisible = true;

@@ -646,6 +646,63 @@ TextPosition LogView::positionAt(QPoint point) const
     return {.row = row, .column = low};
 }
 
+void LogView::setHighlighter(const model::MatchHighlighter* highlighter)
+{
+    if (!m_highlighter.isNull()) {
+        disconnect(m_highlighter, nullptr, this, nullptr);
+    }
+    m_highlighter = highlighter;
+    if (highlighter != nullptr) {
+        connect(highlighter, &model::MatchHighlighter::changed, viewport(),
+                qOverload<>(&QWidget::update));
+    }
+    viewport()->update();
+}
+
+void LogView::setMatchHighlightColor(const QColor& color)
+{
+    m_matchColor = color;
+    viewport()->update();
+}
+
+std::vector<QRectF> LogView::highlightRects(std::uint64_t row, const model::DisplayLine& line,
+                                            const DisplayMapping& mapping, int y) const
+{
+    std::vector<QRectF> rects;
+    if (m_highlighter.isNull() || line.unavailable) {
+        return rects;
+    }
+    const auto ranges = m_highlighter->ranges(m_source->originalLineNumber(core::LineNumber(row)),
+                                              line.text, line.partial);
+    if (ranges.empty()) {
+        return rects;
+    }
+    const QFontMetricsF metrics(font());
+    const double textX = gutterWidth() + kTextMargin - horizontalOffset();
+    for (const auto& range : ranges) {
+        const auto from = mapping.displayOffsets[static_cast<std::size_t>(range.from)];
+        const auto to = mapping.displayOffsets[static_cast<std::size_t>(range.to)];
+        if (to <= from) {
+            continue;  // beyond the column limit
+        }
+        const double left = textX + metrics.horizontalAdvance(mapping.text.left(from));
+        const double right = textX + metrics.horizontalAdvance(mapping.text.left(to));
+        rects.emplace_back(left, y, right - left, m_lineHeight);
+    }
+    return rects;
+}
+
+std::vector<QRectF> LogView::matchRects(core::LineNumber row) const
+{
+    if (row < m_topRow || row.get() >= rowCount().get()) {
+        return {};
+    }
+    const auto lines = m_source->lines(row, core::LineCount(1));
+    const DisplayMapping mapping = mapLine(lines.front().text, lines.front().truncated);
+    const auto offset = static_cast<int>(row.get() - m_topRow.get());
+    return highlightRects(row.get(), lines.front(), mapping, offset * m_lineHeight);
+}
+
 QPoint LogView::pointForPosition(TextPosition position) const
 {
     const auto lines = m_source->lines(core::LineNumber(position.row), core::LineCount(1));
@@ -878,6 +935,9 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
             painter.setPen(
                 colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text));
             painter.setClipRect(gutter, 0, width - gutter, height);
+            for (const QRectF& rect : highlightRects(row, line, mapping, y)) {
+                painter.fillRect(rect, m_matchColor);
+            }
             painter.drawText(textX, y + m_ascent, text);
             if (const auto selected = m_selection.columnsForRow(row, line.text.size())) {
                 // Selected part: highlight background and redraw the text in the highlight color.

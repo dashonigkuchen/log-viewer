@@ -18,6 +18,7 @@ class Document;
 class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
+class MatchHighlighter;
 }  // namespace lv::model
 
 namespace lv::ui
@@ -55,6 +56,11 @@ public:
 
     [[nodiscard]] model::FilteredDocument& filter() const noexcept { return *m_filter; }
 
+    [[nodiscard]] const model::MatchHighlighter& highlighter() const noexcept
+    {
+        return *m_highlighter;
+    }
+
     [[nodiscard]] QSplitter* splitter() const noexcept { return m_splitter; }
 
     // Absolute, normalized path used to detect files that are already open.
@@ -84,6 +90,7 @@ private:
     std::unique_ptr<model::DocumentLineSource> m_source;
     std::unique_ptr<model::FilteredDocument> m_filter;
     std::unique_ptr<model::FilteredLineSource> m_filteredSource;
+    std::unique_ptr<model::MatchHighlighter> m_highlighter;
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;
