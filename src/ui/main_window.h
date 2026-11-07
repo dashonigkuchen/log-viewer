@@ -15,6 +15,7 @@ class QTabWidget;
 
 namespace lv::model
 {
+class FilterHistory;
 class RecentFiles;
 class Settings;
 }  // namespace lv::model
@@ -37,6 +38,11 @@ public:
     // The recent files list shown in File > Recent Files (F-FILE-9). By default the window owns
     // an in-memory list; the application installs one that is persisted in the settings.
     void setRecentFiles(model::RecentFiles* recent);
+
+    // The global filter history (F-HIST-1); by default an in-memory one owned by the window.
+    void setFilterHistory(model::FilterHistory* history);
+
+    [[nodiscard]] model::FilterHistory* filterHistory() const noexcept { return m_filterHistory; }
 
     [[nodiscard]] model::RecentFiles* recentFiles() const noexcept { return m_recent; }
 
@@ -101,6 +107,7 @@ private:
     QTabWidget* m_tabs = nullptr;
     QLabel* m_status = nullptr;
     model::RecentFiles* m_recent = nullptr;
+    model::FilterHistory* m_filterHistory = nullptr;
     QMenu* m_recentMenu = nullptr;
     QMenu* m_encodingMenu = nullptr;
     QActionGroup* m_encodingGroup = nullptr;

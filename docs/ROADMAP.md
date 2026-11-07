@@ -209,7 +209,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
   - Scope: chunk-wide matching optimization (ARCHITECTURE §3.6), literal prefilter for regexes where safe, tuning of chunk size; record P-SRCH results.
   - Done when: P-SRCH-1 … P-SRCH-5 met on the agent machine (or documented with profiles and a plan); results logged in `PERFORMANCE.md`.
 
-- [ ] **M3-12 Filter history** — Depends on: M3-09, M2-08
+- [x] **M3-12 Filter history** — Depends on: M3-09, M2-08 (PR #43)
   - Scope: `src/model/filter_history.cpp` (F-HIST-1 … F-HIST-4), editable combo box with dropdown, `Up`/`Down` cycling, completion, delete entry, clear in settings (settings dialog comes later; provide a menu action for now).
   - Done when: model tests for ordering, dedup by (text, mode, options), limit, persistence; Qt Tests for dropdown selection applying the filter and `Up`/`Down` cycling.
 

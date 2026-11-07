@@ -15,7 +15,8 @@ class QPushButton;
 namespace lv::model
 {
 class FilteredDocument;
-}
+class FilterHistory;
+}  // namespace lv::model
 
 namespace lv::ui
 {
@@ -26,6 +27,10 @@ namespace lv::ui
 //
 // The filter is applied only on Enter. Esc restores the last applied filter. An invalid query
 // is reported inline with its position; the previous result stays.
+//
+// The field is an editable combo box over the global filter history (F-HIST-2, F-HIST-3):
+// the dropdown lists entries (choosing one applies it), Up/Down cycle through them, typing
+// completes from them, and Del in the dropdown removes an entry.
 //
 // Thread-safety: UI thread only.
 class FilterBar : public QWidget
@@ -49,6 +54,11 @@ public:
 
     [[nodiscard]] QLineEdit* input() const noexcept { return m_input; }
 
+    // Applied filters are added to `history`; null = no history. Not owned.
+    void setHistory(model::FilterHistory* history);
+
+    [[nodiscard]] QComboBox* historyBox() const noexcept { return m_combo; }
+
     [[nodiscard]] QComboBox* modeSelector() const noexcept { return m_mode; }
 
     [[nodiscard]] QCheckBox* caseSensitiveBox() const noexcept { return m_caseSensitive; }
@@ -70,9 +80,15 @@ private:
     void hideError();
     void updateOptions();
     void updateStatus();
+    void refreshHistory();
+    void showHistoryEntry(int index);
+    void cycleHistory(int step);
 
     model::FilteredDocument* m_filter;
-    QLineEdit* m_input = nullptr;
+    model::FilterHistory* m_history = nullptr;
+    QComboBox* m_combo = nullptr;
+    QLineEdit* m_input = nullptr;  // the combo box's line edit
+    int m_historyPosition = -1;    // Up/Down position; -1 = what the user typed
     QComboBox* m_mode = nullptr;
     QCheckBox* m_caseSensitive = nullptr;
     QCheckBox* m_wholeWord = nullptr;

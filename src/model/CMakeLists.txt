@@ -6,6 +6,8 @@ add_library(
     document_line_source.cpp
     document_line_source.h
     file_log_sink.cpp
+    filter_history.cpp
+    filter_history.h
     filtered_document.cpp
     filtered_document.h
     filtered_line_source.cpp

@@ -1,9 +1,12 @@
 #include "ui/filter_bar.h"
 
+#include "model/filter_history.h"
 #include "model/filtered_document.h"
 
+#include <QAbstractItemView>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
@@ -11,6 +14,8 @@
 #include <QLocale>
 #include <QPushButton>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 namespace lv::ui
 {
@@ -23,12 +28,20 @@ QString number(std::uint64_t value)
     return QLocale().toString(static_cast<qulonglong>(value));
 }
 
+QComboBox* makeEditableCombo(QWidget* parent)
+{
+    auto* combo = new QComboBox(parent);
+    combo->setEditable(true);  // creates the line edit
+    return combo;
+}
+
 }  // namespace
 
 FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     : QWidget(parent)
     , m_filter(&filter)
-    , m_input(new QLineEdit(this))
+    , m_combo(makeEditableCombo(this))
+    , m_input(m_combo->lineEdit())
     , m_mode(new QComboBox(this))
     , m_caseSensitive(new QCheckBox(QStringLiteral("Case sensitive"), this))
     , m_wholeWord(new QCheckBox(QStringLiteral("Whole word"), this))
@@ -38,6 +51,17 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     , m_error(new QLabel(this))
 {
     setObjectName(QStringLiteral("filterBar"));
+    m_combo->setObjectName(QStringLiteral("filterHistory"));
+    m_combo->setInsertPolicy(QComboBox::NoInsert);  // the history decides what is stored
+    m_combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    m_combo->setMinimumContentsLength(20);
+    m_combo->setMaxVisibleItems(15);
+    auto* completer = new QCompleter(m_combo->model(), m_combo);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    completer->setFilterMode(Qt::MatchContains);
+    completer->setCompletionMode(QCompleter::PopupCompletion);
+    m_combo->setCompleter(completer);
+    m_combo->view()->installEventFilter(this);
     m_input->setObjectName(QStringLiteral("filterInput"));
     m_input->setPlaceholderText(QStringLiteral("Filter (Enter to apply)"));
     m_input->setClearButtonEnabled(false);
@@ -61,7 +85,7 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     auto* row = new QHBoxLayout;
     row->setContentsMargins(0, 0, 0, 0);
     row->addWidget(m_mode);
-    row->addWidget(m_input, 1);
+    row->addWidget(m_combo, 1);
     row->addWidget(m_caseSensitive);
     row->addWidget(m_wholeWord);
     row->addWidget(m_invert);
@@ -74,7 +98,14 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     layout->addWidget(m_error);
 
     connect(m_input, &QLineEdit::returnPressed, this, &FilterBar::apply);
-    connect(m_input, &QLineEdit::textEdited, this, &FilterBar::hideError);
+    connect(m_input, &QLineEdit::textEdited, this, [this] {
+        hideError();
+        m_historyPosition = -1;
+    });
+    connect(m_combo, &QComboBox::activated, this, [this](int index) {
+        showHistoryEntry(index);
+        apply();
+    });
     connect(m_mode, &QComboBox::currentIndexChanged, this, [this] {
         updateOptions();
         hideError();
@@ -104,11 +135,16 @@ bool FilterBar::apply()
         clear();
         return true;
     }
-    if (const auto error = m_filter->apply(enteredQuery())) {
+    const core::Query query = enteredQuery();
+    if (const auto error = m_filter->apply(query)) {
         showError(QString::fromStdString(error->message), error->position);
         return false;
     }
     hideError();
+    m_historyPosition = -1;
+    if (m_history != nullptr) {
+        m_history->add(query);
+    }
     return true;
 }
 
@@ -123,6 +159,74 @@ void FilterBar::clear()
     m_input->clear();
     hideError();
     m_filter->clear();
+}
+
+void FilterBar::setHistory(model::FilterHistory* history)
+{
+    if (m_history != nullptr) {
+        disconnect(m_history, nullptr, this, nullptr);
+    }
+    m_history = history;
+    if (m_history != nullptr) {
+        connect(m_history, &model::FilterHistory::changed, this, &FilterBar::refreshHistory);
+    }
+    refreshHistory();
+}
+
+void FilterBar::refreshHistory()
+{
+    const QString text = m_input->text();
+    const int cursor = m_input->cursorPosition();
+    m_combo->blockSignals(true);
+    m_combo->clear();
+    if (m_history != nullptr) {
+        for (const auto& query : m_history->entries()) {
+            QString options = QString::fromLatin1(core::toString(query.mode).data());
+            if (query.caseSensitive) {
+                options += QStringLiteral(", case sensitive");
+            }
+            if (query.wholeWord) {
+                options += QStringLiteral(", whole word");
+            }
+            if (query.invert) {
+                options += QStringLiteral(", invert");
+            }
+            m_combo->addItem(QString::fromStdString(query.text));
+            m_combo->setItemData(m_combo->count() - 1, options, Qt::ToolTipRole);
+        }
+    }
+    m_combo->setCurrentIndex(-1);
+    m_combo->blockSignals(false);
+    m_input->setText(text);
+    m_input->setCursorPosition(cursor);
+}
+
+void FilterBar::showHistoryEntry(int index)
+{
+    if (m_history == nullptr || index < 0 ||
+        static_cast<std::size_t>(index) >= m_history->entries().size()) {
+        return;
+    }
+    showQuery(m_history->entries()[static_cast<std::size_t>(index)]);
+}
+
+void FilterBar::cycleHistory(int step)
+{
+    if (m_history == nullptr || m_history->entries().empty()) {
+        return;
+    }
+    const int count = static_cast<int>(m_history->entries().size());
+    const int next = std::clamp(m_historyPosition + step, -1, count - 1);
+    if (next == m_historyPosition) {
+        return;
+    }
+    m_historyPosition = next;
+    if (next < 0) {
+        showQuery(m_filter->query());  // back to the applied filter
+    } else {
+        showHistoryEntry(next);
+    }
+    hideError();
 }
 
 void FilterBar::showQuery(const std::optional<core::Query>& query)
@@ -197,6 +301,21 @@ bool FilterBar::eventFilter(QObject* watched, QEvent* event)
         const auto* key = static_cast<QKeyEvent*>(event);  // NOLINT(*-static-cast-downcast)
         if (key->key() == Qt::Key_Escape) {
             restore();
+            return true;
+        }
+        if (key->key() == Qt::Key_Up || key->key() == Qt::Key_Down) {
+            if (m_combo->completer() != nullptr && m_combo->completer()->popup()->isVisible()) {
+                return false;  // let the completion popup handle the keys
+            }
+            cycleHistory(key->key() == Qt::Key_Up ? 1 : -1);
+            return true;
+        }
+    }
+    if (watched == m_combo->view() && event->type() == QEvent::KeyPress && m_history != nullptr) {
+        const auto* key = static_cast<QKeyEvent*>(event);  // NOLINT(*-static-cast-downcast)
+        const int row = m_combo->view()->currentIndex().row();
+        if (key->key() == Qt::Key_Delete && row >= 0) {
+            m_history->remove(static_cast<std::size_t>(row));  // F-HIST-3
             return true;
         }
     }
