@@ -73,6 +73,13 @@ public:
     // Viewport rectangles of the highlighted matches in a visible row (for tests).
     [[nodiscard]] std::vector<QRectF> matchRects(core::LineNumber row) const;
 
+    // Highlighting of the find bar's query (F-FIND-3), painted in its own color; null = none.
+    void setFindHighlighter(const model::MatchHighlighter* highlighter);
+
+    [[nodiscard]] QColor findHighlightColor() const { return m_findColor; }
+
+    [[nodiscard]] std::vector<QRectF> findMatchRects(core::LineNumber row) const;
+
     [[nodiscard]] core::LineCount rowCount() const;
 
     // Top visible row; scrollToRow clamps so that the last page is full when possible.
@@ -193,9 +200,12 @@ private:
     [[nodiscard]] DisplayMapping mapLine(const QString& text, bool truncated) const;
     [[nodiscard]] QString rowText(std::uint64_t row) const;
     // Highlight rectangles of one painted row at vertical position `y`.
-    [[nodiscard]] std::vector<QRectF> highlightRects(std::uint64_t row,
+    [[nodiscard]] std::vector<QRectF> highlightRects(const model::MatchHighlighter* highlighter,
+                                                     std::uint64_t row,
                                                      const model::DisplayLine& line,
                                                      const DisplayMapping& mapping, int y) const;
+    [[nodiscard]] std::vector<QRectF> visibleRects(const model::MatchHighlighter* highlighter,
+                                                   core::LineNumber row) const;
     void startBackgroundCopy(model::RowReader reader, model::CopyRange range,
                              std::uint64_t totalBytes);
     void finishBackgroundCopy();
@@ -211,6 +221,8 @@ private:
     QPointer<model::LineSource> m_source;
     QPointer<const model::MatchHighlighter> m_highlighter;
     QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
+    QPointer<const model::MatchHighlighter> m_findHighlighter;
+    QColor m_findColor{0, 170, 255, 110};  // light blue, distinct from the filter highlight
     core::LineNumber m_topRow;
     std::optional<core::LineNumber> m_currentRow;
     bool m_lineNumbersVisible = true;

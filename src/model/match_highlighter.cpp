@@ -6,6 +6,7 @@
 
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace lv::model
 {
@@ -80,6 +81,21 @@ MatchHighlighter::MatchHighlighter(const FilteredDocument& filter, QObject* pare
     connect(&filter.document(), &Document::reset, this, &MatchHighlighter::invalidate);
 }
 
+MatchHighlighter::MatchHighlighter(const Document& document, QObject* parent)
+    : QObject(parent)
+{
+    connect(&document, &Document::reset, this, &MatchHighlighter::invalidate);
+}
+
+void MatchHighlighter::setQuery(std::shared_ptr<const core::CompiledQuery> query)
+{
+    if (query == m_query) {
+        return;
+    }
+    m_query = std::move(query);
+    invalidate();
+}
+
 void MatchHighlighter::invalidate()
 {
     m_cache.clear();
@@ -90,7 +106,7 @@ void MatchHighlighter::invalidate()
 std::vector<HighlightRange> MatchHighlighter::ranges(core::LineNumber line, const QString& text,
                                                      bool partial) const
 {
-    const auto query = m_filter->compiledQuery();
+    const auto query = m_filter != nullptr ? m_filter->compiledQuery() : m_query;
     if (!query || query->query().invert) {
         return {};
     }

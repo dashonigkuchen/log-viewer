@@ -3,6 +3,8 @@ add_library(
     document_tab.cpp
     document_tab.h
     filter_bar.cpp
+    find_bar.cpp
+    find_bar.h
     filter_bar.h
     go_to_line_dialog.cpp
     go_to_line_dialog.h

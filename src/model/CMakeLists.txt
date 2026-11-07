@@ -14,6 +14,8 @@ add_library(
     filtered_line_source.h
     line_cache.cpp
     line_cache.h
+    line_finder.cpp
+    line_finder.h
     line_source.h
     match_highlighter.cpp
     match_highlighter.h

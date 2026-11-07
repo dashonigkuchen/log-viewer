@@ -665,15 +665,30 @@ void LogView::setMatchHighlightColor(const QColor& color)
     viewport()->update();
 }
 
-std::vector<QRectF> LogView::highlightRects(std::uint64_t row, const model::DisplayLine& line,
+void LogView::setFindHighlighter(const model::MatchHighlighter* highlighter)
+{
+    if (!m_findHighlighter.isNull()) {
+        disconnect(m_findHighlighter, nullptr, this, nullptr);
+        disconnect(m_findHighlighter, nullptr, viewport(), nullptr);
+    }
+    m_findHighlighter = highlighter;
+    if (highlighter != nullptr) {
+        connect(highlighter, &model::MatchHighlighter::changed, viewport(),
+                qOverload<>(&QWidget::update));
+    }
+    viewport()->update();
+}
+
+std::vector<QRectF> LogView::highlightRects(const model::MatchHighlighter* highlighter,
+                                            std::uint64_t row, const model::DisplayLine& line,
                                             const DisplayMapping& mapping, int y) const
 {
     std::vector<QRectF> rects;
-    if (m_highlighter.isNull() || line.unavailable) {
+    if (highlighter == nullptr || line.unavailable) {
         return rects;
     }
-    const auto ranges = m_highlighter->ranges(m_source->originalLineNumber(core::LineNumber(row)),
-                                              line.text, line.partial);
+    const auto ranges = highlighter->ranges(m_source->originalLineNumber(core::LineNumber(row)),
+                                            line.text, line.partial);
     if (ranges.empty()) {
         return rects;
     }
@@ -692,15 +707,26 @@ std::vector<QRectF> LogView::highlightRects(std::uint64_t row, const model::Disp
     return rects;
 }
 
-std::vector<QRectF> LogView::matchRects(core::LineNumber row) const
+std::vector<QRectF> LogView::visibleRects(const model::MatchHighlighter* highlighter,
+                                          core::LineNumber row) const
 {
-    if (row < m_topRow || row.get() >= rowCount().get()) {
+    if (m_source.isNull() || row < m_topRow || row.get() >= rowCount().get()) {
         return {};
     }
     const auto lines = m_source->lines(row, core::LineCount(1));
     const DisplayMapping mapping = mapLine(lines.front().text, lines.front().truncated);
     const auto offset = static_cast<int>(row.get() - m_topRow.get());
-    return highlightRects(row.get(), lines.front(), mapping, offset * m_lineHeight);
+    return highlightRects(highlighter, row.get(), lines.front(), mapping, offset * m_lineHeight);
+}
+
+std::vector<QRectF> LogView::matchRects(core::LineNumber row) const
+{
+    return visibleRects(m_highlighter.data(), row);
+}
+
+std::vector<QRectF> LogView::findMatchRects(core::LineNumber row) const
+{
+    return visibleRects(m_findHighlighter.data(), row);
 }
 
 QPoint LogView::pointForPosition(TextPosition position) const
@@ -935,8 +961,12 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
             painter.setPen(
                 colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text));
             painter.setClipRect(gutter, 0, width - gutter, height);
-            for (const QRectF& rect : highlightRects(row, line, mapping, y)) {
+            for (const QRectF& rect : highlightRects(m_highlighter.data(), row, line, mapping, y)) {
                 painter.fillRect(rect, m_matchColor);
+            }
+            for (const QRectF& rect :
+                 highlightRects(m_findHighlighter.data(), row, line, mapping, y)) {
+                painter.fillRect(rect, m_findColor);
             }
             painter.drawText(textX, y + m_ascent, text);
             if (const auto selected = m_selection.columnsForRow(row, line.text.size())) {
