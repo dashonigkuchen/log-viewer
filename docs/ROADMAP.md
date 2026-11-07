@@ -225,7 +225,7 @@ Goal: the filtered view with literal, regex, and boolean filters, running on all
 
 Goal: follow growing files reliably, including rotation and truncation, with incremental filtering.
 
-- [ ] **M4-01 Change detector** — Depends on: M1-02
+- [x] **M4-01 Change detector** — Depends on: M1-02 (PR #45)
   - Scope: `src/core/tail/change_detector.cpp` (ARCHITECTURE §3.7).
   - Done when: unit tests with fake observations for every classification; `fs` integration tests with real files for grow, truncate, replace (rename + recreate), delete, recreate. **[Windows]**
 
