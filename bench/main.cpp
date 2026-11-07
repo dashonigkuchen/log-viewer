@@ -2,6 +2,7 @@
 #include "decode_bench.h"
 #include "index_bench.h"
 #include "read_bench.h"
+#include "search_bench.h"
 #include "sequence_bench.h"
 
 #include <benchmark/benchmark.h>
@@ -31,6 +32,24 @@ int main(int argc, char** argv)
             ->Unit(benchmark::kMillisecond)
             ->UseRealTime();
         benchmark::RegisterBenchmark("BM_Index" + suffix, lv::bench::indexFile, profile)
+            ->Unit(benchmark::kMillisecond)
+            ->UseRealTime();
+        // P-SRCH-1..4: literal, regex, boolean with all cores; literal with one thread.
+        benchmark::RegisterBenchmark("BM_Search_Literal" + suffix, lv::bench::searchFile, profile,
+                                     std::string("ERROR"), 0, std::size_t{0})
+            ->Unit(benchmark::kMillisecond)
+            ->UseRealTime();
+        benchmark::RegisterBenchmark("BM_Search_Literal_1T" + suffix, lv::bench::searchFile,
+                                     profile, std::string("ERROR"), 0, std::size_t{1})
+            ->Unit(benchmark::kMillisecond)
+            ->UseRealTime();
+        benchmark::RegisterBenchmark("BM_Search_Regex" + suffix, lv::bench::searchFile, profile,
+                                     std::string("(ERROR|WARN).*timeout"), 1, std::size_t{0})
+            ->Unit(benchmark::kMillisecond)
+            ->UseRealTime();
+        benchmark::RegisterBenchmark("BM_Search_Boolean" + suffix, lv::bench::searchFile, profile,
+                                     std::string(R"(/ERROR/ AND NOT "heartbeat")"), 2,
+                                     std::size_t{0})
             ->Unit(benchmark::kMillisecond)
             ->UseRealTime();
     }
