@@ -44,13 +44,37 @@ runs:
         path: .vcpkg
         fetch-depth: 1
 
+    # Downloads from GitHub releases (the vcpkg tool, CMake for vcpkg) intermittently fail with
+    # HTTP 504; cache them so that a run needs them only when the vcpkg baseline changes.
+    - name: Cache vcpkg tool and downloads
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ runner.temp }}/vcpkg-tool
+          ${{ runner.temp }}/vcpkg-downloads
+        key: vcpkg-tool-linux-${{ steps.versions.outputs.vcpkg }}
+
     - name: Bootstrap vcpkg
       shell: bash
       run: |
-        ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        tool="$RUNNER_TEMP/vcpkg-tool/vcpkg"
+        if [ -x "$tool" ]; then
+          cp "$tool" ./.vcpkg/vcpkg
+        else
+          # The bootstrap script itself only retries for a few seconds.
+          for delay in 20 60 120 0; do
+            ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics && break
+            if [ "$delay" -eq 0 ]; then exit 1; fi
+            echo "vcpkg bootstrap failed; retrying in ${delay}s"
+            sleep "$delay"
+          done
+          mkdir -p "$RUNNER_TEMP/vcpkg-tool"
+          cp ./.vcpkg/vcpkg "$tool"
+        fi
+        mkdir -p "$RUNNER_TEMP/vcpkg-cache" "$RUNNER_TEMP/vcpkg-downloads"
         echo "VCPKG_ROOT=$GITHUB_WORKSPACE/.vcpkg" >> "$GITHUB_ENV"
+        echo "VCPKG_DOWNLOADS=$RUNNER_TEMP/vcpkg-downloads" >> "$GITHUB_ENV"
         echo "VCPKG_BINARY_SOURCES=clear;files,$RUNNER_TEMP/vcpkg-cache,readwrite" >> "$GITHUB_ENV"
-        mkdir -p "$RUNNER_TEMP/vcpkg-cache"
 
     - name: Cache vcpkg binaries
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
