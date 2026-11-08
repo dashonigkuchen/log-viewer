@@ -47,7 +47,14 @@ runs:
     - name: Bootstrap vcpkg
       shell: bash
       run: |
-        ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        # The tool download from GitHub releases sometimes fails with HTTP 504 for minutes;
+        # the script itself only retries for a few seconds.
+        for delay in 20 60 120 0; do
+          ./.vcpkg/bootstrap-vcpkg.sh -disableMetrics && break
+          if [ "$delay" -eq 0 ]; then exit 1; fi
+          echo "vcpkg bootstrap failed; retrying in ${delay}s"
+          sleep "$delay"
+        done
         echo "VCPKG_ROOT=$GITHUB_WORKSPACE/.vcpkg" >> "$GITHUB_ENV"
         echo "VCPKG_BINARY_SOURCES=clear;files,$RUNNER_TEMP/vcpkg-cache,readwrite" >> "$GITHUB_ENV"
         mkdir -p "$RUNNER_TEMP/vcpkg-cache"
