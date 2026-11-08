@@ -67,21 +67,39 @@ jobs:
           path: .vcpkg
           fetch-depth: 1
 
+      # Downloads from GitHub releases (the vcpkg tool, CMake for vcpkg) intermittently fail
+      # with HTTP 504; cache them so that a run needs them only when the vcpkg baseline changes.
+      - name: Cache vcpkg tool and downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/vcpkg-tool
+            ${{ runner.temp }}/vcpkg-downloads
+          key: vcpkg-tool-windows-${{ steps.versions.outputs.vcpkg }}
+
       - name: Bootstrap vcpkg
         run: |
-          # The tool download from GitHub releases sometimes fails with HTTP 504 for minutes;
-          # the script itself only retries for a few seconds.
-          $ok = $false
-          foreach ($delay in 20, 60, 120, 0) {
-            ./.vcpkg/bootstrap-vcpkg.bat -disableMetrics
-            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
-            if ($delay -eq 0) { break }
-            Write-Host "vcpkg bootstrap failed; retrying in $delay s"
-            Start-Sleep -Seconds $delay
+          $tool = "$env:RUNNER_TEMP\vcpkg-tool\vcpkg.exe"
+          if (Test-Path $tool) {
+            Copy-Item $tool ./.vcpkg/vcpkg.exe
+          } else {
+            # The bootstrap script itself only retries for a few seconds.
+            $ok = $false
+            foreach ($delay in 20, 60, 120, 0) {
+              ./.vcpkg/bootstrap-vcpkg.bat -disableMetrics
+              if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+              if ($delay -eq 0) { break }
+              Write-Host "vcpkg bootstrap failed; retrying in $delay s"
+              Start-Sleep -Seconds $delay
+            }
+            if (-not $ok) { exit 1 }
+            New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\vcpkg-tool" | Out-Null
+            Copy-Item ./.vcpkg/vcpkg.exe $tool
           }
-          if (-not $ok) { exit 1 }
           New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/vcpkg-cache" | Out-Null
+          New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/vcpkg-downloads" | Out-Null
           "VCPKG_ROOT=$env:GITHUB_WORKSPACE\.vcpkg" >> $env:GITHUB_ENV
+          "VCPKG_DOWNLOADS=$env:RUNNER_TEMP\vcpkg-downloads" >> $env:GITHUB_ENV
           "VCPKG_BINARY_SOURCES=clear;files,$env:RUNNER_TEMP\vcpkg-cache,readwrite" >> $env:GITHUB_ENV
 
       - name: Cache vcpkg binaries
