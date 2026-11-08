@@ -241,7 +241,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `FilteredDocument` searches only appended lines and appends matches; a running full search and incremental appends do not conflict (appends queue behind the full search range).
   - Done when: tests: results after many appends equal a full search of the final file; appends during a running full search are not lost or duplicated.
 
-- [ ] **M4-05 Follow mode** — Depends on: M4-04, M3-08
+- [x] **M4-05 Follow mode** — Depends on: M4-04, M3-08 (PR #51)
   - Scope: F-TAIL-3 for both views, toolbar toggle, `F10`, status bar indicator, tab change indicator (F-TAB-3).
   - Done when: Qt Tests: follow keeps last line visible while appending; scrolling up disables; `Ctrl+End` re-enables.
 

@@ -99,6 +99,12 @@ target_link_libraries(lv_ui_history_tests PRIVATE lv::ui lv_test_support Qt6::Te
 add_test(NAME ui.FilterHistory COMMAND lv_ui_history_tests -o "-,txt")
 set_tests_properties(ui.FilterHistory PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
 
+qt_add_executable(lv_ui_follow_tests follow_mode_test.cpp)
+set_target_properties(lv_ui_follow_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_follow_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
+add_test(NAME ui.FollowMode COMMAND lv_ui_follow_tests -o "-,txt")
+set_tests_properties(ui.FollowMode PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
+
 qt_add_executable(lv_ui_find_bar_tests find_bar_test.cpp)
 set_target_properties(lv_ui_find_bar_tests PROPERTIES WIN32_EXECUTABLE OFF)
 target_link_libraries(lv_ui_find_bar_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)

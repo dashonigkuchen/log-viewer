@@ -107,6 +107,16 @@ public:
     // Opens the "Go to line" dialog (Ctrl+G).
     void showGoToLineDialog();
 
+    // Follow mode (F-TAIL-3): the last row stays current and visible as rows are appended.
+    // Turning it on jumps to the end. The user turns it off by scrolling or moving up and back
+    // on with Ctrl+End; both emit followRequested() so that the owner can apply it per tab.
+    void setFollowing(bool following);
+
+    [[nodiscard]] bool isFollowing() const noexcept { return m_following; }
+
+    // True while the view moves itself to the end (for listeners of currentRowChanged).
+    [[nodiscard]] bool isAutoScrolling() const noexcept { return m_autoScrolling; }
+
     // Selection (SPEC F-VIEW-7/8/9). Columns are UTF-16 offsets into the decoded row text.
     [[nodiscard]] const TextSelection& selection() const noexcept { return m_selection; }
 
@@ -174,6 +184,8 @@ public:
 signals:
     void topRowChanged(lv::core::LineNumber row);
     void currentRowChanged(lv::core::LineNumber row);
+    // The user asked to turn follow mode on (Ctrl+End) or off (scrolled or moved up).
+    void followRequested(bool following);
     // A copy finished: `copied` is false when it was declined, canceled, or failed.
     void copyFinished(bool copied);
 
@@ -232,6 +244,10 @@ private:
     int m_ascent = 0;
     int m_maxTextWidth = 0;  // widest painted line so far, for the horizontal range
     bool m_updatingScrollBars = false;
+    bool m_following = false;
+    bool m_autoScrolling = false;
+    void followEnd();
+    void userMovedUp();
     int m_wheelRemainder = 0;  // angle delta not yet turned into rows (smooth wheels, touchpads)
     std::int64_t m_lastPaintUs = 0;
     TextSelection m_selection;

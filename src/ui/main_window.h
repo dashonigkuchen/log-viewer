@@ -113,6 +113,8 @@ private:
     QActionGroup* m_encodingGroup = nullptr;
     model::Settings* m_settings = nullptr;
     QAction* m_lineNumbersAction = nullptr;
+    QAction* m_followAction = nullptr;
+    void updateFollowAction();
 };
 
 }  // namespace lv::ui

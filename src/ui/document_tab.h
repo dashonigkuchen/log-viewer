@@ -81,14 +81,23 @@ public:
     // Overrides the encoding (nullopt = detect) and re-indexes, keeping the position (F-ENC-3).
     void setEncodingOverride(std::optional<core::Encoding> encoding);
 
-    // Status bar text: size, lines, encoding, current line, indexing progress (F-TAB-6).
+    // Status bar text: size, lines, encoding, current line, indexing progress, follow mode
+    // (F-TAB-6).
     [[nodiscard]] QString statusText() const;
+
+    // Follow mode of both views (F-TAIL-3, per tab; off by default).
+    void setFollowing(bool following);
+
+    [[nodiscard]] bool isFollowing() const noexcept { return m_following; }
 
 signals:
     // statusText() or the indexing state changed.
     void statusChanged();
     // The user moved the splitter between main and filtered view.
     void splitterMoved();
+    void followingChanged(bool following);
+    // New lines arrived or the file was reloaded (for the inactive-tab indicator, F-TAB-3).
+    void contentChanged();
 
 private:
     std::filesystem::path m_path;
@@ -103,6 +112,7 @@ private:
     FilterBar* m_filterBar = nullptr;
     FindBar* m_findBar = nullptr;
     bool m_syncing = false;  // guards the two-way view synchronization
+    bool m_following = false;
 
     void syncMainToFiltered(core::LineNumber line);
     void syncFilteredToMain(core::LineNumber row);
