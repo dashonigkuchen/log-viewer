@@ -94,6 +94,16 @@ Result<FileSnapshot> ChangeDetector::snapshot(const File& file)
     return FileSnapshot{.size = *size, .fingerprint = *fingerprint};
 }
 
+Result<FileSnapshot> ChangeDetector::snapshotAt(const File& file, std::uint64_t size)
+{
+    const auto fingerprint = readFingerprint(file, static_cast<std::size_t>(std::min<std::uint64_t>(
+                                                       size, Fingerprint::kFingerprintBytes)));
+    if (!fingerprint) {
+        return tl::unexpected(fingerprint.error());
+    }
+    return FileSnapshot{.size = size, .fingerprint = *fingerprint};
+}
+
 Result<Observation> ChangeDetector::observe(const File& open, const std::filesystem::path& path,
                                             const FileSnapshot& last)
 {

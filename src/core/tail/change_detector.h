@@ -77,6 +77,9 @@ public:
     // Size and fingerprint of `file` now (after indexing, for the next check).
     [[nodiscard]] static Result<FileSnapshot> snapshot(const File& file);
 
+    // Snapshot for the first `size` bytes of `file` (the indexed part), even if it is larger now.
+    [[nodiscard]] static Result<FileSnapshot> snapshotAt(const File& file, std::uint64_t size);
+
     // Observes `open` and `path` and classifies the change since `last`. Errors come from the
     // open handle (I/O errors); a path that cannot be inspected for other reasons than not
     // existing is reported as an error too, so the caller simply retries on the next poll.

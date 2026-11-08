@@ -4,6 +4,7 @@
 #include "core/index/line_index.h"
 #include "core/platform/file.h"
 #include "core/reader/line_reader.h"
+#include "core/tail/change_detector.h"
 
 #include <QObject>
 #include <QString>
@@ -21,6 +22,8 @@
 namespace lv::model
 {
 
+class FileWatcher;
+
 // The opened file of one generation with its line index and reader. The indexer thread is the
 // single writer of `index`; everything else only reads (snapshots are thread-safe).
 // Shared by the document and the views; a reload creates a new instance.
@@ -33,13 +36,22 @@ struct DocumentContent
     core::LineIndex index;
     core::LineReader reader;
     std::uint64_t generation;
+    // What the indexed part looked like (size = indexed end); compared with the file to detect
+    // changes. Worker-only: workers of a document run one after another.
+    core::FileSnapshot watched;
 };
 
 // One opened log file (ARCHITECTURE §5): opens and indexes it on a worker thread, publishes
 // progress, and supports reload and an encoding override (SPEC F-FILE-8, F-ENC-3, F-FILE-12).
 //
 // Every (re)start increments generation(); signals of an older generation are dropped, so
-// listeners never see stale data. Watching the file for growth follows in M4.
+// listeners never see stale data.
+//
+// Once indexed, the file is watched (FileWatcher, F-TAIL-2). On a change a worker classifies it
+// (core::ChangeDetector): growth is indexed incrementally from the last complete line, so a
+// partial last line is completed and never counted twice (F-TAIL-1, F-TAIL-8), followed by
+// linesAppended(). Truncation and replacement reload the document (notices, marks, and the
+// missing state follow in M4-06); a missing path keeps the content.
 //
 // Thread-safety: UI thread only (signals are emitted on the thread that owns the object).
 class Document : public QObject
@@ -94,6 +106,16 @@ public:
     // Lines visible to readers now (including a partial last line).
     [[nodiscard]] core::LineCount lineCount() const;
 
+    // Watching (F-TAIL-2). Applied now and to the watcher created once the file is indexed.
+    void setPollInterval(int milliseconds);
+    void setWatchNotificationsEnabled(bool enabled);
+
+    // Null before the file was indexed for the first time.
+    [[nodiscard]] FileWatcher* watcher() const noexcept { return m_watcher; }
+
+    // Number of completed incremental index runs (diagnostics, tests).
+    [[nodiscard]] std::uint64_t tailRuns() const noexcept { return m_tailRuns; }
+
 signals:
     void stateChanged(lv::model::Document::State state);
     void indexingProgress(quint64 indexedBytes, quint64 totalBytes);
@@ -110,6 +132,12 @@ private:
     void stopWorker();
     void runWorker(const std::stop_token& stop, std::uint64_t generation,
                    std::optional<core::Encoding> encodingOverride);
+    // Checks the file for changes on a worker (or once the current worker is done).
+    void scheduleTailCheck();
+    void runTail(const std::stop_token& stop, std::uint64_t generation,
+                 const std::shared_ptr<DocumentContent>& content);
+    void workerDone();
+    void ensureWatcher();
     void setState(State state);
 
     // Worker: queues `function` to run on the UI thread if the generation is still current.
@@ -132,6 +160,12 @@ private:
     std::mutex m_eventMutex;
     std::vector<PendingEvent> m_events;
     bool m_drainScheduled = false;
+    FileWatcher* m_watcher = nullptr;  // child; created when first indexed
+    int m_pollInterval = 1000;
+    bool m_watchNotifications = true;
+    bool m_workerBusy = false;  // a worker of the current generation is running
+    bool m_recheck = false;     // a change arrived while the worker was busy
+    std::uint64_t m_tailRuns = 0;
 
     std::jthread m_worker;  // last member: joined before the queue is destroyed
 };

@@ -82,6 +82,7 @@ Append one row per measurement session. Never edit old rows.
 | 2026-11-07 | agent LXC (4 vCPU) | M3-11 | `BM_Search_Literal_1T/large` vs 3 threads (P-SRCH-4) | 669 ms vs 250 ms = 2.7× | 3 workers (cores − 1); criterion is 4 threads, verify on `owner-notebook` |
 | 2026-11-07 | agent LXC (4 vCPU) | M3-11 | match list memory (P-SRCH-5), `ERROR` on large (165k matches) | 1.27 bytes/match | met |
 | 2026-11-07 | agent LXC (4 vCPU) | M3-11 | chunk size sweep (large, literal / regex) | 256 KiB 249/837 ms, 1 MiB 251/836 ms, 4 MiB 380/880 ms | default stays 1 MiB |
+| 2026-11-08 | agent LXC (4 vCPU) | M4-03 | P-TAIL-1 polling only, interval 100 ms (`document_tail_test`) | worst 100 ms of 5 appends | met (budget interval + 100 ms) |
 
 M1-10 notes: block size was the biggest factor (4 MiB → 512 KiB: `large` 287 → 118 ms) because the scanned block is still in L2/L3 after the read. The SSE2 newline scan with branch-light position extraction replaced one `memchr` call per line (split 450 → 185 ms per GiB on `short`), and bulk append with a word-wise bit packer halved the index append cost (260 → 105 ms per GiB). `short` (≈ 20 bytes per line, 54 M lines per GiB) is bound by per-line work, not I/O; P-IDX-2 is met through its 2 GB/s floor. Further gains (AVX2, parallel scanning of blocks) are not worth it for the owner's ~50 MB files (7 ms).
 
