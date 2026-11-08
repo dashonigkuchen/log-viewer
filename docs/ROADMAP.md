@@ -233,7 +233,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/model/file_watcher.cpp`: `QFileSystemWatcher` on file and directory, polling timer fallback (F-TAIL-2), coalescing.
   - Done when: model tests with a writer thread: change events arrive with notifications and with notifications disabled (polling only); burst of 10,000 appends yields bounded number of checks.
 
-- [ ] **M4-03 Incremental indexing in Document** — Depends on: M4-02, M1-07
+- [x] **M4-03 Incremental indexing in Document** — Depends on: M4-02, M1-07 (PR #48)
   - Scope: `Document` reacts to `Grown` with incremental indexing, emits `linesAppended`; pending tail handling (F-TAIL-8).
   - Done when: tests: appending lines (with and without trailing newline, partial line completed later) yields exactly the same index as a fresh open; P-TAIL-1 latency measured in a test with polling interval 100 ms.
 
