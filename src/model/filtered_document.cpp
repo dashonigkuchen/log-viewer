@@ -5,6 +5,10 @@
 
 #include <QMetaObject>
 
+#include <condition_variable>
+#include <functional>
+#include <memory>
+#include <optional>
 #include <utility>
 
 namespace lv::model
@@ -22,34 +26,153 @@ struct FilteredDocument::Shared
     core::SearchProgress progress;
     bool finished = false;
     std::optional<core::Error> error;
+    bool restart = false;  // a listed partial line stopped matching: start over
+    // UI -> worker: the document appended lines.
+    bool more = false;
+    std::condition_variable_any wake;
 };
 
 namespace
 {
 
 // Appends to the generation's match list and reports to the UI thread after every chunk.
+// Lines up to `listed` (already in the list: a re-searched partial line) are not appended again.
 class PostingSink final : public core::ResultSink
 {
 public:
-    PostingSink(core::SortedU64Sequence& matches,
+    PostingSink(core::SortedU64Sequence& matches, std::optional<std::uint64_t> listed,
                 std::function<void(const core::SearchProgress&)> post)
         : m_matches(&matches)
+        , m_listed(listed)
         , m_post(std::move(post))
     {}
 
     void append(std::span<const std::uint64_t> lines, const core::SearchProgress& progress) override
     {
-        m_matches->append(lines);
+        for (const std::uint64_t line : lines) {
+            if (m_listed && line <= *m_listed) {
+                m_sawListed = m_sawListed || line == *m_listed;
+                continue;
+            }
+            m_matches->append(line);
+        }
         m_matches->publish();
         m_post(progress);
     }
 
+    [[nodiscard]] bool sawListed() const noexcept { return m_sawListed; }
+
 private:
     core::SortedU64Sequence* m_matches;
+    std::optional<std::uint64_t> m_listed;
     std::function<void(const core::SearchProgress&)> m_post;
+    bool m_sawListed = false;
 };
 
 }  // namespace
+
+// The search loop of one filter generation: a full search, then incremental searches of
+// appended lines whenever the UI thread signals more (Shared::more).
+struct FilteredDocument::Worker
+{
+    using Update = std::function<void(Shared&)>;
+    using Schedule = std::function<void(const Update&)>;
+
+    enum class Outcome : std::uint8_t
+    {
+        kWait,  // searched (or nothing to do): wait for appended lines
+        kStop,  // canceled, failed, or restarting
+    };
+
+    std::shared_ptr<const DocumentContent> content;
+    std::shared_ptr<core::SortedU64Sequence> matches;
+    std::shared_ptr<const core::CompiledQuery> compiled;
+    core::ThreadPool* pool = nullptr;
+    std::shared_ptr<Shared> shared;
+    Schedule schedule;
+
+    std::uint64_t start = 0;  // first line not searched as a complete line yet
+    std::uint64_t skipped = 0;
+    bool first = true;
+
+    void run(const std::stop_token& stop)
+    {
+        while (!stop.stop_requested()) {
+            if (pass(stop) == Outcome::kStop) {
+                return;
+            }
+            std::unique_lock lock(shared->mutex);
+            if (!shared->wake.wait(lock, stop, [this] { return shared->more; })) {
+                return;
+            }
+            shared->more = false;
+        }
+    }
+
+    void report(std::uint64_t searched, std::uint64_t total, std::uint64_t skippedLines,
+                bool finished)
+    {
+        schedule([&](Shared& state) {
+            state.finished = finished;
+            state.matchCount = matches->size();
+            state.progress.searchedLines = core::LineCount(searched);
+            state.progress.totalLines = core::LineCount(total);
+            state.progress.matches = matches->size();
+            state.progress.skippedLines = skippedLines;
+        });
+    }
+
+    Outcome pass(const std::stop_token& stop)
+    {
+        const auto snapshot = content->index.snapshot();
+        const std::uint64_t end = snapshot.lineCount().get();
+        if (!first && end <= start) {
+            return Outcome::kWait;
+        }
+        // The last listed match is `start` only if it was a partial line before.
+        std::optional<std::uint64_t> listed;
+        if (!matches->empty()) {
+            listed = matches->at(matches->size() - 1);
+        }
+        const bool startListed = !first && listed == start;
+        PostingSink sink(*matches, first ? std::nullopt : listed,
+                         [&](const core::SearchProgress& progress) {
+                             report(start + progress.searchedLines.get(), end,
+                                    skipped + progress.skippedLines, false);
+                         });
+        core::SearchRequest request;
+        request.file = &content->file;
+        request.index = &content->index;
+        request.snapshot = snapshot;
+        request.range = core::SearchRange{.first = core::LineNumber(start),
+                                          .count = core::LineCount(end - start)};
+        request.matcher = compiled.get();
+        const auto result = core::SearchEngine::run(request, *pool, stop, sink);
+        if (!result) {
+            const auto code = result.error().code;
+            if (code == core::ErrorCode::kCanceled) {
+                return Outcome::kStop;  // a newer generation (or destruction) replaced it
+            }
+            if (!first && code == core::ErrorCode::kOutOfRange) {
+                return Outcome::kWait;  // the file shrank: the document reload restarts us
+            }
+            schedule([&](Shared& state) {
+                state.finished = true;
+                state.error = result.error();
+            });
+            return Outcome::kStop;
+        }
+        if (startListed && !sink.sawListed()) {
+            schedule([](Shared& state) { state.restart = true; });
+            return Outcome::kStop;
+        }
+        skipped += result->skippedLines;
+        start = snapshot.completeLines.get();
+        first = false;
+        report(end, end, skipped, true);
+        return Outcome::kWait;
+    }
+};
 
 FilteredDocument::FilteredDocument(const Document& document, core::ThreadPool& pool,
                                    QObject* parent)
@@ -61,6 +184,7 @@ FilteredDocument::FilteredDocument(const Document& document, core::ThreadPool& p
 {
     connect(&document, &Document::reset, this, &FilteredDocument::onDocumentReset);
     connect(&document, &Document::stateChanged, this, &FilteredDocument::onDocumentStateChanged);
+    connect(&document, &Document::linesAppended, this, &FilteredDocument::onLinesAppended);
 }
 
 FilteredDocument::~FilteredDocument()
@@ -121,6 +245,8 @@ void FilteredDocument::restart()
         m_shared->error.reset();
         m_shared->matchCount = 0;
         m_shared->progress = {};
+        m_shared->restart = false;
+        m_shared->more = false;
     }
     m_matches = std::make_shared<core::SortedU64Sequence>();
     m_matchCount = 0;
@@ -151,7 +277,7 @@ void FilteredDocument::startSearch()
     // Raw pointer for the wake-up only: the destructor joins the worker before `this` dies, and
     // drainEvents() runs on the UI thread.
     FilteredDocument* self = this;
-    const auto schedule = [shared, self, generation](auto&& update) {
+    const Worker::Schedule schedule = [shared, self, generation](const Worker::Update& update) {
         bool wake = false;
         {
             const std::scoped_lock lock(shared->mutex);
@@ -166,36 +292,13 @@ void FilteredDocument::startSearch()
             QMetaObject::invokeMethod(self, "drainEvents", Qt::QueuedConnection);
         }
     };
-    m_worker =
-        std::jthread([content, matches, compiled, pool, schedule](const std::stop_token& stop) {
-            PostingSink sink(*matches, [&](const core::SearchProgress& progress) {
-                schedule([&](Shared& state) {
-                    state.matchCount = matches->size();
-                    state.progress = progress;
-                });
-            });
-            core::SearchRequest request;
-            request.file = &content->file;
-            request.index = &content->index;
-            request.snapshot = content->index.snapshot();
-            request.matcher = compiled.get();
-            const auto result = core::SearchEngine::run(request, *pool, stop, sink);
-            if (!result && result.error().code == core::ErrorCode::kCanceled) {
-                return;  // a newer generation (or destruction) replaced this search
-            }
-            schedule([&](Shared& state) {
-                state.finished = true;
-                if (!result) {
-                    state.error = result.error();
-                } else {
-                    state.matchCount = matches->size();
-                    state.progress.searchedLines = result->searchedLines;
-                    state.progress.totalLines = request.snapshot.lineCount();
-                    state.progress.matches = result->matches;
-                    state.progress.skippedLines = result->skippedLines;
-                }
-            });
-        });
+    auto worker = std::make_shared<Worker>(Worker{.content = content,
+                                                  .matches = matches,
+                                                  .compiled = compiled,
+                                                  .pool = pool,
+                                                  .shared = shared,
+                                                  .schedule = schedule});
+    m_worker = std::jthread([worker](const std::stop_token& stop) { worker->run(stop); });
 }
 
 void FilteredDocument::drainEvents()
@@ -204,6 +307,7 @@ void FilteredDocument::drainEvents()
     core::SearchProgress progress;
     bool finished = false;
     std::optional<core::Error> error;
+    bool restartNeeded = false;
     {
         const std::scoped_lock lock(m_shared->mutex);
         m_shared->drainScheduled = false;
@@ -215,6 +319,12 @@ void FilteredDocument::drainEvents()
         progress = m_shared->progress;
         finished = m_shared->finished;
         error = m_shared->error;
+        restartNeeded = std::exchange(m_shared->restart, false);
+    }
+    if (restartNeeded) {
+        restart();
+        startSearch();
+        return;
     }
     m_progress = progress;
     if (matchCount > m_matchCount) {
@@ -240,6 +350,18 @@ void FilteredDocument::onDocumentReset()
     }
     restart();
     startSearch();  // pending until the new generation is indexed
+}
+
+void FilteredDocument::onLinesAppended()
+{
+    if (!m_worker.joinable()) {
+        return;  // no search yet (inactive, or pending until the document is indexed)
+    }
+    {
+        const std::scoped_lock lock(m_shared->mutex);
+        m_shared->more = true;
+    }
+    m_shared->wake.notify_all();
 }
 
 void FilteredDocument::onDocumentStateChanged()

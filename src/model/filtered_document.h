@@ -29,8 +29,15 @@ class Document;
 //
 // Every apply(), clear(), and document reset starts a new filter generation with a new match
 // list; results and signals of older generations never reach listeners. While the document is
-// indexing, the filter waits and runs when indexing has finished (incremental filtering of
-// growing files follows in M4). A document reload clears the matches and re-runs the filter.
+// indexing, the filter waits and runs when indexing has finished. A document reload clears the
+// matches and re-runs the filter.
+//
+// Incremental filtering (F-TAIL-1): one worker per generation searches the whole file once and
+// then waits; when the document appends lines it searches only the new lines (from the first
+// line that was not complete before, so a partial last line is re-checked when it grows) and
+// appends the matches. Appends that arrive during a search queue behind it, so nothing is lost
+// or duplicated. If a listed partial line stops matching once it grows (possible with inverted
+// or anchored queries), the filter restarts with a new generation.
 //
 // Thread-safety: UI thread only.
 class FilteredDocument : public QObject
@@ -105,6 +112,7 @@ signals:
 
 private:
     struct Shared;
+    struct Worker;
 
     // Starts a new generation: cancels the worker and replaces the match list.
     void restart();
@@ -114,6 +122,7 @@ private:
     Q_INVOKABLE void drainEvents();
     void onDocumentReset();
     void onDocumentStateChanged();
+    void onLinesAppended();
 
     const Document* m_document;
     core::ThreadPool* m_pool;

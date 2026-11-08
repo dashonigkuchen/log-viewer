@@ -237,7 +237,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `Document` reacts to `Grown` with incremental indexing, emits `linesAppended`; pending tail handling (F-TAIL-8).
   - Done when: tests: appending lines (with and without trailing newline, partial line completed later) yields exactly the same index as a fresh open; P-TAIL-1 latency measured in a test with polling interval 100 ms.
 
-- [ ] **M4-04 Incremental filtering** — Depends on: M4-03, M3-07
+- [x] **M4-04 Incremental filtering** — Depends on: M4-03, M3-07 (PR #50)
   - Scope: `FilteredDocument` searches only appended lines and appends matches; a running full search and incremental appends do not conflict (appends queue behind the full search range).
   - Done when: tests: results after many appends equal a full search of the final file; appends during a running full search are not lost or duplicated.
 
