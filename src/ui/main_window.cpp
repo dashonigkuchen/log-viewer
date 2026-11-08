@@ -35,6 +35,7 @@
 #include <QStyle>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QToolBar>
 #include <QUrl>
 #include <QtVersion>
 
@@ -62,6 +63,14 @@ MainWindow::MainWindow(QWidget* parent)
     connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closeTab);
     connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateStatus);
     connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateEncodingMenu);
+    connect(m_tabs, &QTabWidget::currentChanged, this, &MainWindow::updateFollowAction);
+    connect(m_tabs, &QTabWidget::currentChanged, this, [this] {
+        // The current tab no longer needs the "changed" indicator (F-TAB-3).
+        if (auto* tab = currentDocumentTab()) {
+            tab->setProperty("lvChanged", false);
+            updateTabState(tab);
+        }
+    });
     connect(m_tabs->tabBar(), &QTabBar::customContextMenuRequested, this,
             &MainWindow::showTabContextMenu);
     // Middle click closes a tab (F-TAB-2).
@@ -200,6 +209,23 @@ void MainWindow::createMenus()
             tab->findBar()->findPrevious();
         }
     });
+    // Follow mode of the current tab (F-TAIL-3).
+    m_followAction = viewMenu->addAction(QStringLiteral("F&ollow"));
+    m_followAction->setObjectName(QStringLiteral("actionFollow"));
+    m_followAction->setCheckable(true);
+    m_followAction->setShortcut(QKeySequence(Qt::Key_F10));
+    m_followAction->setToolTip(QStringLiteral("Follow the end of the file (F10)"));
+    connect(m_followAction, &QAction::triggered, this, [this](bool on) {
+        if (auto* tab = currentDocumentTab()) {
+            tab->setFollowing(on);
+        } else {
+            m_followAction->setChecked(false);
+        }
+    });
+    auto* toolBar = addToolBar(QStringLiteral("Main"));
+    toolBar->setObjectName(QStringLiteral("mainToolBar"));
+    toolBar->setMovable(false);
+    toolBar->addAction(m_followAction);
     QAction* clearHistory = viewMenu->addAction(QStringLiteral("Clear Filter &History"));
     clearHistory->setObjectName(QStringLiteral("actionClearFilterHistory"));
     connect(clearHistory, &QAction::triggered, this, [this] {
@@ -391,6 +417,17 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
     });
     applyViewSettings(tab);
     tab->filterBar()->setHistory(m_filterHistory);
+    connect(tab, &DocumentTab::followingChanged, this, [this, tab] {
+        if (tab == currentDocumentTab()) {
+            updateFollowAction();
+        }
+    });
+    connect(tab, &DocumentTab::contentChanged, this, [this, tab] {
+        if (tab != currentDocumentTab()) {
+            tab->setProperty("lvChanged", true);
+            updateTabState(tab);
+        }
+    });
     if (m_settings != nullptr) {
         const QByteArray state = m_settings->filterSplitterState();
         if (!state.isEmpty()) {
@@ -474,6 +511,8 @@ void MainWindow::updateTabState(DocumentTab* tab)
         title += QStringLiteral(" \u23F3");  // hourglass while indexing (F-TAB-3)
     } else if (state == State::kError) {
         title += QStringLiteral(" \u26A0");
+    } else if (tab->property("lvChanged").toBool()) {
+        title += QStringLiteral(" \u25CF");  // changed while the tab was not active (F-TAB-3)
     }
     m_tabs->setTabText(index, title);
 }
@@ -482,6 +521,12 @@ QString MainWindow::statusText() const
 {
     const auto* tab = currentDocumentTab();
     return tab == nullptr ? QStringLiteral("Ready") : tab->statusText();
+}
+
+void MainWindow::updateFollowAction()
+{
+    const auto* tab = currentDocumentTab();
+    m_followAction->setChecked(tab != nullptr && tab->isFollowing());
 }
 
 void MainWindow::updateStatus()

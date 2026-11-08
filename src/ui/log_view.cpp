@@ -120,6 +120,36 @@ void LogView::scrollToRow(core::LineNumber row)
     viewport()->update();
 }
 
+void LogView::setFollowing(bool following)
+{
+    if (following == m_following) {
+        return;
+    }
+    m_following = following;
+    if (following) {
+        followEnd();
+    }
+}
+
+void LogView::followEnd()
+{
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        return;
+    }
+    m_autoScrolling = true;
+    setCurrentRow(core::LineNumber(rows - 1));
+    scrollToRow(core::LineNumber(maxTopRow()));
+    m_autoScrolling = false;
+}
+
+void LogView::userMovedUp()
+{
+    if (m_following) {
+        emit followRequested(false);
+    }
+}
+
 void LogView::setCurrentRow(core::LineNumber row)
 {
     const std::uint64_t rows = rowCount().get();
@@ -195,12 +225,14 @@ void LogView::keyPressEvent(QKeyEvent* event)
     bool movesRow = true;
     switch (event->key()) {
     case Qt::Key_Up:
+        userMovedUp();
         moveCurrentRow(core::LineNumber(current > 0 ? current - 1 : 0));
         break;
     case Qt::Key_Down:
         moveCurrentRow(core::LineNumber(current + 1));
         break;
     case Qt::Key_PageUp:
+        userMovedUp();
         moveCurrentRow(core::LineNumber(current > page ? current - page : 0));
         break;
     case Qt::Key_PageDown:
@@ -208,6 +240,7 @@ void LogView::keyPressEvent(QKeyEvent* event)
         break;
     case Qt::Key_Home:
         if (control) {
+            userMovedUp();
             moveCurrentRow(core::LineNumber(0));
         } else {
             movesRow = false;
@@ -218,6 +251,9 @@ void LogView::keyPressEvent(QKeyEvent* event)
         if (control) {
             moveCurrentRow(core::LineNumber(rows > 0 ? rows - 1 : 0));
             horizontal->setValue(0);
+            if (!m_following) {
+                emit followRequested(true);  // Ctrl+End turns follow mode on (F-TAIL-3)
+            }
         } else {
             movesRow = false;
             horizontal->setValue(horizontal->maximum());
@@ -761,6 +797,7 @@ void LogView::wheelEvent(QWheelEvent* event)
         const std::uint64_t top = m_topRow.get();
         const auto steps = static_cast<std::uint64_t>(std::abs(rows));
         if (rows > 0) {
+            userMovedUp();
             scrollToRow(core::LineNumber(top > steps ? top - steps : 0));
         } else {
             scrollToRow(core::LineNumber(top + steps));
@@ -873,6 +910,9 @@ void LogView::scrollContentsBy(int /*dx*/, int dy)
     if (m_updatingScrollBars) {
         return;
     }
+    if (dy > 0) {
+        userMovedUp();  // the scroll bar moved up
+    }
     if (dy != 0) {
         const core::LineNumber row(rowForScrollValue(verticalScrollBar()->value()));
         if (row != m_topRow) {
@@ -890,6 +930,9 @@ void LogView::onRowsAppended()
     }
     updateScrollBars();
     viewport()->update();
+    if (m_following) {
+        followEnd();
+    }
 }
 
 void LogView::onReset()
@@ -904,6 +947,9 @@ void LogView::onReset()
     }
     updateScrollBars();
     viewport()->update();
+    if (m_following) {
+        followEnd();
+    }
 }
 
 void LogView::resizeEvent(QResizeEvent* event)

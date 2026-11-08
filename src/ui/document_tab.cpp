@@ -74,6 +74,14 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     connect(m_splitter, &QSplitter::splitterMoved, this, &DocumentTab::splitterMoved);
     connect(m_filteredView, &LogView::currentRowChanged, this, &DocumentTab::syncFilteredToMain);
     connect(m_view, &LogView::currentRowChanged, this, &DocumentTab::syncMainToFiltered);
+    connect(m_view, &LogView::followRequested, this, &DocumentTab::setFollowing);
+    connect(m_filteredView, &LogView::followRequested, this, &DocumentTab::setFollowing);
+    connect(m_document.get(), &model::Document::linesAppended, this, [this] {
+        if (m_document->state() == model::Document::State::kReady) {
+            emit contentChanged();
+        }
+    });
+    connect(m_document.get(), &model::Document::reset, this, &DocumentTab::contentChanged);
 
     connect(m_document.get(), &model::Document::stateChanged, this, &DocumentTab::statusChanged);
     connect(m_document.get(), &model::Document::linesAppended, this, &DocumentTab::statusChanged);
@@ -105,9 +113,23 @@ void DocumentTab::openFindBar()
     m_findBar->open(target);
 }
 
+void DocumentTab::setFollowing(bool following)
+{
+    if (following == m_following) {
+        return;
+    }
+    m_following = following;
+    m_view->setFollowing(following);
+    m_filteredView->setFollowing(following);
+    emit followingChanged(following);
+    emit statusChanged();
+}
+
 void DocumentTab::syncFilteredToMain(core::LineNumber row)
 {
-    if (m_syncing || row.get() >= m_filteredSource->lineCount().get()) {
+    // While following, each view moves to its own end; syncing would pull the other one away.
+    if (m_syncing || m_filteredView->isAutoScrolling() ||
+        row.get() >= m_filteredSource->lineCount().get()) {
         return;
     }
     m_syncing = true;
@@ -117,7 +139,7 @@ void DocumentTab::syncFilteredToMain(core::LineNumber row)
 
 void DocumentTab::syncMainToFiltered(core::LineNumber line)
 {
-    if (m_syncing) {
+    if (m_syncing || m_view->isAutoScrolling()) {
         return;
     }
     // Nearest match at or before `line`: the one before the first match after it.
@@ -218,6 +240,9 @@ QString DocumentTab::statusText() const
     }
     if (m_document->state() == State::kIndexing && m_totalBytes > 0) {
         parts << QStringLiteral("Indexing %1%").arg(m_indexedBytes * 100 / m_totalBytes);
+    }
+    if (m_following) {
+        parts << QStringLiteral("Following");
     }
     return parts.join(QStringLiteral("  |  "));
 }
