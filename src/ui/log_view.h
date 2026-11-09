@@ -2,6 +2,7 @@
 
 #include "core/util/strong_types.h"
 #include "model/line_source.h"
+#include "model/mark_set.h"
 #include "model/match_highlighter.h"
 #include "ui/text_selection.h"
 
@@ -72,6 +73,32 @@ public:
 
     // Viewport rectangles of the highlighted matches in a visible row (for tests).
     [[nodiscard]] std::vector<QRectF> matchRects(core::LineNumber row) const;
+
+    // Marks of the document (F-MARK-1 … F-MARK-5); null = no mark column and no mark actions.
+    // Not owned.
+    void setMarks(model::MarkSet* marks);
+
+    [[nodiscard]] model::MarkSet* marks() const noexcept { return m_marks; }
+
+    // Toggles marks on the selected rows, or on the current row without a selection (M).
+    void toggleMarks();
+    // Moves to the next / previous marked row (Ctrl+Down / Ctrl+Up); false if there is none.
+    bool goToNextMark();
+    bool goToPreviousMark();
+    // Asks for confirmation (injectable for tests) and clears all marks (F-MARK-4).
+    void clearMarks();
+
+    void setClearMarksConfirmation(std::function<bool(std::size_t count)> confirm)
+    {
+        m_confirmClearMarks = std::move(confirm);
+    }
+
+    // Copies all marked lines in line order (F-MARK-5).
+    void copyMarkedLines();
+    // Width of the mark column at the left edge of the gutter (0 without marks).
+    [[nodiscard]] int markColumnWidth() const;
+
+    [[nodiscard]] QColor markColor() const { return m_markColor; }
 
     // Highlighting of the find bar's query (F-FIND-3), painted in its own color; null = none.
     void setFindHighlighter(const model::MatchHighlighter* highlighter);
@@ -200,6 +227,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void changeEvent(QEvent* event) override;
     void scrollContentsBy(int dx, int dy) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
     // Display text of a row and the display offset of every original column (size + 1 entries).
@@ -234,6 +262,13 @@ private:
     QPointer<const model::MatchHighlighter> m_highlighter;
     QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
     QPointer<const model::MatchHighlighter> m_findHighlighter;
+    QPointer<model::MarkSet> m_marks;
+    QColor m_markColor{120, 170, 255, 90};  // light blue row background for marked lines
+    std::function<bool(std::size_t)> m_confirmClearMarks;
+    // Original line numbers of the selected rows (or the current row).
+    [[nodiscard]] std::vector<core::LineNumber> targetLines() const;
+    // Row of the first row whose original line is >= `line` (rows are ascending).
+    [[nodiscard]] std::optional<core::LineNumber> rowAtOrAfter(core::LineNumber line) const;
     QColor m_findColor{0, 170, 255, 110};  // light blue, distinct from the filter highlight
     core::LineNumber m_topRow;
     std::optional<core::LineNumber> m_currentRow;

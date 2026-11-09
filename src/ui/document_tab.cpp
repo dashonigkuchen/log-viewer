@@ -5,6 +5,7 @@
 #include "model/document_line_source.h"
 #include "model/filtered_document.h"
 #include "model/filtered_line_source.h"
+#include "model/mark_set.h"
 #include "model/match_highlighter.h"
 #include "model/search_pool.h"
 #include "ui/filter_bar.h"
@@ -43,6 +44,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_filter(std::make_unique<model::FilteredDocument>(*m_document, model::searchThreadPool()))
     , m_filteredSource(std::make_unique<model::FilteredLineSource>(*m_filter, *m_source))
     , m_highlighter(std::make_unique<model::MatchHighlighter>(*m_filter))
+    , m_marks(std::make_unique<model::MarkSet>(*m_document))
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
 {
@@ -61,6 +63,8 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_filteredView->setLineSource(m_filteredSource.get());
     m_view->setHighlighter(m_highlighter.get());
     m_filteredView->setHighlighter(m_highlighter.get());
+    m_view->setMarks(m_marks.get());
+    m_filteredView->setMarks(m_marks.get());
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);
@@ -91,6 +95,12 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     noticeLayout->addWidget(closeNotice);
     m_noticeBar->hide();
     connect(m_document.get(), &model::Document::notice, this, &DocumentTab::showNotice);
+    // Marks refer to line numbers of the old generation: they are dropped (F-TAIL-5).
+    connect(m_marks.get(), &model::MarkSet::cleared, this, [this](quint64 count) {
+        const QString previous = noticeText().section(QStringLiteral("  "), 1);
+        const QString lost = QStringLiteral("%1 mark(s) were cleared.").arg(count);
+        showNotice(previous.isEmpty() ? lost : previous + QStringLiteral(" ") + lost);
+    });
     connect(m_document.get(), &model::Document::missingChanged, this, &DocumentTab::statusChanged);
 
     auto* layout = new QVBoxLayout(this);
@@ -243,6 +253,8 @@ DocumentTab::~DocumentTab()
     delete m_findBar;  // detaches its highlighter from the views first
     m_findBar = nullptr;
     // The view refers to the source, the source to the document: detach before destroying them.
+    m_view->setMarks(nullptr);
+    m_filteredView->setMarks(nullptr);
     m_view->setLineSource(nullptr);
 }
 

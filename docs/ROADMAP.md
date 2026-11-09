@@ -259,7 +259,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 ## M5 – Marks, bookmarks, highlight rules
 
-- [ ] **M5-01 Marks** — Depends on: M3-08
+- [x] **M5-01 Marks** — Depends on: M3-08 (PR #56)
   - Scope: `src/model/mark_set.cpp`, gutter mark column, `M` key, context menu, next/previous (F-MARK-1 … F-MARK-5).
   - Done when: model and Qt Tests for toggle on single and multiple lines, navigation, clear with confirmation, copy marked lines.
 
