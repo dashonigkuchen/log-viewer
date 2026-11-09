@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QString>
 
+#include <cstdint>
 #include <memory>
+#include <optional>
 
 class QSettings;
 
@@ -22,11 +24,24 @@ class Settings : public QObject
     Q_OBJECT
 
 public:
-    static constexpr int kSchemaVersion = 1;
+    // Version 2 added the settings dialog values (M6-01); version 1 files are migrated.
+    static constexpr int kSchemaVersion = 2;
     static constexpr int kDefaultTabWidth = 8;
     static constexpr int kDefaultFontSize = 10;
     static constexpr int kMinFontSize = 4;
     static constexpr int kMaxFontSize = 72;
+    static constexpr int kDefaultPollMs = 1000;
+    static constexpr int kMinPollMs = 100;
+    static constexpr int kMaxPollMs = 10000;
+    static constexpr int kDefaultMaxColumns = 100000;
+    static constexpr int kMinMaxColumns = 100;
+    static constexpr int kMaxMaxColumns = 1000000;
+    static constexpr int kDefaultHistorySize = 100;
+    static constexpr int kMaxHistorySize = 1000;
+    static constexpr int kMaxSearchThreads = 64;
+    // Colors as 0xAARRGGBB (QtCore only).
+    static constexpr std::uint32_t kDefaultMarkColor = 0x5A78AAFFU;
+    static constexpr std::uint32_t kDefaultMatchColor = 0x96FFD600U;
 
     // Opens `<directory>/logviewer.ini` (the directory is created if needed).
     explicit Settings(const QString& directory, QObject* parent = nullptr);
@@ -69,6 +84,54 @@ public:
 
     void setShowMarksInFilter(bool show);
 
+    // Settings dialog values (F-SET-1).
+    // Current line background; nullopt = derived from the palette.
+    [[nodiscard]] std::optional<std::uint32_t> currentLineColor() const noexcept
+    {
+        return m_currentLineColor;
+    }
+
+    void setCurrentLineColor(std::optional<std::uint32_t> color);
+
+    [[nodiscard]] std::uint32_t markColor() const noexcept { return m_markColor; }
+
+    void setMarkColor(std::uint32_t color);
+
+    [[nodiscard]] std::uint32_t matchColor() const noexcept { return m_matchColor; }
+
+    void setMatchColor(std::uint32_t color);
+
+    // File change polling interval in ms (F-TAIL-2).
+    [[nodiscard]] int pollInterval() const noexcept { return m_pollInterval; }
+
+    void setPollInterval(int milliseconds);
+
+    // Displayed characters per line before it is cut (F-FILE-7).
+    [[nodiscard]] int maxColumns() const noexcept { return m_maxColumns; }
+
+    void setMaxColumns(int columns);
+
+    [[nodiscard]] int filterHistorySize() const noexcept { return m_historySize; }
+
+    void setFilterHistorySize(int size);
+
+    // Used by M6-03 / M6-04; stored here so the dialog can show them.
+    [[nodiscard]] bool restoreSession() const noexcept { return m_restoreSession; }
+
+    void setRestoreSession(bool restore);
+
+    [[nodiscard]] bool singleInstance() const noexcept { return m_singleInstance; }
+
+    void setSingleInstance(bool single);
+
+    // Search threads; 0 = automatic. Takes effect at the next start (the pool is global).
+    [[nodiscard]] int searchThreads() const noexcept { return m_searchThreads; }
+
+    void setSearchThreads(int threads);
+
+    // Path of the backup if the settings file was corrupt and has been reset (F-SET-3).
+    [[nodiscard]] const QString& corruptBackup() const noexcept { return m_corruptBackup; }
+
     // Saved QSplitter state between main and filtered view (F-FILT-1); empty if never saved.
     [[nodiscard]] QByteArray filterSplitterState() const;
     void setFilterSplitterState(const QByteArray& state);
@@ -79,9 +142,15 @@ public:
 signals:
     // A view setting changed (font, zoom, tab width, line numbers).
     void viewSettingsChanged();
+    // Any other setting changed (polling, history size, ...).
+    void settingsChanged();
 
 private:
     void load();
+    void migrate(int fromVersion);
+    void setColorValue(const char* name, std::uint32_t& member, std::uint32_t color);
+    void setIntValue(const char* name, int& member, int value, int min, int max);
+    void setBoolValue(const char* name, bool& member, bool value);
 
     std::unique_ptr<QSettings> m_store;
     QString m_fontFamily;
@@ -90,6 +159,16 @@ private:
     int m_tabWidth = kDefaultTabWidth;
     bool m_lineNumbers = true;
     bool m_showMarksInFilter = true;
+    std::optional<std::uint32_t> m_currentLineColor;
+    std::uint32_t m_markColor = kDefaultMarkColor;
+    std::uint32_t m_matchColor = kDefaultMatchColor;
+    int m_pollInterval = kDefaultPollMs;
+    int m_maxColumns = kDefaultMaxColumns;
+    int m_historySize = kDefaultHistorySize;
+    bool m_restoreSession = true;
+    bool m_singleInstance = true;
+    int m_searchThreads = 0;
+    QString m_corruptBackup;
 };
 
 }  // namespace lv::model

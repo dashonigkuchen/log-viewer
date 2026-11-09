@@ -31,6 +31,16 @@ void FilterHistory::add(const core::Query& query)
     emit changed();
 }
 
+void FilterHistory::setLimit(int limit)
+{
+    LV_ASSERT(limit > 0);
+    m_limit = limit;
+    if (m_entries.size() > static_cast<std::size_t>(m_limit)) {
+        m_entries.resize(static_cast<std::size_t>(m_limit));
+        emit changed();
+    }
+}
+
 void FilterHistory::remove(std::size_t index)
 {
     if (index < m_entries.size()) {

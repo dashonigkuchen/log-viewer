@@ -13,6 +13,7 @@
 #include "ui/find_bar.h"
 #include "ui/highlight_dialog.h"
 #include "ui/log_view.h"
+#include "ui/settings_dialog.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -120,6 +121,12 @@ void MainWindow::createMenus()
     closeAllAction->setObjectName(QStringLiteral("actionCloseAll"));
     connect(closeAllAction, &QAction::triggered, this, &MainWindow::closeAllTabs);
 
+    fileMenu->addSeparator();
+    QAction* settingsAction = fileMenu->addAction(QStringLiteral("&Settings..."));
+    settingsAction->setObjectName(QStringLiteral("actionSettings"));
+    settingsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma));
+    settingsAction->setMenuRole(QAction::PreferencesRole);
+    connect(settingsAction, &QAction::triggered, this, [this] { editSettings(); });
     fileMenu->addSeparator();
 
     QAction* exitAction = fileMenu->addAction(QStringLiteral("E&xit"));
@@ -309,6 +316,14 @@ void MainWindow::setSettings(model::Settings* settings)
     if (m_settings != nullptr) {
         connect(m_settings, &model::Settings::viewSettingsChanged, this,
                 qOverload<>(&MainWindow::applyViewSettings));
+        connect(m_settings, &model::Settings::settingsChanged, this,
+                qOverload<>(&MainWindow::applyViewSettings));
+        if (!m_settings->corruptBackup().isEmpty()) {
+            statusBar()->showMessage(
+                QStringLiteral("The settings file was damaged and has been reset (backup: %1).")
+                    .arg(QDir::toNativeSeparators(m_settings->corruptBackup())),
+                15000);
+        }
         m_lineNumbersAction->setChecked(m_settings->lineNumbersVisible());
         m_showMarksAction->setChecked(m_settings->showMarksInFilter());
     }
@@ -348,11 +363,23 @@ void MainWindow::applyViewSettings(DocumentTab* tab)
     }
     tab->setShowMarksInFilter(m_settings != nullptr ? m_settings->showMarksInFilter()
                                                     : m_showMarksAction->isChecked());
+    if (m_settings != nullptr) {
+        tab->document().setPollInterval(m_settings->pollInterval());
+        if (m_filterHistory != nullptr) {
+            m_filterHistory->setLimit(m_settings->filterHistorySize());
+        }
+    }
     for (LogView* view : {tab->mainView(), tab->filteredView()}) {
         if (m_settings != nullptr) {
             view->setFont(viewFont());
             view->setTabWidth(m_settings->tabWidth());
             view->setLineNumbersVisible(m_settings->lineNumbersVisible());
+            view->setColumnLimit(m_settings->maxColumns());
+            view->setMarkColor(QColor::fromRgba(m_settings->markColor()));
+            view->setMatchHighlightColor(QColor::fromRgba(m_settings->matchColor()));
+            const std::optional<std::uint32_t> currentLine = m_settings->currentLineColor();
+            view->setCurrentLineColor(currentLine.has_value() ? QColor::fromRgba(*currentLine)
+                                                              : QColor());
         } else {
             view->setLineNumbersVisible(m_lineNumbersAction->isChecked());
         }
@@ -418,6 +445,18 @@ void MainWindow::editHighlightRules(const std::function<void(HighlightDialog&)>&
     if (dialog.exec() == QDialog::Accepted) {
         m_highlightSets->assign(dialog.sets(), dialog.defaultIndex());
     }
+}
+
+void MainWindow::editSettings(const std::function<void(SettingsDialog&)>& prepare)
+{
+    if (m_settings == nullptr) {
+        return;
+    }
+    SettingsDialog dialog(*m_settings, this);
+    if (prepare) {
+        prepare(dialog);
+    }
+    dialog.exec();
 }
 
 void MainWindow::highlightText(DocumentTab* tab, const QString& text)

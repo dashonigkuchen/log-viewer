@@ -12,4 +12,7 @@ namespace lv::model
 // on first use with the default size; destroyed at exit after all documents are gone.
 [[nodiscard]] core::ThreadPool& searchThreadPool();
 
+// Number of threads for the pool (0 = automatic); only effective before its first use.
+void setSearchThreadCount(int threads);
+
 }  // namespace lv::model

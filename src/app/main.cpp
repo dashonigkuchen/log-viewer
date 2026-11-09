@@ -6,6 +6,7 @@
 #include "model/highlight_sets.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
+#include "model/search_pool.h"
 #include "model/settings.h"
 #include "ui/main_window.h"
 
@@ -58,12 +59,13 @@ int main(int argc, char* argv[])
         lv::core::LogLevel::kInfo,
         QStringLiteral("Log Viewer %1 starting").arg(lv::model::versionString()).toStdString());
     lv::model::Settings settings(lv::model::settingsDirectory());
+    lv::model::setSearchThreadCount(settings.searchThreads());  // before the pool is used
     lv::model::RecentFiles recent;
     recent.load(settings.store());
     QObject::connect(&recent, &lv::model::RecentFiles::changed,
                      [&recent, &settings] { recent.save(settings.store()); });
 
-    lv::model::FilterHistory history;
+    lv::model::FilterHistory history(nullptr, settings.filterHistorySize());
     history.load(settings.store());
     QObject::connect(&history, &lv::model::FilterHistory::changed,
                      [&history, &settings] { history.save(settings.store()); });

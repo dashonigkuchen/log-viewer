@@ -297,7 +297,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 ## M6 – Settings, session, polish
 
-- [ ] **M6-01 Settings dialog** — Depends on: M2-08, M5-06
+- [x] **M6-01 Settings dialog** — Depends on: M2-08, M5-06 (PR #64)
   - Scope: F-SET-1, settings migration and corrupt file handling (F-SET-3).
   - Done when: Qt Tests change each setting and verify effect and persistence; corrupt INI file is backed up and replaced.
 

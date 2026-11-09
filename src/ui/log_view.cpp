@@ -878,6 +878,24 @@ void LogView::setTabWidth(int width)
     viewport()->update();
 }
 
+void LogView::setMarkColor(const QColor& color)
+{
+    m_markColor = color;
+    viewport()->update();
+}
+
+void LogView::setCurrentLineColor(const QColor& color)
+{
+    m_currentLineColor = color;
+    viewport()->update();
+}
+
+QColor LogView::currentLineColor() const
+{
+    return m_currentLineColor.isValid() ? m_currentLineColor
+                                        : palette().color(QPalette::Highlight).lighter(170);
+}
+
 void LogView::setColumnLimit(int columns)
 {
     LV_ASSERT(columns > 0);
@@ -1373,7 +1391,7 @@ void LogView::paintRuleBackground(QPainter& painter, const model::LineHighlight&
         painter.drawRect(gutter, y, width - gutter - 1, m_lineHeight - 1);
         painter.restore();
     } else {
-        painter.fillRect(gutter, y, width - gutter, m_lineHeight, highlight.lighter(170));
+        painter.fillRect(gutter, y, width - gutter, m_lineHeight, currentLineColor());
     }
 }
 
