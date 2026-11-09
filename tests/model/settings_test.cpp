@@ -3,6 +3,7 @@
 #include "model/settings.h"
 #include "temp_dir.h"
 
+#include <QDir>
 #include <QFile>
 #include <QSettings>
 #include <QSignalSpy>
@@ -151,7 +152,9 @@ TEST_CASE("a corrupt settings file is backed up and replaced", "[model][settings
         file.write("[View\ntabWidth=4\n");  // unterminated section: QSettings::FormatError
     }
     Settings settings(qpath(dir.path()));
-    CHECK(settings.corruptBackup() == qpath(dir / "logviewer.ini.corrupt"));
+    // Compare normalized paths: Qt uses "/" while std::filesystem uses "\\" on Windows.
+    CHECK(QDir::cleanPath(settings.corruptBackup()) ==
+          QDir::cleanPath(qpath(dir / "logviewer.ini.corrupt")));
     CHECK(QFile::exists(settings.corruptBackup()));
     CHECK(settings.tabWidth() == Settings::kDefaultTabWidth);
     settings.setTabWidth(2);
