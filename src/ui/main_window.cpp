@@ -369,6 +369,16 @@ void MainWindow::setFilterHistory(model::FilterHistory* history)
     }
 }
 
+void MainWindow::setAnnotationStore(model::AnnotationStore* store)
+{
+    m_annotationStore = store;
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (auto* tab = documentTab(i)) {
+            tab->setAnnotationStore(store);
+        }
+    }
+}
+
 void MainWindow::setHighlightSets(model::HighlightSets* sets)
 {
     m_highlightSets = sets;
@@ -543,6 +553,7 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
     applyViewSettings(tab);
     tab->filterBar()->setHistory(m_filterHistory);
     tab->lineHighlighter().setSets(m_highlightSets);
+    tab->setAnnotationStore(m_annotationStore);
     connect(tab, &DocumentTab::highlightTextRequested, this,
             [this, tab](const QString& text) { highlightText(tab, text); });
     connect(tab, &DocumentTab::followingChanged, this, [this, tab] {
