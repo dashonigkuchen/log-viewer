@@ -25,8 +25,9 @@ namespace lv::ui
 // text field, mode selector (Literal / Regex / Boolean), options (case sensitive, whole word,
 // invert), Clear, and a status line with progress, match count, and skipped lines.
 //
-// The filter is applied only on Enter. Esc restores the last applied filter. An invalid query
-// is reported inline with its position; the previous result stays.
+// Text is applied on Enter; changing the mode or an option applies the entered text right away
+// (nothing happens while the field is empty). Esc restores the last applied filter. An invalid
+// query is reported inline with its position; the previous result stays.
 //
 // The field is an editable combo box over the global filter history (F-HIST-2, F-HIST-3):
 // the dropdown lists entries (choosing one applies it), Up/Down cycle through them, typing
@@ -79,6 +80,7 @@ private:
     void showError(const QString& message, std::size_t position);
     void hideError();
     void updateOptions();
+    void applyOptionChange();
     void updateStatus();
     void refreshHistory();
     void showHistoryEntry(int index);

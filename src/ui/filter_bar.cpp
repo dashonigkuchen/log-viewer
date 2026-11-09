@@ -4,6 +4,7 @@
 #include "model/filtered_document.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
@@ -110,6 +111,13 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
         updateOptions();
         hideError();
     });
+    // Option changes by the user apply the entered text right away; text changes wait for
+    // Enter. clicked/activated fire only on user interaction, not when showQuery() or the
+    // history set the options.
+    connect(m_mode, &QComboBox::activated, this, &FilterBar::applyOptionChange);
+    for (QCheckBox* box : {m_caseSensitive, m_wholeWord, m_invert}) {
+        connect(box, &QCheckBox::clicked, this, &FilterBar::applyOptionChange);
+    }
     connect(m_clear, &QPushButton::clicked, this, &FilterBar::clear);
     connect(m_filter, &model::FilteredDocument::stateChanged, this, &FilterBar::updateStatus);
     connect(m_filter, &model::FilteredDocument::progressChanged, this, &FilterBar::updateStatus);
@@ -127,6 +135,18 @@ core::Query FilterBar::enteredQuery() const
     query.wholeWord = m_wholeWord->isChecked();
     query.invert = m_invert->isChecked();
     return query;
+}
+
+void FilterBar::applyOptionChange()
+{
+    if (m_input->text().isEmpty()) {
+        return;  // nothing to filter yet
+    }
+    QWidget* focused = QApplication::focusWidget();
+    apply();
+    if (focused != nullptr && m_error->isVisible()) {
+        focused->setFocus();  // keep the focus on the option; the error is shown inline
+    }
 }
 
 bool FilterBar::apply()
