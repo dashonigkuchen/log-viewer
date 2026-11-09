@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
-#include <cstdlib>
 #include <fstream>
 #include <string>
 #include <thread>
@@ -37,12 +36,10 @@ namespace
 
 std::uint64_t envNumber(const char* name, std::uint64_t fallback)
 {
-    // NOLINTNEXTLINE(concurrency-mt-unsafe): read before any thread starts
-    const char* value = std::getenv(name);
-    if (value == nullptr || *value == '\0') {
-        return fallback;
-    }
-    return std::strtoull(value, nullptr, 10);
+    // qEnvironmentVariable: portable and not deprecated by MSVC (unlike std::getenv).
+    bool ok = false;
+    const auto value = qEnvironmentVariable(name).toULongLong(&ok);
+    return ok ? value : fallback;
 }
 
 // Resident memory of this process in bytes (0 if unknown).
