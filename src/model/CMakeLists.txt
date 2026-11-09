@@ -19,6 +19,8 @@ add_library(
     line_finder.cpp
     line_finder.h
     line_source.h
+    annotation_store.cpp
+    annotation_store.h
     highlight_sets.cpp
     highlight_sets.h
     line_highlighter.cpp

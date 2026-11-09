@@ -1,4 +1,5 @@
 #include "core/util/log.h"
+#include "model/annotation_store.h"
 #include "model/app_paths.h"
 #include "model/file_log_sink.h"
 #include "model/filter_history.h"
@@ -76,7 +77,11 @@ int main(int argc, char* argv[])
     QObject::connect(&highlightSets, &lv::model::HighlightSets::setsChanged, saveHighlightSets);
     QObject::connect(&highlightSets, &lv::model::HighlightSets::defaultChanged, saveHighlightSets);
 
+    lv::model::AnnotationStore annotations(lv::model::settingsDirectory() +
+                                           QStringLiteral("/annotations.json"));
+
     lv::ui::MainWindow window;
+    window.setAnnotationStore(&annotations);
     window.setFilterHistory(&history);
     window.setHighlightSets(&highlightSets);
     window.setSettings(&settings);

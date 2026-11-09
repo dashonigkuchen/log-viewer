@@ -17,6 +17,7 @@ class QTabWidget;
 
 namespace lv::model
 {
+class AnnotationStore;
 class FilterHistory;
 class HighlightSets;
 class RecentFiles;
@@ -50,6 +51,8 @@ public:
 
     // The global filter history (F-HIST-1); by default an in-memory one owned by the window.
     void setFilterHistory(model::FilterHistory* history);
+    // Persists marks and bookmarks per file (F-PERS-1); null = not persisted. Not owned.
+    void setAnnotationStore(model::AnnotationStore* store);
     // Highlight sets for all tabs (F-HL-3); the window creates its own until one is set.
     void setHighlightSets(model::HighlightSets* sets);
 
@@ -128,6 +131,7 @@ private:
     model::RecentFiles* m_recent = nullptr;
     model::FilterHistory* m_filterHistory = nullptr;
     model::HighlightSets* m_highlightSets = nullptr;
+    model::AnnotationStore* m_annotationStore = nullptr;
     QMenu* m_highlightSetMenu = nullptr;
     void updateHighlightSetMenu();
     QMenu* m_recentMenu = nullptr;

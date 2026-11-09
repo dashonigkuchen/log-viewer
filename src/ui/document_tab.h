@@ -8,6 +8,7 @@
 
 class QLabel;
 class QSplitter;
+class QTimer;
 class QWidget;
 
 #include <filesystem>
@@ -20,6 +21,7 @@ class Document;
 class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
+class AnnotationStore;
 class Bookmarks;
 class LineHighlighter;
 class MarkSet;
@@ -76,6 +78,12 @@ public:
     {
         return *m_lineHighlighter;
     }
+
+    // Where marks and bookmarks of this file are persisted (F-PERS-1); null = not persisted.
+    // Set before the document is ready to restore saved annotations. Not owned.
+    void setAnnotationStore(model::AnnotationStore* store);
+    // Writes the current marks and bookmarks to the store now.
+    void saveAnnotations();
 
     // The view that has (or last had) the keyboard focus; the main view by default.
     [[nodiscard]] LogView* activeView() const;
@@ -168,6 +176,11 @@ private:
     void restorePosition();
     std::optional<core::LineNumber> m_restoreTop;
     std::optional<core::LineNumber> m_restoreCurrent;
+    void restoreAnnotations();
+    model::AnnotationStore* m_annotationStore = nullptr;
+    bool m_annotationsRestored = false;
+    bool m_annotationsDirty = false;
+    QTimer* m_annotationTimer = nullptr;
 };
 
 // Absolute, lexically normalized form of `path` (also resolves symlinks when the file exists).

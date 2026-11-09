@@ -287,7 +287,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/ui/highlight_dialog.cpp` (F-HL-4) with live preview; "Highlight this text" action (F-HL-7).
   - Done when: Qt Tests for create/edit/reorder/delete rules and sets, preview updates.
 
-- [ ] **M5-08 Persist marks and bookmarks per file** — Depends on: M5-04
+- [x] **M5-08 Persist marks and bookmarks per file** — Depends on: M5-04 (PR #63)
   - Scope: F-PERS-1.
   - Done when: tests: reopen restores; changed fingerprint discards with notice; LRU limit of 500 files.
 

@@ -1,6 +1,7 @@
 #include "ui/document_tab.h"
 
 #include "core/encoding/encoding.h"
+#include "model/annotation_store.h"
 #include "model/bookmarks.h"
 #include "model/document.h"
 #include "model/document_line_source.h"
@@ -20,6 +21,7 @@
 #include <QLocale>
 #include <QSplitter>
 #include <QTime>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -153,9 +155,67 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
             [this](model::Document::State state) {
                 if (state == model::Document::State::kReady) {
                     restorePosition();
+                    restoreAnnotations();
                 }
             });
+    // Save marks and bookmarks shortly after they change (and when the tab closes).
+    m_annotationTimer = new QTimer(this);
+    m_annotationTimer->setSingleShot(true);
+    m_annotationTimer->setInterval(1000);
+    connect(m_annotationTimer, &QTimer::timeout, this, &DocumentTab::saveAnnotations);
+    const auto annotationsChanged = [this] {
+        if (m_annotationsRestored) {
+            m_annotationsDirty = true;
+            m_annotationTimer->start();
+        }
+    };
+    connect(m_marks.get(), &model::MarkSet::changed, this, annotationsChanged);
+    connect(m_bookmarks.get(), &model::Bookmarks::changed, this, annotationsChanged);
     m_document->open();
+}
+
+void DocumentTab::setAnnotationStore(model::AnnotationStore* store)
+{
+    m_annotationStore = store;
+    if (m_document->state() == model::Document::State::kReady) {
+        restoreAnnotations();
+    }
+}
+
+void DocumentTab::restoreAnnotations()
+{
+    if (m_annotationsRestored || m_annotationStore == nullptr) {
+        return;
+    }
+    m_annotationsRestored = true;
+    const QString path = QString::fromStdU16String(m_path.u16string());
+    const auto key = model::FileKey::read(path);
+    if (!key) {
+        return;
+    }
+    const auto result = m_annotationStore->load(path, *key);
+    if (result.lookup == model::AnnotationStore::Lookup::kMismatch) {
+        showNotice(QStringLiteral(
+            "The file changed since it was last open: its saved marks and bookmarks were "
+            "discarded."));
+    } else if (result.lookup == model::AnnotationStore::Lookup::kFound) {
+        result.annotations.applyTo(*m_marks, *m_bookmarks, m_document->lineCount().get());
+    }
+    m_annotationsDirty = false;
+    m_annotationTimer->stop();
+}
+
+void DocumentTab::saveAnnotations()
+{
+    m_annotationTimer->stop();
+    if (m_annotationStore == nullptr || !m_annotationsRestored || !m_annotationsDirty) {
+        return;
+    }
+    m_annotationsDirty = false;
+    const QString path = QString::fromStdU16String(m_path.u16string());
+    if (const auto key = model::FileKey::read(path)) {
+        m_annotationStore->save(path, *key, model::FileAnnotations::of(*m_marks, *m_bookmarks));
+    }
 }
 
 void DocumentTab::openFindBar()
@@ -289,6 +349,7 @@ void DocumentTab::setEncodingOverride(std::optional<core::Encoding> encoding)
 
 DocumentTab::~DocumentTab()
 {
+    saveAnnotations();
     delete m_findBar;  // detaches its highlighter from the views first
     m_findBar = nullptr;
     // The view refers to the source, the source to the document: detach before destroying them.

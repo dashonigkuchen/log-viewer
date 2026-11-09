@@ -144,3 +144,9 @@ set_target_properties(lv_ui_highlight_dialog_tests PROPERTIES WIN32_EXECUTABLE O
 target_link_libraries(lv_ui_highlight_dialog_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
 add_test(NAME ui.HighlightDialog COMMAND lv_ui_highlight_dialog_tests -o "-,txt")
 set_tests_properties(ui.HighlightDialog PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
+
+qt_add_executable(lv_ui_annotations_tests annotations_test.cpp)
+set_target_properties(lv_ui_annotations_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_annotations_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
+add_test(NAME ui.Annotations COMMAND lv_ui_annotations_tests -o "-,txt")
+set_tests_properties(ui.Annotations PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
