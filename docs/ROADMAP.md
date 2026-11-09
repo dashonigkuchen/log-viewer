@@ -267,7 +267,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: merge of matches and marks in `FilteredLineSource` (F-FILT-9) with visual distinction; option toggle.
   - Done when: tests: marked non-matching lines appear in order; unmarking removes them; toggling the option.
 
-- [ ] **M5-03 Mark colors** — Depends on: M5-01
+- [x] **M5-03 Mark colors** — Depends on: M5-01 (PR #58)
   - Scope: F-MARK-6.
   - Done when: tests for color assignment and painting.
 

@@ -24,6 +24,7 @@
 #include <QWheelEvent>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iterator>
 #include <stop_token>
@@ -238,6 +239,12 @@ void LogView::keyPressEvent(QKeyEvent* event)
     }
     if (control && !shift && event->key() == Qt::Key_Up && !m_marks.isNull()) {
         goToPreviousMark();
+        event->accept();
+        return;
+    }
+    if (control && !shift && event->key() >= Qt::Key_1 && event->key() <= Qt::Key_9 &&
+        !m_marks.isNull()) {
+        toggleMarkColor(event->key() - Qt::Key_0);
         event->accept();
         return;
     }
@@ -925,6 +932,28 @@ std::vector<core::LineNumber> LogView::targetLines() const
     return lines;
 }
 
+QColor LogView::markColor(int index) const
+{
+    // Distinct hues for Ctrl+1 … Ctrl+9, same translucency as the default color.
+    static constexpr std::array<QRgb, 9> kColors{0xE53935, 0xFB8C00, 0xFDD835, 0x43A047, 0x00ACC1,
+                                                 0x1E88E5, 0x8E24AA, 0xD81B60, 0x6D4C41};
+    if (index <= 0 || index > static_cast<int>(kColors.size())) {
+        return m_markColor;
+    }
+    QColor color(kColors.at(static_cast<std::size_t>(index - 1)));
+    color.setAlpha(m_markColor.alpha());
+    return color;
+}
+
+void LogView::toggleMarkColor(int color)
+{
+    if (m_marks.isNull()) {
+        return;
+    }
+    const auto lines = targetLines();
+    m_marks->toggleColor(lines, color);
+}
+
 void LogView::toggleMarks()
 {
     if (m_marks.isNull()) {
@@ -1250,22 +1279,25 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
         for (std::size_t i = 0; i < lines.size(); ++i) {
             const std::uint64_t row = first + i;
             const int y = static_cast<int>(i) * m_lineHeight;
-            const bool marked =
-                !m_marks.isNull() &&
-                m_marks->contains(m_source->originalLineNumber(core::LineNumber(row)));
+            const std::optional<int> markIndex =
+                m_marks.isNull()
+                    ? std::nullopt
+                    : m_marks->colorOf(m_source->originalLineNumber(core::LineNumber(row)));
+            const bool marked = markIndex.has_value();
+            const QColor rowMarkColor = markColor(markIndex.value_or(0));
             if (m_currentRow && m_currentRow->get() == row) {
                 painter.fillRect(gutter, y, width - gutter, m_lineHeight,
                                  colors.color(QPalette::Highlight).lighter(170));
             }
             if (marked) {
-                painter.fillRect(gutter, y, width - gutter, m_lineHeight, m_markColor);
+                painter.fillRect(gutter, y, width - gutter, m_lineHeight, rowMarkColor);
                 // Mark symbol: a filled circle in the mark column (F-MARK-2).
                 const int size = std::max(4, markColumnWidth() - 4);
                 painter.save();
                 painter.setRenderHint(QPainter::Antialiasing);
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(
-                    QColor(m_markColor.red(), m_markColor.green(), m_markColor.blue()));
+                    QColor(rowMarkColor.red(), rowMarkColor.green(), rowMarkColor.blue()));
                 painter.drawEllipse(QRect((markColumnWidth() - size) / 2,
                                           y + ((m_lineHeight - size) / 2), size, size));
                 painter.restore();
@@ -1283,7 +1315,7 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
                                   (textColor.blueF() * 0.6F) + (base.blueF() * 0.4F));
                 painter.fillRect(
                     gutter, y, 3, m_lineHeight,
-                    QColor(m_markColor.red(), m_markColor.green(), m_markColor.blue()));
+                    QColor(rowMarkColor.red(), rowMarkColor.green(), rowMarkColor.blue()));
             }
             painter.setPen(textColor);
             painter.setClipRect(gutter, 0, width - gutter, height);

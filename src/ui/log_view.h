@@ -82,6 +82,8 @@ public:
 
     // Toggles marks on the selected rows, or on the current row without a selection (M).
     void toggleMarks();
+    // Marks the selected rows (or the current row) with color `color` (Ctrl+1 … Ctrl+9).
+    void toggleMarkColor(int color);
     // Moves to the next / previous marked row (Ctrl+Down / Ctrl+Up); false if there is none.
     bool goToNextMark();
     bool goToPreviousMark();
@@ -102,6 +104,9 @@ public:
     [[nodiscard]] int markColumnWidth() const;
 
     [[nodiscard]] QColor markColor() const { return m_markColor; }
+
+    // Row background of mark color `index` (0 = default, F-MARK-6).
+    [[nodiscard]] QColor markColor(int index) const;
 
     // Highlighting of the find bar's query (F-FIND-3), painted in its own color; null = none.
     void setFindHighlighter(const model::MatchHighlighter* highlighter);

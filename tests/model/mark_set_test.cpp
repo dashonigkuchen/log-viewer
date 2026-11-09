@@ -86,3 +86,38 @@ TEST_CASE("a new document generation clears the marks", "[model][marks]")
     document.reload();  // nothing to clear: no signal
     CHECK(cleared.count() == 1);
 }
+
+TEST_CASE("marks carry a color", "[model][marks]")
+{
+    const lv::test::TempDir dir;
+    {
+        lv::test::LogWriter writer(dir / "a.log", true);
+        writer.append("a\nb\nc\n");
+    }
+    const Document document(dir / "a.log");
+    MarkSet marks(document);
+    marks.toggle(LineNumber(0));
+    CHECK(marks.colorOf(LineNumber(0)) == 0);
+    CHECK_FALSE(marks.colorOf(LineNumber(1)));
+
+    // Ctrl+3 on lines 0 and 1: recolors 0, marks 1.
+    const std::vector both{LineNumber(0), LineNumber(1)};
+    marks.toggleColor(both, 3);
+    CHECK(marks.colorOf(LineNumber(0)) == 3);
+    CHECK(marks.colorOf(LineNumber(1)) == 3);
+    // Same color again: unmarks.
+    marks.toggleColor(both, 3);
+    CHECK(marks.empty());
+    // A different color only recolors.
+    marks.toggleColor(both, 2);
+    marks.toggleColor(std::vector{LineNumber(1)}, 5);
+    CHECK(marks.colorOf(LineNumber(0)) == 2);
+    CHECK(marks.colorOf(LineNumber(1)) == 5);
+    // Plain toggle of a mixed selection keeps colors of marked lines.
+    marks.toggle(std::vector{LineNumber(1), LineNumber(2)});
+    CHECK(marks.colorOf(LineNumber(1)) == 5);
+    CHECK(marks.colorOf(LineNumber(2)) == 0);
+    // Out-of-range colors are ignored.
+    marks.toggleColor(both, 10);
+    CHECK(marks.colorOf(LineNumber(0)) == 2);
+}

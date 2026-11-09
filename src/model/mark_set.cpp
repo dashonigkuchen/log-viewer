@@ -26,12 +26,18 @@ bool MarkSet::contains(core::LineNumber line) const
     return m_lines.contains(line.get());
 }
 
+std::optional<int> MarkSet::colorOf(core::LineNumber line) const
+{
+    const auto it = m_lines.find(line.get());
+    return it == m_lines.end() ? std::nullopt : std::optional<int>(it->second);
+}
+
 std::vector<core::LineNumber> MarkSet::lines() const
 {
     std::vector<core::LineNumber> out;
     out.reserve(m_lines.size());
-    for (const std::uint64_t line : m_lines) {
-        out.emplace_back(line);
+    for (const auto& entry : m_lines) {
+        out.emplace_back(entry.first);
     }
     return out;
 }
@@ -39,7 +45,7 @@ std::vector<core::LineNumber> MarkSet::lines() const
 void MarkSet::toggle(core::LineNumber line)
 {
     if (m_lines.erase(line.get()) == 0) {
-        m_lines.insert(line.get());
+        m_lines.emplace(line.get(), std::uint8_t{0});
     }
     emit changed();
 }
@@ -55,7 +61,24 @@ void MarkSet::toggle(std::span<const core::LineNumber> lines)
         if (allMarked) {
             m_lines.erase(line.get());
         } else {
-            m_lines.insert(line.get());
+            m_lines.try_emplace(line.get(), std::uint8_t{0});
+        }
+    }
+    emit changed();
+}
+
+void MarkSet::toggleColor(std::span<const core::LineNumber> lines, int color)
+{
+    if (lines.empty() || color < 0 || color >= kColorCount) {
+        return;
+    }
+    const bool allSame = std::ranges::all_of(
+        lines, [this, color](core::LineNumber line) { return colorOf(line) == color; });
+    for (const core::LineNumber line : lines) {
+        if (allSame) {
+            m_lines.erase(line.get());
+        } else {
+            m_lines.insert_or_assign(line.get(), static_cast<std::uint8_t>(color));
         }
     }
     emit changed();
@@ -73,13 +96,14 @@ void MarkSet::clear()
 std::optional<core::LineNumber> MarkSet::next(core::LineNumber line) const
 {
     const auto it = m_lines.upper_bound(line.get());
-    return it == m_lines.end() ? std::nullopt : std::optional(core::LineNumber(*it));
+    return it == m_lines.end() ? std::nullopt : std::optional(core::LineNumber(it->first));
 }
 
 std::optional<core::LineNumber> MarkSet::previous(core::LineNumber line) const
 {
     const auto it = m_lines.lower_bound(line.get());
-    return it == m_lines.begin() ? std::nullopt : std::optional(core::LineNumber(*std::prev(it)));
+    return it == m_lines.begin() ? std::nullopt
+                                 : std::optional(core::LineNumber(std::prev(it)->first));
 }
 
 }  // namespace lv::model

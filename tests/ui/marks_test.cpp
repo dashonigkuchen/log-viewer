@@ -197,6 +197,30 @@ private slots:
         QCOMPARE(filtered->rowCount().get(), std::uint64_t{2});
     }
 
+    static void ctrlDigitMarksWithAColor()
+    {
+        const Fixture f;
+        QVERIFY(f.ready());
+        auto* view = f.tab->mainView();
+        view->setFocus();
+        view->setCurrentRow(LineNumber(1));
+        QTest::keyClick(view, Qt::Key_4, Qt::ControlModifier);
+        QCOMPARE(f.tab->marks().colorOf(LineNumber(1)).value_or(-1), 4);
+        view->setCurrentRow(LineNumber(2));
+        QTest::keyClick(view, Qt::Key_1, Qt::ControlModifier);
+        QCOMPARE(f.tab->marks().colorOf(LineNumber(2)).value_or(-1), 1);
+        // Rows are painted in their own colors.
+        QVERIFY(view->markColor(4) != view->markColor(1));
+        QVERIFY(view->markColor(0) == view->markColor());
+        const QImage image = view->viewport()->grab().toImage();
+        const int x = view->gutterWidth() + 300;
+        const int h = view->lineHeight();
+        QVERIFY(image.pixelColor(x, h + 1) != image.pixelColor(x, (2 * h) + 1));
+        // Same digit again unmarks.
+        QTest::keyClick(view, Qt::Key_1, Qt::ControlModifier);
+        QVERIFY(!f.tab->marks().contains(LineNumber(2)));
+    }
+
     static void reloadClearsMarksWithANotice()
     {
         const Fixture f;
