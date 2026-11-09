@@ -51,6 +51,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_marks(std::make_unique<model::MarkSet>(*m_document))
     , m_bookmarks(std::make_unique<model::Bookmarks>(*m_document))
     , m_lineHighlighter(std::make_unique<model::LineHighlighter>())
+    , m_annotationTimer(new QTimer(this))
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
 {
@@ -159,7 +160,6 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
                 }
             });
     // Save marks and bookmarks shortly after they change (and when the tab closes).
-    m_annotationTimer = new QTimer(this);
     m_annotationTimer->setSingleShot(true);
     m_annotationTimer->setInterval(1000);
     connect(m_annotationTimer, &QTimer::timeout, this, &DocumentTab::saveAnnotations);

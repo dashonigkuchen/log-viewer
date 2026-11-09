@@ -156,6 +156,7 @@ private:
     std::unique_ptr<model::MarkSet> m_marks;
     std::unique_ptr<model::Bookmarks> m_bookmarks;
     std::unique_ptr<model::LineHighlighter> m_lineHighlighter;
+    QTimer* m_annotationTimer = nullptr;  // saves annotations after changes
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;
@@ -180,7 +181,6 @@ private:
     model::AnnotationStore* m_annotationStore = nullptr;
     bool m_annotationsRestored = false;
     bool m_annotationsDirty = false;
-    QTimer* m_annotationTimer = nullptr;
 };
 
 // Absolute, lexically normalized form of `path` (also resolves symlinks when the file exists).
