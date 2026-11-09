@@ -509,7 +509,7 @@ void MainWindow::updateTabState(DocumentTab* tab)
     QString title = tab->title();
     if (state == State::kIndexing) {
         title += QStringLiteral(" \u23F3");  // hourglass while indexing (F-TAB-3)
-    } else if (state == State::kError) {
+    } else if (state == State::kError || tab->document().isMissing()) {
         title += QStringLiteral(" \u26A0");
     } else if (tab->property("lvChanged").toBool()) {
         title += QStringLiteral(" \u25CF");  // changed while the tab was not active (F-TAB-3)

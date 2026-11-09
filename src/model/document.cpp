@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <span>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -124,6 +125,19 @@ void Document::scheduleTailCheck()
                          const std::stop_token& stop) { runTail(stop, generation, content); });
 }
 
+void Document::setMissing(bool missing)
+{
+    if (missing == m_missing) {
+        return;
+    }
+    m_missing = missing;
+    emit missingChanged(missing);
+    if (missing) {
+        emit notice(QStringLiteral("The file was deleted or moved. The content stays visible; it "
+                                   "is reloaded when the file reappears."));
+    }
+}
+
 void Document::workerDone()
 {
     m_workerBusy = false;
@@ -148,6 +162,7 @@ void Document::startWorker()
     m_errorMessage.clear();
     m_workerBusy = true;
     m_recheck = false;
+    setMissing(false);
     setState(State::kIndexing);
     emit reset(generation);
     m_worker =
@@ -299,31 +314,53 @@ void Document::runWorker(const std::stop_token& stop, std::uint64_t generation,
 void Document::runTail(const std::stop_token& stop, std::uint64_t generation,
                        const std::shared_ptr<DocumentContent>& content)
 {
-    const auto done = [this, generation] {
-        post(generation, [this] { workerDone(); });
+    const auto done = [this, generation](bool missing) {
+        post(generation, [this, missing] {
+            setMissing(missing);
+            workerDone();
+        });
     };
-    const auto reloadLater = [this, generation](const char* why) {
-        core::log(core::LogLevel::kInfo, "'" + m_path.string() + "' " + why + "; reloading");
-        post(generation, [this] { startWorker(); });
+    const auto reloadLater = [this, generation](core::Change why) {
+        const bool truncated = why == core::Change::kTruncated;
+        core::log(core::LogLevel::kInfo, "'" + m_path.string() + "' was " +
+                                             std::string(core::toString(why)) + "; reloading");
+        post(generation, [this, truncated] {
+            const bool wasMissing = m_missing;
+            startWorker();
+            if (truncated) {
+                emit notice(QStringLiteral("The file was truncated and is shown from the "
+                                           "beginning again."));
+            } else {
+                emit notice(wasMissing ? QStringLiteral("The file reappeared and was reloaded.")
+                                       : QStringLiteral("The file was replaced (rotated) and was "
+                                                        "reloaded."));
+            }
+        });
     };
-    const auto change = core::ChangeDetector::check(content->file, m_path, content->watched);
-    if (!change) {
-        done();  // retried on the next change or poll
+    // Reloads for truncation and replacement; true if the caller may go on.
+    const auto handle = [&](const core::Result<core::Change>& change) {
+        if (!change) {
+            done(m_missing);  // retried on the next change or poll
+            return false;
+        }
+        switch (*change) {
+        case core::Change::kUnchanged:
+            done(false);
+            return false;
+        case core::Change::kMissing:
+            done(true);
+            return false;
+        case core::Change::kTruncated:
+        case core::Change::kReplaced:
+            reloadLater(*change);
+            return false;
+        case core::Change::kGrown:
+            break;
+        }
+        return true;
+    };
+    if (!handle(core::ChangeDetector::check(content->file, m_path, content->watched))) {
         return;
-    }
-    switch (*change) {
-    case core::Change::kUnchanged:
-    case core::Change::kMissing:  // content stays; deletion handling follows in M4-06
-        done();
-        return;
-    case core::Change::kTruncated:
-        reloadLater("was truncated");
-        return;
-    case core::Change::kReplaced:
-        reloadLater("was replaced");
-        return;
-    case core::Change::kGrown:
-        break;
     }
     const auto before = content->index.snapshot();
     const auto result = core::Indexer::run(
@@ -333,10 +370,17 @@ void Document::runTail(const std::stop_token& stop, std::uint64_t generation,
         });
     if (!result) {
         if (result.error().code == core::ErrorCode::kOutOfRange) {
-            reloadLater("shrank while indexing");
+            reloadLater(core::Change::kTruncated);
         } else if (result.error().code != core::ErrorCode::kCanceled) {
-            done();
+            done(m_missing);
         }
+        return;
+    }
+    // A truncation followed by new writes during the run would look like growth to the indexer;
+    // compare the start of the file with what was known before the run.
+    if (const auto again = core::ChangeDetector::check(content->file, m_path, content->watched);
+        again && (*again == core::Change::kTruncated || *again == core::Change::kReplaced)) {
+        reloadLater(*again);
         return;
     }
     const auto after = content->index.snapshot();
@@ -345,6 +389,7 @@ void Document::runTail(const std::stop_token& stop, std::uint64_t generation,
     }
     post(generation, [this, lines = after.lineCount().get(), grew = after != before] {
         ++m_tailRuns;
+        setMissing(false);
         if (grew) {
             emit linesAppended(lines);  // also when only the partial last line grew
         }

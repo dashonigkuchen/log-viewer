@@ -245,7 +245,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-TAIL-3 for both views, toolbar toggle, `F10`, status bar indicator, tab change indicator (F-TAB-3).
   - Done when: Qt Tests: follow keeps last line visible while appending; scrolling up disables; `Ctrl+End` re-enables.
 
-- [ ] **M4-06 Truncation, rotation, deletion** — Depends on: M4-03
+- [x] **M4-06 Truncation, rotation, deletion** — Depends on: M4-03 (PR #53)
   - Scope: F-TAIL-5, F-TAIL-6, F-TAIL-7 in `Document`, notices in the tab, generation reset, filter re-run.
   - Done when: `fs` tests with `loggen --rotate-every` and `--truncate-every`: views end up with exactly the content of the current file; no crash when the file is missing; marks cleared with notice. **[Windows]**
 

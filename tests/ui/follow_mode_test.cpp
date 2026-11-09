@@ -13,6 +13,7 @@
 #include <QTest>
 #include <QWheelEvent>
 
+#include <filesystem>
 #include <string>
 
 using lv::core::LineNumber;
@@ -182,6 +183,36 @@ private slots:
         tabs->setCurrentIndex(indexA);
         QVERIFY(!tabs->tabText(indexA).contains(QChar(0x25CF)));
         QVERIFY(!follow->isChecked());  // a does not follow
+    }
+
+    static void deletionShowsANoticeAndTheMissingState()
+    {
+        const TempDir dir;
+        {
+            LogWriter writer(dir / "gone.log", true);
+            writer.append(lines(0, 5, "INFO"));
+        }
+        DocumentTab tab(dir / "gone.log");
+        tab.document().setPollInterval(100);
+        tab.resize(800, 600);
+        tab.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&tab));
+        QVERIFY(waitFor([&] { return tab.document().state() == Document::State::kReady; }));
+        QVERIFY(tab.noticeText().isEmpty());
+        std::filesystem::remove(dir / "gone.log");
+        QVERIFY(waitFor([&] { return !tab.noticeText().isEmpty(); }));
+        QVERIFY(tab.noticeText().contains(QStringLiteral("deleted")));
+        QVERIFY(tab.statusText().contains(QStringLiteral("File deleted")));
+        QCOMPARE(tab.mainView()->rowCount().get(), std::uint64_t{5});  // content stays
+        tab.hideNotice();
+        QVERIFY(tab.noticeText().isEmpty());
+        {
+            LogWriter writer(dir / "gone.log", true);
+            writer.append("back\n");
+        }
+        QVERIFY(waitFor([&] { return tab.noticeText().contains(QStringLiteral("reappeared")); }));
+        QVERIFY(waitFor([&] { return tab.mainView()->rowCount().get() == 1; }));
+        QVERIFY(!tab.statusText().contains(QStringLiteral("File deleted")));
     }
 };
 
