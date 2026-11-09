@@ -80,3 +80,20 @@ TEST_CASE("the tab's active set follows the default or a chosen set", "[model][h
     CHECK_FALSE(highlighter.chosenSet());
     CHECK(highlighter.activeSet() == sets.defaultIndex());
 }
+
+TEST_CASE("a chosen set is kept by name across reordering", "[model][highlight]")
+{
+    HighlightSets sets;
+    sets.assign({setWith("A", "x", 0xFF0000AAU), setWith("B", "x", 0xFF0000BBU)}, 0);
+    LineHighlighter highlighter;
+    highlighter.setSets(&sets);
+    highlighter.setActiveSet(1);  // "B"
+    sets.assign({setWith("B", "x", 0xFF0000BBU), setWith("A", "x", 0xFF0000AAU)}, 1);
+    CHECK(highlighter.chosenSet() == 0);
+    CHECK(highlighter.highlight(LineNumber(0), QStringLiteral("x"), false).background ==
+          0xFF0000BBU);
+    // Renamed: back to the default ("A").
+    sets.replace(0, setWith("C", "x", 0xFF0000CCU));
+    CHECK_FALSE(highlighter.chosenSet());
+    CHECK(highlighter.activeSet() == 1);
+}

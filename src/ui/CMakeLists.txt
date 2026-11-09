@@ -9,6 +9,8 @@ add_library(
     find_bar.h
     filter_bar.h
     go_to_line_dialog.cpp
+    highlight_dialog.cpp
+    highlight_dialog.h
     go_to_line_dialog.h
     log_view.cpp
     log_view.h

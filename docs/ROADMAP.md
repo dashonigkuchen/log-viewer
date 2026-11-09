@@ -283,7 +283,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: apply rules in `LogView` for visible lines with caching (F-HL-5); per-tab active set.
   - Done when: rendering tests for whole-line and match-only rules; P-UI-1 with 20 rules on `long` profile (relaxed on CI).
 
-- [ ] **M5-07 Highlight dialog** — Depends on: M5-06
+- [x] **M5-07 Highlight dialog** — Depends on: M5-06 (PR #62)
   - Scope: `src/ui/highlight_dialog.cpp` (F-HL-4) with live preview; "Highlight this text" action (F-HL-7).
   - Done when: Qt Tests for create/edit/reorder/delete rules and sets, preview updates.
 

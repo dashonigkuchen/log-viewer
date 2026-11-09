@@ -139,6 +139,10 @@ public:
     // Removes set `index`; the last set cannot be removed (returns false).
     bool remove(std::size_t index);
 
+    // Replaces all sets at once (the highlight dialog's OK); names are made unique, at least one
+    // set is kept, and `defaultIndex` is clamped.
+    void assign(std::vector<HighlightSet> sets, std::size_t defaultIndex);
+
     [[nodiscard]] std::size_t defaultIndex() const noexcept { return m_default; }
 
     void setDefaultIndex(std::size_t index);

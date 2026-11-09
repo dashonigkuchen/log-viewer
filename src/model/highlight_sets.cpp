@@ -276,6 +276,22 @@ bool HighlightSets::remove(std::size_t index)
     return true;
 }
 
+void HighlightSets::assign(std::vector<HighlightSet> sets, std::size_t defaultIndex)
+{
+    if (sets.empty()) {
+        sets.push_back(defaultSet());
+    }
+    m_sets.clear();
+    for (auto& set : sets) {
+        set.name = uniqueName(set.name, std::nullopt);
+        m_sets.push_back(std::move(set));
+    }
+    m_compiled.assign(m_sets.size(), nullptr);
+    m_default = defaultIndex < m_sets.size() ? defaultIndex : 0;
+    emit setsChanged();
+    emit defaultChanged();
+}
+
 void HighlightSets::setDefaultIndex(std::size_t index)
 {
     LV_ASSERT(index < m_sets.size());

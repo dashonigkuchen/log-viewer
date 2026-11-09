@@ -23,14 +23,16 @@ void LineHighlighter::setSets(const HighlightSets* sets)
     m_sets = sets;
     if (sets != nullptr) {
         connect(sets, &HighlightSets::setChanged, this, [this](std::size_t index) {
-            if (activeSet() == index) {
+            if (m_chosen && !m_sets->find(*m_chosen)) {
+                m_chosen.reset();  // renamed
+                clearCache();
+            } else if (activeSet() == index) {
                 clearCache();
             }
         });
         connect(sets, &HighlightSets::setsChanged, this, [this] {
-            // Indexes may have moved: a chosen set that no longer exists falls back to the
-            // default.
-            if (m_chosen && *m_chosen >= m_sets->size()) {
+            // A chosen set that no longer exists falls back to the default.
+            if (m_chosen && !m_sets->find(*m_chosen)) {
                 m_chosen.reset();
             }
             clearCache();
@@ -49,14 +51,19 @@ void LineHighlighter::setActiveSet(std::optional<std::size_t> index)
     if (index && (m_sets.isNull() || *index >= m_sets->size())) {
         index.reset();
     }
-    if (index == m_chosen) {
-        return;
-    }
     const auto before = activeSet();
-    m_chosen = index;
+    m_chosen = index ? std::optional(m_sets->set(*index).name) : std::nullopt;
     if (activeSet() != before) {
         clearCache();
     }
+}
+
+std::optional<std::size_t> LineHighlighter::chosenSet() const
+{
+    if (!m_chosen || m_sets.isNull()) {
+        return std::nullopt;
+    }
+    return m_sets->find(*m_chosen);
 }
 
 std::optional<std::size_t> LineHighlighter::activeSet() const
@@ -64,7 +71,7 @@ std::optional<std::size_t> LineHighlighter::activeSet() const
     if (m_sets.isNull() || m_sets->size() == 0) {
         return std::nullopt;
     }
-    return m_chosen.value_or(m_sets->defaultIndex());
+    return chosenSet().value_or(m_sets->defaultIndex());
 }
 
 void LineHighlighter::clearCache()
