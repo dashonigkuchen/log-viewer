@@ -120,6 +120,12 @@ public:
 
     [[nodiscard]] QColor markColor() const { return m_markColor; }
 
+    // Default mark color (F-SET-1); the alpha also applies to the nine mark colors.
+    void setMarkColor(const QColor& color);
+    // Current line background; an invalid color derives it from the palette.
+    void setCurrentLineColor(const QColor& color);
+    [[nodiscard]] QColor currentLineColor() const;
+
     // Row background of mark color `index` (0 = default, F-MARK-6).
     [[nodiscard]] QColor markColor(int index) const;
 
@@ -321,6 +327,7 @@ private:
     template <typename Step>
     bool goToLineBy(Step step);
     QColor m_markColor{120, 170, 255, 90};  // light blue row background for marked lines
+    QColor m_currentLineColor;              // invalid = palette highlight, lightened
     std::function<bool(std::size_t)> m_confirmClearMarks;
     // Original line numbers of the selected rows (or the current row).
     [[nodiscard]] std::vector<core::LineNumber> targetLines() const;

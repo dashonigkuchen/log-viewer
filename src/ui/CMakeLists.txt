@@ -14,6 +14,8 @@ add_library(
     go_to_line_dialog.h
     log_view.cpp
     log_view.h
+    settings_dialog.cpp
+    settings_dialog.h
     main_window.cpp
     main_window.h
     text_selection.cpp

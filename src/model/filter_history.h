@@ -28,6 +28,9 @@ public:
 
     [[nodiscard]] int limit() const noexcept { return m_limit; }
 
+    // Changes the limit (> 0); drops entries beyond it.
+    void setLimit(int limit);
+
     // Moves `query` to the front (adding it if new) and drops entries beyond the limit.
     // Empty queries are ignored.
     void add(const core::Query& query);

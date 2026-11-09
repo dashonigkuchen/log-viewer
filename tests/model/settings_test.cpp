@@ -85,3 +85,78 @@ TEST_CASE("portable mode uses the application directory", "[model][settings]")
     CHECK(lv::model::settingsDirectory(appDir) == QDir::cleanPath(appDir));
     CHECK_FALSE(lv::model::isPortable(QString()));
 }
+
+TEST_CASE("dialog settings round-trip and clamp", "[model][settings]")
+{
+    const lv::test::TempDir dir;
+    {
+        Settings settings(qpath(dir.path()));
+        CHECK(settings.pollInterval() == Settings::kDefaultPollMs);
+        CHECK(settings.maxColumns() == Settings::kDefaultMaxColumns);
+        CHECK(settings.filterHistorySize() == Settings::kDefaultHistorySize);
+        CHECK(settings.restoreSession());
+        CHECK(settings.singleInstance());
+        CHECK(settings.searchThreads() == 0);
+        CHECK_FALSE(settings.currentLineColor());
+        const QSignalSpy other(&settings, &Settings::settingsChanged);
+        const QSignalSpy view(&settings, &Settings::viewSettingsChanged);
+        settings.setPollInterval(50);  // clamped
+        settings.setMaxColumns(5000);
+        settings.setFilterHistorySize(20);
+        settings.setRestoreSession(false);
+        settings.setSingleInstance(false);
+        settings.setSearchThreads(3);
+        settings.setCurrentLineColor(0xFF112233U);
+        settings.setMarkColor(0x80FF0000U);
+        settings.setMatchColor(0x8000FF00U);
+        CHECK(settings.pollInterval() == Settings::kMinPollMs);
+        CHECK(other.count() == 6);
+        CHECK(view.count() == 4);  // max columns + 3 colors
+    }
+    const Settings loaded(qpath(dir.path()));
+    CHECK(loaded.pollInterval() == Settings::kMinPollMs);
+    CHECK(loaded.maxColumns() == 5000);
+    CHECK(loaded.filterHistorySize() == 20);
+    CHECK_FALSE(loaded.restoreSession());
+    CHECK_FALSE(loaded.singleInstance());
+    CHECK(loaded.searchThreads() == 3);
+    CHECK(loaded.currentLineColor() == 0xFF112233U);
+    CHECK(loaded.markColor() == 0x80FF0000U);
+    CHECK(loaded.matchColor() == 0x8000FF00U);
+}
+
+TEST_CASE("version 1 settings are migrated", "[model][settings]")
+{
+    const lv::test::TempDir dir;
+    {
+        QSettings raw(qpath(dir / "logviewer.ini"), QSettings::IniFormat);
+        raw.setValue(QStringLiteral("General/schemaVersion"), 1);
+        raw.setValue(QStringLiteral("View/pollInterval"), 2500);
+        raw.setValue(QStringLiteral("View/tabWidth"), 4);
+    }
+    const Settings settings(qpath(dir.path()));
+    CHECK(settings.pollInterval() == 2500);
+    CHECK(settings.tabWidth() == 4);
+    const QSettings raw(settings.filePath(), QSettings::IniFormat);
+    CHECK(raw.value(QStringLiteral("General/schemaVersion")).toInt() == Settings::kSchemaVersion);
+    CHECK_FALSE(raw.contains(QStringLiteral("View/pollInterval")));
+}
+
+TEST_CASE("a corrupt settings file is backed up and replaced", "[model][settings]")
+{
+    const lv::test::TempDir dir;
+    {
+        QFile file(qpath(dir / "logviewer.ini"));
+        REQUIRE(file.open(QIODevice::WriteOnly));
+        file.write("[View\ntabWidth=4\n");  // unterminated section: QSettings::FormatError
+    }
+    Settings settings(qpath(dir.path()));
+    CHECK(settings.corruptBackup() == qpath(dir / "logviewer.ini.corrupt"));
+    CHECK(QFile::exists(settings.corruptBackup()));
+    CHECK(settings.tabWidth() == Settings::kDefaultTabWidth);
+    settings.setTabWidth(2);
+    settings.sync();
+    const Settings again(qpath(dir.path()));
+    CHECK(again.corruptBackup().isEmpty());
+    CHECK(again.tabWidth() == 2);
+}
