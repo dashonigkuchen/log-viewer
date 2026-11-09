@@ -50,8 +50,10 @@ struct DocumentContent
 // Once indexed, the file is watched (FileWatcher, F-TAIL-2). On a change a worker classifies it
 // (core::ChangeDetector): growth is indexed incrementally from the last complete line, so a
 // partial last line is completed and never counted twice (F-TAIL-1, F-TAIL-8), followed by
-// linesAppended(). Truncation and replacement reload the document (notices, marks, and the
-// missing state follow in M4-06); a missing path keeps the content.
+// linesAppended(). Truncation (F-TAIL-5) and replacement/rotation (F-TAIL-6) reload the document
+// with a new generation and emit notice(). A missing path (deleted, or rotated away and not yet
+// recreated, F-TAIL-7) keeps the content and sets isMissing(); when the path reappears it is
+// treated like a rotation.
 //
 // Thread-safety: UI thread only (signals are emitted on the thread that owns the object).
 class Document : public QObject
@@ -116,6 +118,9 @@ public:
     // Number of completed incremental index runs (diagnostics, tests).
     [[nodiscard]] std::uint64_t tailRuns() const noexcept { return m_tailRuns; }
 
+    // The path no longer exists; the content of the open file stays visible (F-TAIL-7).
+    [[nodiscard]] bool isMissing() const noexcept { return m_missing; }
+
 signals:
     void stateChanged(lv::model::Document::State state);
     void indexingProgress(quint64 indexedBytes, quint64 totalBytes);
@@ -123,6 +128,10 @@ signals:
     void linesAppended(quint64 lineCount);
     // A new generation started: all lines, marks, and caches of older generations are invalid.
     void reset(quint64 generation);
+    // A non-modal message for the user (truncated, replaced, deleted; F-TAIL-5/6/7).
+    void notice(const QString& message);
+    // isMissing() changed.
+    void missingChanged(bool missing);
 
 private:
     // Runs the events queued by the worker (on the UI thread).
@@ -166,6 +175,8 @@ private:
     bool m_workerBusy = false;  // a worker of the current generation is running
     bool m_recheck = false;     // a change arrived while the worker was busy
     std::uint64_t m_tailRuns = 0;
+    bool m_missing = false;
+    void setMissing(bool missing);
 
     std::jthread m_worker;  // last member: joined before the queue is destroyed
 };

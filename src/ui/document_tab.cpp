@@ -12,8 +12,12 @@
 #include "ui/log_view.h"
 
 #include <QDir>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QLocale>
 #include <QSplitter>
+#include <QTime>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <system_error>
@@ -65,9 +69,34 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_splitter->setStretchFactor(1, 1);
     // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer): needs the views created above
     m_findBar = new FindBar(*m_document, *m_filter, *m_view, *m_filteredView, this);
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer): built with the layout below
+    m_noticeBar = new QWidget(this);
+    m_noticeBar->setObjectName(QStringLiteral("noticeBar"));
+    m_noticeBar->setAutoFillBackground(true);
+    m_noticeBar->setStyleSheet(
+        QStringLiteral("#noticeBar { background: #fff4ce; color: #3b2f00; }"));
+    // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer): child of the notice bar
+    m_noticeLabel = new QLabel(m_noticeBar);
+    m_noticeLabel->setObjectName(QStringLiteral("noticeText"));
+    m_noticeLabel->setWordWrap(true);
+    auto* closeNotice = new QToolButton(m_noticeBar);
+    closeNotice->setObjectName(QStringLiteral("noticeClose"));
+    closeNotice->setText(QStringLiteral("\u2715"));
+    closeNotice->setAutoRaise(true);
+    closeNotice->setToolTip(QStringLiteral("Dismiss"));
+    connect(closeNotice, &QToolButton::clicked, this, &DocumentTab::hideNotice);
+    auto* noticeLayout = new QHBoxLayout(m_noticeBar);
+    noticeLayout->setContentsMargins(8, 4, 4, 4);
+    noticeLayout->addWidget(m_noticeLabel, 1);
+    noticeLayout->addWidget(closeNotice);
+    m_noticeBar->hide();
+    connect(m_document.get(), &model::Document::notice, this, &DocumentTab::showNotice);
+    connect(m_document.get(), &model::Document::missingChanged, this, &DocumentTab::statusChanged);
+
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    layout->addWidget(m_noticeBar);
     layout->addWidget(m_findBar);
     layout->addWidget(m_splitter);
     setFocusProxy(m_view);
@@ -111,6 +140,23 @@ void DocumentTab::openFindBar()
         target = m_findBar->target();  // already open: keep its view
     }
     m_findBar->open(target);
+}
+
+QString DocumentTab::noticeText() const
+{
+    return m_noticeBar->isHidden() ? QString() : m_noticeLabel->text();
+}
+
+void DocumentTab::showNotice(const QString& message)
+{
+    m_noticeLabel->setText(QStringLiteral("%1  %2").arg(
+        QTime::currentTime().toString(QStringLiteral("HH:mm:ss")), message));
+    m_noticeBar->show();
+}
+
+void DocumentTab::hideNotice()
+{
+    m_noticeBar->hide();
 }
 
 void DocumentTab::setFollowing(bool following)
@@ -243,6 +289,9 @@ QString DocumentTab::statusText() const
     }
     if (m_following) {
         parts << QStringLiteral("Following");
+    }
+    if (m_document->isMissing()) {
+        parts << QStringLiteral("File deleted");
     }
     return parts.join(QStringLiteral("  |  "));
 }

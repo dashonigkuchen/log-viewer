@@ -6,7 +6,9 @@
 #include <QString>
 #include <QWidget>
 
+class QLabel;
 class QSplitter;
+class QWidget;
 
 #include <filesystem>
 #include <memory>
@@ -90,6 +92,14 @@ public:
 
     [[nodiscard]] bool isFollowing() const noexcept { return m_following; }
 
+    // Non-modal notice above the views (truncated, rotated, deleted; F-TAIL-5/6/7); hidden when
+    // empty. Closed by its button.
+    [[nodiscard]] QWidget* noticeBar() const noexcept { return m_noticeBar; }
+
+    [[nodiscard]] QString noticeText() const;
+    void showNotice(const QString& message);
+    void hideNotice();
+
 signals:
     // statusText() or the indexing state changed.
     void statusChanged();
@@ -111,6 +121,8 @@ private:
     LogView* m_filteredView = nullptr;
     FilterBar* m_filterBar = nullptr;
     FindBar* m_findBar = nullptr;
+    QWidget* m_noticeBar = nullptr;
+    QLabel* m_noticeLabel = nullptr;
     bool m_syncing = false;  // guards the two-way view synchronization
     bool m_following = false;
 
