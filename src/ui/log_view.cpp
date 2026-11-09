@@ -93,6 +93,9 @@ void LogView::setLineSource(model::LineSource* source)
     if (!m_source.isNull()) {
         connect(m_source, &model::LineSource::linesAppended, this, &LogView::onRowsAppended);
         connect(m_source, &model::LineSource::reset, this, &LogView::onReset);
+        connect(m_source, &model::LineSource::rowsAboutToChange, this,
+                &LogView::onRowsAboutToChange);
+        connect(m_source, &model::LineSource::rowsChanged, this, &LogView::onRowsChanged);
     }
     onReset();
 }
@@ -1142,6 +1145,49 @@ void LogView::onRowsAppended()
     }
 }
 
+void LogView::onRowsAboutToChange()
+{
+    m_keepCurrentLine.reset();
+    m_keepTopLine.reset();
+    const std::uint64_t rows = rowCount().get();
+    if (m_currentRow && m_currentRow->get() < rows) {
+        m_keepCurrentLine = m_source->originalLineNumber(*m_currentRow);
+    }
+    if (m_topRow.get() < rows) {
+        m_keepTopLine = m_source->originalLineNumber(m_topRow);
+    }
+}
+
+void LogView::onRowsChanged()
+{
+    // Rows moved: a selection in row coordinates would now cover other lines.
+    m_selection = TextSelection{};
+    m_dragging = false;
+    const std::uint64_t rows = rowCount().get();
+    if (rows == 0) {
+        m_currentRow.reset();
+        m_topRow = core::LineNumber(0);
+    } else {
+        const auto restore = [&](std::optional<core::LineNumber> line) {
+            if (!line) {
+                return core::LineNumber(0);
+            }
+            return rowAtOrAfter(*line).value_or(core::LineNumber(rows - 1));
+        };
+        const core::LineNumber current = restore(m_keepCurrentLine);
+        const core::LineNumber top = restore(m_keepTopLine);
+        m_topRow = core::LineNumber(std::min(top.get(), maxTopRow()));
+        if (m_currentRow != current) {
+            m_currentRow = current;  // same line as before: no currentRowChanged (no view sync)
+        }
+    }
+    updateScrollBars();
+    viewport()->update();
+    if (m_following) {
+        followEnd();
+    }
+}
+
 void LogView::onReset()
 {
     m_topRow = core::LineNumber(0);
@@ -1227,8 +1273,19 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
             const auto& line = lines[i];
             const DisplayMapping mapping = mapLine(line.text, line.truncated);
             const QString& text = mapping.text;
-            painter.setPen(
-                colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text));
+            QColor textColor =
+                colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text);
+            if (line.extra) {
+                // Marked line that does not match (F-FILT-9): dimmed text and a bar at the left.
+                const QColor base = colors.color(QPalette::Base);
+                textColor.setRgbF((textColor.redF() * 0.6F) + (base.redF() * 0.4F),
+                                  (textColor.greenF() * 0.6F) + (base.greenF() * 0.4F),
+                                  (textColor.blueF() * 0.6F) + (base.blueF() * 0.4F));
+                painter.fillRect(
+                    gutter, y, 3, m_lineHeight,
+                    QColor(m_markColor.red(), m_markColor.green(), m_markColor.blue()));
+            }
+            painter.setPen(textColor);
             painter.setClipRect(gutter, 0, width - gutter, height);
             for (const QRectF& rect : highlightRects(m_highlighter.data(), row, line, mapping, y)) {
                 painter.fillRect(rect, m_matchColor);

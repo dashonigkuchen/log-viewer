@@ -24,6 +24,9 @@ struct DisplayLine
     bool partial = false;
     // Reading failed (for example, the file shrank); text is empty.
     bool unavailable = false;
+    // Shown although it does not belong to the source's result (a marked line in the filtered
+    // view, F-FILT-9); views paint it distinctly.
+    bool extra = false;
 };
 
 // What a view shows: the full file or the result of a filter. Rows are positions in the view,
@@ -60,6 +63,11 @@ signals:
     void linesAppended(quint64 lineCount);
     // All rows changed (reload, encoding change, new filter); line numbers may be invalid.
     void reset();
+    // Rows are about to be inserted or removed anywhere (not only at the end); line numbers stay
+    // valid. Views remember their position by original line number and restore it on
+    // rowsChanged().
+    void rowsAboutToChange();
+    void rowsChanged();
 };
 
 }  // namespace lv::model

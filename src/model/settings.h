@@ -64,6 +64,11 @@ public:
 
     void setLineNumbersVisible(bool visible);
 
+    // Marked lines also appear in the filtered view (F-FILT-9).
+    [[nodiscard]] bool showMarksInFilter() const noexcept { return m_showMarksInFilter; }
+
+    void setShowMarksInFilter(bool show);
+
     // Saved QSplitter state between main and filtered view (F-FILT-1); empty if never saved.
     [[nodiscard]] QByteArray filterSplitterState() const;
     void setFilterSplitterState(const QByteArray& state);
@@ -84,6 +89,7 @@ private:
     int m_zoom = 0;
     int m_tabWidth = kDefaultTabWidth;
     bool m_lineNumbers = true;
+    bool m_showMarksInFilter = true;
 };
 
 }  // namespace lv::model

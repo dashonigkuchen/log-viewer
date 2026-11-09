@@ -207,7 +207,7 @@ void FindBar::showResult(const model::FindResult& result)
         LogView* view = m_searchView;
         core::LineNumber row(*result.line);
         if (view == m_filteredView) {
-            row = core::LineNumber(m_filter->lowerBound(row));
+            row = view->rowAtOrAfter(row).value_or(row);
         }
         view->goToRow(row);
         // Select the first match in the line so that it stands out from the other highlights.

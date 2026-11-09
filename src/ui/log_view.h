@@ -95,6 +95,9 @@ public:
 
     // Copies all marked lines in line order (F-MARK-5).
     void copyMarkedLines();
+    // First row whose original line is >= `line` (rows are ascending), if any.
+    [[nodiscard]] std::optional<core::LineNumber> rowAtOrAfter(core::LineNumber line) const;
+
     // Width of the mark column at the left edge of the gutter (0 without marks).
     [[nodiscard]] int markColumnWidth() const;
 
@@ -252,6 +255,11 @@ private:
     void updateSelectionAfterMove(bool extend, std::optional<core::LineNumber> before);
     void onRowsAppended();
     void onReset();
+    void onRowsAboutToChange();
+    void onRowsChanged();
+    // Position remembered across rowsAboutToChange()/rowsChanged().
+    std::optional<core::LineNumber> m_keepCurrentLine;
+    std::optional<core::LineNumber> m_keepTopLine;
     void updateMetrics();
     void updateScrollBars();
     [[nodiscard]] std::uint64_t maxTopRow() const;
@@ -267,8 +275,7 @@ private:
     std::function<bool(std::size_t)> m_confirmClearMarks;
     // Original line numbers of the selected rows (or the current row).
     [[nodiscard]] std::vector<core::LineNumber> targetLines() const;
-    // Row of the first row whose original line is >= `line` (rows are ascending).
-    [[nodiscard]] std::optional<core::LineNumber> rowAtOrAfter(core::LineNumber line) const;
+
     QColor m_findColor{0, 170, 255, 110};  // light blue, distinct from the filter highlight
     core::LineNumber m_topRow;
     std::optional<core::LineNumber> m_currentRow;
