@@ -173,6 +173,11 @@
       },
       "execution": {
         "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     },
     {
@@ -183,6 +188,11 @@
       },
       "execution": {
         "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     },
     {
@@ -197,6 +207,11 @@
       "environment": {
         "ASAN_OPTIONS": "detect_leaks=1:abort_on_error=1",
         "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     },
     {
@@ -207,7 +222,7 @@
       },
       "filter": {
         "exclude": {
-          "label": "ui"
+          "label": "ui|slow"
         }
       },
       "execution": {
@@ -225,6 +240,11 @@
       },
       "execution": {
         "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     },
     {
@@ -235,6 +255,11 @@
       },
       "execution": {
         "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     },
     {
@@ -245,6 +270,11 @@
       },
       "execution": {
         "noTestsAction": "error"
+      },
+      "filter": {
+        "exclude": {
+          "label": "slow"
+        }
       }
     }
   ]

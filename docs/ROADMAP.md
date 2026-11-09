@@ -249,7 +249,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-TAIL-5, F-TAIL-6, F-TAIL-7 in `Document`, notices in the tab, generation reset, filter re-run.
   - Done when: `fs` tests with `loggen --rotate-every` and `--truncate-every`: views end up with exactly the content of the current file; no crash when the file is missing; marks cleared with notice. **[Windows]**
 
-- [ ] **M4-07 Live stress test** — Depends on: M4-05, M4-06
+- [x] **M4-07 Live stress test** — Depends on: M4-05, M4-06 (PR #54)
   - Scope: `slow` test: `loggen --append-rate 50 --duration 30` with active filter and follow mode; measure UI stalls and memory (P-TAIL-2, P-UI-2).
   - Done when: test passes on Linux CI (nightly) and is documented for manual runs on Windows; results logged in `PERFORMANCE.md`.
 

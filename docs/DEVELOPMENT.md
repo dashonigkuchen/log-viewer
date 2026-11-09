@@ -81,6 +81,15 @@ ctest --preset linux-gcc-debug -R LineIndex     # by name
 - UI tests run with `QT_QPA_PLATFORM=offscreen` (set by CTest properties).
 - `LV_SETTINGS_DIR` overrides the settings directory (app log, later settings); use it in tests and manual runs to keep the real profile clean.
 - Tests labeled `slow` (> 5 s) do not run in the default PR CI job; they run in the nightly job.
+  The test presets exclude them; run them directly, e.g. the live stress test (M4-07):
+  ```
+  ctest --test-dir build/linux-release -L slow --output-on-failure
+  # Windows (Release build, any shell), optional rate and duration:
+  set LV_STRESS_RATE_MB=50
+  set LV_STRESS_SECONDS=60
+  build\windows-msvc-release\tests\ui\lv_ui_stress_tests.exe -o -,txt
+  ```
+  It prints the written amount, the worst UI stall, and the memory growth; record the numbers in PERFORMANCE.md.
 - Fuzz-style tests: property tests with seeded random inputs inside Catch2 (`GENERATE(take(...))`). Real libFuzzer targets may be added later (`fuzz/`).
 
 ## 4. Benchmarks and test data
