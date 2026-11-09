@@ -110,3 +110,13 @@ set_target_properties(lv_ui_find_bar_tests PROPERTIES WIN32_EXECUTABLE OFF)
 target_link_libraries(lv_ui_find_bar_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
 add_test(NAME ui.FindBar COMMAND lv_ui_find_bar_tests -o "-,txt")
 set_tests_properties(ui.FindBar PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
+
+# Live stress test (M4-07): label `slow`, nightly only. Manual run: lv_ui_stress_tests -o -,txt
+qt_add_executable(lv_ui_stress_tests live_stress_test.cpp)
+set_target_properties(lv_ui_stress_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_stress_tests PRIVATE lv::ui lv::loggen lv_test_support Qt6::Test lv::compile_options)
+if(WIN32)
+    target_link_libraries(lv_ui_stress_tests PRIVATE psapi)
+endif()
+add_test(NAME slow.LiveStress COMMAND lv_ui_stress_tests -o "-,txt")
+set_tests_properties(slow.LiveStress PROPERTIES LABELS slow TIMEOUT 300 ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
