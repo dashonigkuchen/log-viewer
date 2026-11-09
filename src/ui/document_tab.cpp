@@ -6,6 +6,7 @@
 #include "model/document_line_source.h"
 #include "model/filtered_document.h"
 #include "model/filtered_line_source.h"
+#include "model/line_highlighter.h"
 #include "model/mark_set.h"
 #include "model/match_highlighter.h"
 #include "model/search_pool.h"
@@ -47,6 +48,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_highlighter(std::make_unique<model::MatchHighlighter>(*m_filter))
     , m_marks(std::make_unique<model::MarkSet>(*m_document))
     , m_bookmarks(std::make_unique<model::Bookmarks>(*m_document))
+    , m_lineHighlighter(std::make_unique<model::LineHighlighter>())
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
 {
@@ -70,6 +72,9 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_filteredSource->setMarks(m_marks.get());
     m_view->setBookmarks(m_bookmarks.get());
     m_filteredView->setBookmarks(m_bookmarks.get());
+    m_lineHighlighter->watch(*m_document);
+    m_view->setLineHighlighter(m_lineHighlighter.get());
+    m_filteredView->setLineHighlighter(m_lineHighlighter.get());
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);
@@ -289,6 +294,8 @@ DocumentTab::~DocumentTab()
     m_filteredSource->setMarks(nullptr);
     m_view->setBookmarks(nullptr);
     m_filteredView->setBookmarks(nullptr);
+    m_view->setLineHighlighter(nullptr);
+    m_filteredView->setLineHighlighter(nullptr);
     m_view->setLineSource(nullptr);
 }
 
