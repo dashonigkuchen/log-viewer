@@ -75,6 +75,9 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_lineHighlighter->watch(*m_document);
     m_view->setLineHighlighter(m_lineHighlighter.get());
     m_filteredView->setLineHighlighter(m_lineHighlighter.get());
+    for (LogView* view : {m_view, m_filteredView}) {
+        connect(view, &LogView::highlightTextRequested, this, &DocumentTab::highlightTextRequested);
+    }
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);

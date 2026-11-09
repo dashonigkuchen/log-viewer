@@ -6,6 +6,7 @@
 #include <QStringList>
 
 #include <filesystem>
+#include <functional>
 
 class QActionGroup;
 class QLabel;
@@ -26,6 +27,7 @@ namespace lv::ui
 {
 
 class BookmarksPanel;
+class HighlightDialog;
 class DocumentTab;
 
 // The top-level window: tabs for documents, menus, and a status bar (SPEC F-FILE-1, F-TAB-1,
@@ -52,6 +54,12 @@ public:
     void setHighlightSets(model::HighlightSets* sets);
 
     [[nodiscard]] model::HighlightSets* highlightSets() const noexcept { return m_highlightSets; }
+
+    // Opens the highlight rules dialog (F-HL-4); `prepare` may adjust it before it is shown
+    // (tests). Applies the result on OK.
+    void editHighlightRules(const std::function<void(HighlightDialog&)>& prepare = {});
+    // Adds a match-only rule for `text` to the active set of `tab` (F-HL-7).
+    void highlightText(DocumentTab* tab, const QString& text);
 
     [[nodiscard]] model::FilterHistory* filterHistory() const noexcept { return m_filterHistory; }
 

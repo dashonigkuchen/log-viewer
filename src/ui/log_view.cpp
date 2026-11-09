@@ -1143,6 +1143,13 @@ void LogView::contextMenuEvent(QContextMenuEvent* event)
     }
     menu.addAction(QStringLiteral("Copy"), this, &LogView::copy)
         ->setEnabled(!m_selection.isEmpty());
+    // Quick highlight rule from a selection inside one line (F-HL-7).
+    const QString selected = m_selection.isEmpty() ? QString() : selectedText();
+    QAction* highlight =
+        menu.addAction(QStringLiteral("Highlight This Text"), this,
+                       [this, selected] { emit highlightTextRequested(selected); });
+    highlight->setObjectName(QStringLiteral("actionHighlightThisText"));
+    highlight->setEnabled(!selected.isEmpty() && !selected.contains(u'\n'));
     menu.addAction(QStringLiteral("Select All"), this, &LogView::selectAll);
     menu.exec(event->globalPos());
 }

@@ -43,10 +43,11 @@ public:
 
     [[nodiscard]] const HighlightSets* sets() const noexcept { return m_sets; }
 
-    // Index of the set used by this tab; nullopt = follow the default set.
+    // Index of the set used by this tab; nullopt = follow the default set. The choice is kept by
+    // name, so it survives reordering; if the set is removed or renamed, the tab follows the
+    // default again.
     void setActiveSet(std::optional<std::size_t> index);
-
-    [[nodiscard]] std::optional<std::size_t> chosenSet() const noexcept { return m_chosen; }
+    [[nodiscard]] std::optional<std::size_t> chosenSet() const;
 
     // The set actually used, if any sets are present.
     [[nodiscard]] std::optional<std::size_t> activeSet() const;
@@ -63,7 +64,7 @@ signals:
 
 private:
     QPointer<const HighlightSets> m_sets;
-    std::optional<std::size_t> m_chosen;
+    std::optional<QString> m_chosen;  // name of the chosen set
     mutable std::shared_ptr<const CompiledHighlightSet> m_compiled;
     mutable core::MatchScratch m_scratch;
     mutable std::unordered_map<std::uint64_t, LineHighlight> m_cache;

@@ -235,6 +235,8 @@ public:
     [[nodiscard]] std::int64_t lastPaintMicroseconds() const noexcept { return m_lastPaintUs; }
 
 signals:
+    // "Highlight this text" on a selection within one line (F-HL-7).
+    void highlightTextRequested(const QString& text);
     void topRowChanged(lv::core::LineNumber row);
     void currentRowChanged(lv::core::LineNumber row);
     // The user asked to turn follow mode on (Ctrl+End) or off (scrolled or moved up).

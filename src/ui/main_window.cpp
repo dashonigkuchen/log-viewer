@@ -11,6 +11,7 @@
 #include "ui/document_tab.h"
 #include "ui/filter_bar.h"
 #include "ui/find_bar.h"
+#include "ui/highlight_dialog.h"
 #include "ui/log_view.h"
 
 #include <QAction>
@@ -244,6 +245,9 @@ void MainWindow::createMenus()
     m_highlightSetMenu->setObjectName(QStringLiteral("menuHighlightSet"));
     connect(m_highlightSetMenu, &QMenu::aboutToShow, this, &MainWindow::updateHighlightSetMenu);
     updateHighlightSetMenu();
+    QAction* editRules = viewMenu->addAction(QStringLiteral("Edit Highlight &Rules..."));
+    editRules->setObjectName(QStringLiteral("actionEditHighlightRules"));
+    connect(editRules, &QAction::triggered, this, [this] { editHighlightRules(); });
     auto* toolBar = addToolBar(QStringLiteral("Main"));
     toolBar->setObjectName(QStringLiteral("mainToolBar"));
     toolBar->setMovable(false);
@@ -376,6 +380,56 @@ void MainWindow::setHighlightSets(model::HighlightSets* sets)
     updateHighlightSetMenu();
 }
 
+void MainWindow::editHighlightRules(const std::function<void(HighlightDialog&)>& prepare)
+{
+    // Preview: the lines on screen of the current tab, otherwise sample lines.
+    QStringList preview;
+    if (const auto* tab = currentDocumentTab()) {
+        const LogView* view = tab->mainView();
+        if (const auto* source = view->lineSource(); source != nullptr) {
+            const std::uint64_t rows = source->lineCount().get();
+            const std::uint64_t first = std::min(view->topRow().get(), rows);
+            const std::uint64_t count = std::min<std::uint64_t>(rows - first, 30);
+            for (const auto& line :
+                 source->plainLines(core::LineNumber(first), core::LineCount(count))) {
+                preview << line.text;
+            }
+        }
+    }
+    HighlightDialog dialog(*m_highlightSets, preview, this);
+    if (const auto* tab = currentDocumentTab()) {
+        if (const auto active = tab->lineHighlighter().activeSet()) {
+            dialog.selectSet(*active);
+        }
+    }
+    if (prepare) {
+        prepare(dialog);
+    }
+    if (dialog.exec() == QDialog::Accepted) {
+        m_highlightSets->assign(dialog.sets(), dialog.defaultIndex());
+    }
+}
+
+void MainWindow::highlightText(DocumentTab* tab, const QString& text)
+{
+    if (tab == nullptr || text.isEmpty()) {
+        return;
+    }
+    const auto active = tab->lineHighlighter().activeSet();
+    if (!active) {
+        return;
+    }
+    model::HighlightSet set = m_highlightSets->set(*active);
+    set.rules.push_back({.pattern = text,
+                         .regex = false,
+                         .caseSensitive = true,
+                         .scope = model::HighlightScope::kMatchOnly,
+                         .foreground = std::nullopt,
+                         .background = 0xFF80DEEAU,  // light cyan, distinct from the filter color
+                         .enabled = true});
+    m_highlightSets->replace(*active, std::move(set));
+}
+
 void MainWindow::updateHighlightSetMenu()
 {
     m_highlightSetMenu->clear();
@@ -489,6 +543,8 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
     applyViewSettings(tab);
     tab->filterBar()->setHistory(m_filterHistory);
     tab->lineHighlighter().setSets(m_highlightSets);
+    connect(tab, &DocumentTab::highlightTextRequested, this,
+            [this, tab](const QString& text) { highlightText(tab, text); });
     connect(tab, &DocumentTab::followingChanged, this, [this, tab] {
         if (tab == currentDocumentTab()) {
             updateFollowAction();

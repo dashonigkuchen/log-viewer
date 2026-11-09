@@ -138,3 +138,9 @@ set_target_properties(lv_ui_highlight_rule_tests PROPERTIES WIN32_EXECUTABLE OFF
 target_link_libraries(lv_ui_highlight_rule_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
 add_test(NAME ui.HighlightRules COMMAND lv_ui_highlight_rule_tests -o "-,txt")
 set_tests_properties(ui.HighlightRules PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
+
+qt_add_executable(lv_ui_highlight_dialog_tests highlight_dialog_test.cpp)
+set_target_properties(lv_ui_highlight_dialog_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_highlight_dialog_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
+add_test(NAME ui.HighlightDialog COMMAND lv_ui_highlight_dialog_tests -o "-,txt")
+set_tests_properties(ui.HighlightDialog PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")

@@ -135,6 +135,8 @@ signals:
     void followingChanged(bool following);
     // New lines arrived or the file was reloaded (for the inactive-tab indicator, F-TAB-3).
     void contentChanged();
+    // "Highlight this text" in one of the views (F-HL-7).
+    void highlightTextRequested(const QString& text);
 
 private:
     std::filesystem::path m_path;
