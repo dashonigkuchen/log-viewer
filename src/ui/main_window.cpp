@@ -5,6 +5,7 @@
 #include "model/model_info.h"
 #include "model/recent_files.h"
 #include "model/settings.h"
+#include "ui/bookmarks_panel.h"
 #include "ui/document_tab.h"
 #include "ui/filter_bar.h"
 #include "ui/find_bar.h"
@@ -16,6 +17,7 @@
 #include <QClipboard>
 #include <QDesktopServices>
 #include <QDir>
+#include <QDockWidget>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -233,6 +235,7 @@ void MainWindow::createMenus()
             m_followAction->setChecked(false);
         }
     });
+    createBookmarkActions(viewMenu);
     auto* toolBar = addToolBar(QStringLiteral("Main"));
     toolBar->setObjectName(QStringLiteral("mainToolBar"));
     toolBar->setMovable(false);
@@ -535,6 +538,44 @@ QString MainWindow::statusText() const
 {
     const auto* tab = currentDocumentTab();
     return tab == nullptr ? QStringLiteral("Ready") : tab->statusText();
+}
+
+void MainWindow::createBookmarkActions(QMenu* menu)
+{
+    m_bookmarksPanel = new BookmarksPanel(this);
+    m_bookmarksDock = new QDockWidget(QStringLiteral("Bookmarks"), this);
+    m_bookmarksDock->setObjectName(QStringLiteral("bookmarksDock"));
+    m_bookmarksDock->setWidget(m_bookmarksPanel);
+    addDockWidget(Qt::RightDockWidgetArea, m_bookmarksDock);
+    m_bookmarksDock->hide();
+    connect(m_tabs, &QTabWidget::currentChanged, this,
+            [this] { m_bookmarksPanel->setTab(currentDocumentTab()); });
+
+    menu->addSeparator();
+    QAction* panel = m_bookmarksDock->toggleViewAction();
+    panel->setObjectName(QStringLiteral("actionBookmarksPanel"));
+    panel->setText(QStringLiteral("&Bookmarks Panel"));
+    panel->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_B));
+    menu->addAction(panel);
+
+    const auto add = [this, menu](const QString& name, const QString& text, const QKeySequence& key,
+                                  auto handler) {
+        QAction* action = menu->addAction(text);
+        action->setObjectName(name);
+        action->setShortcut(key);
+        connect(action, &QAction::triggered, this, [this, handler] {
+            if (auto* tab = currentDocumentTab()) {
+                handler(tab->activeView());
+            }
+        });
+    };
+    add(QStringLiteral("actionToggleBookmark"), QStringLiteral("Toggle Boo&kmark"),
+        QKeySequence(Qt::CTRL | Qt::Key_B), [](LogView* view) { view->toggleBookmark(); });
+    add(QStringLiteral("actionNextBookmark"), QStringLiteral("Next Bookmark"),
+        QKeySequence(Qt::Key_F2), [](LogView* view) { view->goToNextBookmark(); });
+    add(QStringLiteral("actionPreviousBookmark"), QStringLiteral("Previous Bookmark"),
+        QKeySequence(Qt::SHIFT | Qt::Key_F2), [](LogView* view) { view->goToPreviousBookmark(); });
+    menu->addSeparator();
 }
 
 void MainWindow::updateFollowAction()

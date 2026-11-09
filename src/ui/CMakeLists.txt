@@ -1,5 +1,7 @@
 add_library(
     lv_ui STATIC
+    bookmarks_panel.cpp
+    bookmarks_panel.h
     document_tab.cpp
     document_tab.h
     filter_bar.cpp

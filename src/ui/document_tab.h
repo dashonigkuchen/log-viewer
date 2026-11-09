@@ -20,6 +20,7 @@ class Document;
 class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
+class Bookmarks;
 class MarkSet;
 class MatchHighlighter;
 }  // namespace lv::model
@@ -66,6 +67,13 @@ public:
     [[nodiscard]] model::FilteredDocument& filter() const noexcept { return *m_filter; }
 
     [[nodiscard]] model::MarkSet& marks() const noexcept { return *m_marks; }
+
+    [[nodiscard]] model::Bookmarks& bookmarks() const noexcept { return *m_bookmarks; }
+
+    // The view that has (or last had) the keyboard focus; the main view by default.
+    [[nodiscard]] LogView* activeView() const;
+    // Shows `line` in the main view (and the filtered view, if it shows the line).
+    void goToLine(core::LineNumber line);
 
     // Marked lines also appear in the filtered view (F-FILT-9; default on).
     void setShowMarksInFilter(bool show);
@@ -129,6 +137,7 @@ private:
     std::unique_ptr<model::FilteredLineSource> m_filteredSource;
     std::unique_ptr<model::MatchHighlighter> m_highlighter;
     std::unique_ptr<model::MarkSet> m_marks;
+    std::unique_ptr<model::Bookmarks> m_bookmarks;
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;

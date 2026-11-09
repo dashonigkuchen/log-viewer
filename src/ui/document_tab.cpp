@@ -1,6 +1,7 @@
 #include "ui/document_tab.h"
 
 #include "core/encoding/encoding.h"
+#include "model/bookmarks.h"
 #include "model/document.h"
 #include "model/document_line_source.h"
 #include "model/filtered_document.h"
@@ -45,6 +46,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     , m_filteredSource(std::make_unique<model::FilteredLineSource>(*m_filter, *m_source))
     , m_highlighter(std::make_unique<model::MatchHighlighter>(*m_filter))
     , m_marks(std::make_unique<model::MarkSet>(*m_document))
+    , m_bookmarks(std::make_unique<model::Bookmarks>(*m_document))
     , m_splitter(new QSplitter(Qt::Vertical, this))
     , m_view(new LogView(m_splitter))
 {
@@ -66,6 +68,8 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_view->setMarks(m_marks.get());
     m_filteredView->setMarks(m_marks.get());
     m_filteredSource->setMarks(m_marks.get());
+    m_view->setBookmarks(m_bookmarks.get());
+    m_filteredView->setBookmarks(m_bookmarks.get());
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);
@@ -97,10 +101,15 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_noticeBar->hide();
     connect(m_document.get(), &model::Document::notice, this, &DocumentTab::showNotice);
     // Marks refer to line numbers of the old generation: they are dropped (F-TAIL-5).
-    connect(m_marks.get(), &model::MarkSet::cleared, this, [this](quint64 count) {
+    const auto appendNotice = [this](const QString& lost) {
         const QString previous = noticeText().section(QStringLiteral("  "), 1);
-        const QString lost = QStringLiteral("%1 mark(s) were cleared.").arg(count);
         showNotice(previous.isEmpty() ? lost : previous + QStringLiteral(" ") + lost);
+    };
+    connect(m_marks.get(), &model::MarkSet::cleared, this, [appendNotice](quint64 count) {
+        appendNotice(QStringLiteral("%1 mark(s) were cleared.").arg(count));
+    });
+    connect(m_bookmarks.get(), &model::Bookmarks::cleared, this, [appendNotice](quint64 count) {
+        appendNotice(QStringLiteral("%1 bookmark(s) were cleared.").arg(count));
     });
     connect(m_document.get(), &model::Document::missingChanged, this, &DocumentTab::statusChanged);
 
@@ -168,6 +177,17 @@ void DocumentTab::showNotice(const QString& message)
 void DocumentTab::hideNotice()
 {
     m_noticeBar->hide();
+}
+
+LogView* DocumentTab::activeView() const
+{
+    return m_filteredView->hasFocus() ? m_filteredView : m_view;
+}
+
+void DocumentTab::goToLine(core::LineNumber line)
+{
+    m_view->goToRow(line);
+    m_view->setFocus();
 }
 
 void DocumentTab::setShowMarksInFilter(bool show)
@@ -267,6 +287,8 @@ DocumentTab::~DocumentTab()
     m_view->setMarks(nullptr);
     m_filteredView->setMarks(nullptr);
     m_filteredSource->setMarks(nullptr);
+    m_view->setBookmarks(nullptr);
+    m_filteredView->setBookmarks(nullptr);
     m_view->setLineSource(nullptr);
 }
 

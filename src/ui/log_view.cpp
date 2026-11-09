@@ -20,6 +20,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPalette>
+#include <QPen>
 #include <QScrollBar>
 #include <QWheelEvent>
 
@@ -344,7 +345,7 @@ void LogView::mousePressEvent(QMouseEvent* event)
         clearSelection();
         return;  // below the last row: keep the current row
     }
-    if (point.x() < markColumnWidth()) {
+    if (point.x() < markColumnWidth() && !m_marks.isNull()) {
         // Click in the mark column toggles the mark of that row (F-MARK-1).
         m_marks->toggle(m_source->originalLineNumber(core::LineNumber(clickedRow)));
         return;
@@ -871,7 +872,7 @@ int LogView::horizontalOffset() const
 
 int LogView::markColumnWidth() const
 {
-    return m_marks.isNull() ? 0 : std::max(8, (m_lineHeight * 3) / 4);
+    return m_marks.isNull() && m_bookmarks.isNull() ? 0 : std::max(8, (m_lineHeight * 3) / 4);
 }
 
 int LogView::gutterWidth() const
@@ -979,43 +980,73 @@ std::optional<core::LineNumber> LogView::rowAtOrAfter(core::LineNumber line) con
     return low < rowCount().get() ? std::optional(core::LineNumber(low)) : std::nullopt;
 }
 
-bool LogView::goToNextMark()
+template <typename Step>
+bool LogView::goToLineBy(Step step)
 {
-    if (m_marks.isNull() || m_source.isNull() || rowCount().get() == 0) {
+    if (m_source.isNull() || rowCount().get() == 0) {
         return false;
     }
     const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
     auto line = m_source->originalLineNumber(core::LineNumber(current));
-    // Marks may be on lines this view does not show (filtered view): skip them.
-    while (const auto mark = m_marks->next(line)) {
-        if (const auto row = rowAtOrAfter(*mark);
-            row && m_source->originalLineNumber(*row) == *mark) {
+    // The target may be on a line this view does not show (filtered view): skip it.
+    while (const std::optional<core::LineNumber> target = step(line)) {
+        if (const auto row = rowAtOrAfter(*target);
+            row && m_source->originalLineNumber(*row) == *target) {
             userMovedUp();  // leaves follow mode like any manual move
             goToRow(*row);
             return true;
         }
-        line = *mark;
+        line = *target;
     }
     return false;
 }
 
+bool LogView::goToNextMark()
+{
+    return !m_marks.isNull() &&
+           goToLineBy([this](core::LineNumber line) { return m_marks->next(line); });
+}
+
 bool LogView::goToPreviousMark()
 {
-    if (m_marks.isNull() || m_source.isNull() || rowCount().get() == 0) {
-        return false;
+    return !m_marks.isNull() &&
+           goToLineBy([this](core::LineNumber line) { return m_marks->previous(line); });
+}
+
+void LogView::setBookmarks(model::Bookmarks* bookmarks)
+{
+    if (!m_bookmarks.isNull()) {
+        disconnect(m_bookmarks, nullptr, viewport(), nullptr);
     }
-    const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
-    auto line = m_source->originalLineNumber(core::LineNumber(current));
-    while (const auto mark = m_marks->previous(line)) {
-        if (const auto row = rowAtOrAfter(*mark);
-            row && m_source->originalLineNumber(*row) == *mark) {
-            userMovedUp();
-            goToRow(*row);
-            return true;
-        }
-        line = *mark;
+    m_bookmarks = bookmarks;
+    if (bookmarks != nullptr) {
+        connect(bookmarks, &model::Bookmarks::changed, viewport(), qOverload<>(&QWidget::update));
     }
-    return false;
+    updateScrollBars();
+    viewport()->update();
+}
+
+void LogView::toggleBookmark()
+{
+    if (m_bookmarks.isNull() || m_source.isNull() || !m_currentRow ||
+        m_currentRow->get() >= rowCount().get()) {
+        return;
+    }
+    const auto lines = m_source->plainLines(*m_currentRow, core::LineCount(1));
+    const QString text = lines.empty() ? QString() : lines.front().text;
+    m_bookmarks->toggle(m_source->originalLineNumber(*m_currentRow), text);
+}
+
+bool LogView::goToNextBookmark()
+{
+    return !m_bookmarks.isNull() &&
+           goToLineBy([this](core::LineNumber line) { return m_bookmarks->next(line); });
+}
+
+bool LogView::goToPreviousBookmark()
+{
+    return !m_bookmarks.isNull() &&
+           goToLineBy([this](core::LineNumber line) { return m_bookmarks->previous(line); });
 }
 
 void LogView::clearMarks()
@@ -1080,6 +1111,13 @@ void LogView::contextMenuEvent(QContextMenuEvent* event)
             ->setEnabled(!m_marks->empty());
         menu.addAction(QStringLiteral("Clear All Marks..."), this, &LogView::clearMarks)
             ->setEnabled(!m_marks->empty());
+        menu.addSeparator();
+    }
+    if (!m_bookmarks.isNull()) {
+        QAction* bookmark =
+            menu.addAction(QStringLiteral("Toggle Bookmark"), this, &LogView::toggleBookmark);
+        bookmark->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+        bookmark->setEnabled(m_currentRow.has_value());
         menu.addSeparator();
     }
     menu.addAction(QStringLiteral("Copy"), this, &LogView::copy)
@@ -1251,6 +1289,40 @@ void LogView::changeEvent(QEvent* event)
     }
 }
 
+void LogView::paintMarkSymbols(QPainter& painter, core::LineNumber row, int y,
+                               std::optional<int> markIndex) const
+{
+    const int column = markColumnWidth();
+    if (markIndex) {
+        // Mark symbol: a filled circle in the mark column (F-MARK-2).
+        const QColor color = markColor(*markIndex);
+        const int size = std::max(4, column - 4);
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(color.red(), color.green(), color.blue()));
+        painter.drawEllipse(
+            QRect((column - size) / 2, y + ((m_lineHeight - size) / 2), size, size));
+        painter.restore();
+    }
+    if (!m_bookmarks.isNull() && m_bookmarks->contains(m_source->originalLineNumber(row))) {
+        // Bookmark symbol: a ribbon in the mark column (F-BOOK-4).
+        const int w = std::max(4, column - 4);
+        const int left = (column - w) / 2;
+        const int top = y + 1;
+        const int bottom = y + m_lineHeight - 2;
+        const std::array<QPoint, 5> ribbon{
+            QPoint(left, top), QPoint(left + w, top), QPoint(left + w, bottom),
+            QPoint(left + (w / 2), bottom - (w / 2)), QPoint(left, bottom)};
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(QPen(palette().color(QPalette::Base), 1));
+        painter.setBrush(m_bookmarkColor);
+        painter.drawPolygon(ribbon.data(), static_cast<int>(ribbon.size()));
+        painter.restore();
+    }
+}
+
 void LogView::paintEvent(QPaintEvent* /*event*/)
 {
     QElapsedTimer timer;
@@ -1291,17 +1363,8 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
             }
             if (marked) {
                 painter.fillRect(gutter, y, width - gutter, m_lineHeight, rowMarkColor);
-                // Mark symbol: a filled circle in the mark column (F-MARK-2).
-                const int size = std::max(4, markColumnWidth() - 4);
-                painter.save();
-                painter.setRenderHint(QPainter::Antialiasing);
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(
-                    QColor(rowMarkColor.red(), rowMarkColor.green(), rowMarkColor.blue()));
-                painter.drawEllipse(QRect((markColumnWidth() - size) / 2,
-                                          y + ((m_lineHeight - size) / 2), size, size));
-                painter.restore();
             }
+            paintMarkSymbols(painter, core::LineNumber(row), y, markIndex);
             const auto& line = lines[i];
             const DisplayMapping mapping = mapLine(line.text, line.truncated);
             const QString& text = mapping.text;
