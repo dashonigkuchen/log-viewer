@@ -199,6 +199,66 @@ private slots:
         QCOMPARE(f.filter().matchCount(), std::uint64_t{2});  // "error net", "ERROR_CODE 5"
     }
 
+    static void optionChangesApplyImmediately()
+    {
+        const Fixture f;
+        QVERIFY(f.ready());
+        // With an empty field, options do nothing.
+        QTest::mouseClick(f.bar().caseSensitiveBox(), Qt::LeftButton);
+        QApplication::processEvents();
+        QCOMPARE(f.filter().state(), FilteredDocument::State::kInactive);
+        QTest::mouseClick(f.bar().caseSensitiveBox(), Qt::LeftButton);  // back off
+
+        QVERIFY(f.enter(QStringLiteral("ERROR")));
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{3});  // ERROR, error, ERROR_CODE
+        const auto done = [&] {
+            return waitFor([&] { return f.filter().state() == FilteredDocument::State::kDone; });
+        };
+        QTest::mouseClick(f.bar().caseSensitiveBox(), Qt::LeftButton);
+        QVERIFY(done());
+        QVERIFY(f.filter().query().value_or(lv::core::Query{}).caseSensitive);
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{2});
+        QTest::mouseClick(f.bar().wholeWordBox(), Qt::LeftButton);
+        QVERIFY(done());
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{1});
+        QTest::mouseClick(f.bar().invertBox(), Qt::LeftButton);
+        QVERIFY(done());
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{5});
+
+        // A text typed but not confirmed is applied together with the option.
+        f.bar().input()->setText(QStringLiteral("WARN"));
+        QTest::mouseClick(f.bar().invertBox(), Qt::LeftButton);  // invert off
+        QVERIFY(done());
+        QCOMPARE(f.filter().query().value_or(lv::core::Query{}).text, std::string("WARN"));
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{1});
+    }
+
+    static void modeChangeAppliesAndInvalidModeKeepsTheResult()
+    {
+        const Fixture f;
+        QVERIFY(f.ready());
+        QVERIFY(f.enter(QStringLiteral("ERROR(")));  // valid as a literal
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{0});
+        QVERIFY(f.enter(QStringLiteral("WARN")));
+        f.bar().input()->setText(QStringLiteral("ERROR("));
+        // Switching to regex makes the text invalid: error shown, old result stays.
+        auto* mode = f.bar().modeSelector();
+        mode->setCurrentIndex(1);
+        QVERIFY(QMetaObject::invokeMethod(mode, "activated", Q_ARG(int, 1)));
+        QApplication::processEvents();
+        QVERIFY(f.bar().errorLabel()->isVisible());
+        QCOMPARE(f.filter().query().value_or(lv::core::Query{}).text, std::string("WARN"));
+        QCOMPARE(f.filter().matchCount(), std::uint64_t{1});
+        // Fixing it by switching back applies the literal.
+        mode->setCurrentIndex(0);
+        QVERIFY(QMetaObject::invokeMethod(mode, "activated", Q_ARG(int, 0)));
+        QVERIFY(waitFor([&] {
+            return f.filter().state() == FilteredDocument::State::kDone &&
+                   f.filter().query().value_or(lv::core::Query{}).text == "ERROR(";
+        }));
+        QVERIFY(f.bar().errorLabel()->isHidden());
+    }
+
     static void modeSwitchingKeepsTheText()
     {
         const Fixture f;
