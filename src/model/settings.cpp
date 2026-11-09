@@ -66,6 +66,7 @@ void Settings::load()
         readInt(*m_store, "View/zoom", 0, kMinFontSize - m_fontSize, kMaxFontSize - m_fontSize);
     m_tabWidth = readInt(*m_store, "View/tabWidth", kDefaultTabWidth, 1, kMaxTabWidth);
     m_lineNumbers = m_store->value(key("View/lineNumbers"), true).toBool();
+    m_showMarksInFilter = m_store->value(key("View/showMarksInFilter"), true).toBool();
 }
 
 void Settings::setFont(const QString& family, int size)
@@ -108,6 +109,16 @@ void Settings::setLineNumbersVisible(bool visible)
     }
     m_lineNumbers = visible;
     m_store->setValue(key("View/lineNumbers"), m_lineNumbers);
+    emit viewSettingsChanged();
+}
+
+void Settings::setShowMarksInFilter(bool show)
+{
+    if (show == m_showMarksInFilter) {
+        return;
+    }
+    m_showMarksInFilter = show;
+    m_store->setValue(key("View/showMarksInFilter"), m_showMarksInFilter);
     emit viewSettingsChanged();
 }
 

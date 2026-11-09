@@ -1,6 +1,7 @@
 #include "log_writer.h"
 #include "model/document.h"
 #include "model/filtered_document.h"
+#include "model/filtered_line_source.h"
 #include "model/mark_set.h"
 #include "temp_dir.h"
 #include "ui/document_tab.h"
@@ -129,8 +130,18 @@ private slots:
         filtered->setCurrentRow(LineNumber(0));  // line 1
         QVERIFY(filtered->goToNextMark());
         QCOMPARE(filtered->currentRow().value_or(LineNumber(99)).get(),
-                 std::uint64_t{1});          // line 3
-        QVERIFY(!filtered->goToNextMark());  // lines 4 and 5 are not in the filter
+                 std::uint64_t{1});  // line 3
+        // Marked lines 4 and 5 are shown in the filtered view (F-FILT-9) and visited ...
+        QVERIFY(filtered->goToNextMark());
+        QCOMPARE(filtered->lineSource()
+                     ->originalLineNumber(filtered->currentRow().value_or(LineNumber(0)))
+                     .get(),
+                 std::uint64_t{4});
+        // ... but skipped when the option is off.
+        f.tab->setShowMarksInFilter(false);
+        filtered->setCurrentRow(LineNumber(1));  // line 3
+        QVERIFY(!filtered->goToNextMark());
+        f.tab->setShowMarksInFilter(true);
         // Toggling in the filtered view marks the original line.
         filtered->setFocus();
         filtered->setCurrentRow(LineNumber(0));
@@ -160,6 +171,30 @@ private slots:
         view->setClearMarksConfirmation([](std::size_t) { return true; });
         view->clearMarks();
         QVERIFY(f.tab->marks().empty());
+    }
+
+    static void filteredViewShowsMarkedLinesAndKeepsItsPosition()
+    {
+        const Fixture f;
+        QVERIFY(f.ready());
+        QVERIFY(!f.tab->filter().apply({.text = "ERROR"}).has_value());
+        QVERIFY(waitFor([&] { return f.tab->filter().state() == FilteredDocument::State::kDone; }));
+        auto* filtered = f.tab->filteredView();
+        QCOMPARE(filtered->rowCount().get(), std::uint64_t{2});
+        filtered->setCurrentRow(LineNumber(1));  // line 3
+        f.tab->marks().toggle(LineNumber(0));    // inserted before the current row
+        QCOMPARE(filtered->rowCount().get(), std::uint64_t{3});
+        // The current row still shows line 3.
+        const auto row = filtered->currentRow().value_or(LineNumber(99));
+        QCOMPARE(filtered->lineSource()->originalLineNumber(row).get(), std::uint64_t{3});
+        QVERIFY(f.tab->filteredSource().isExtraRow(LineNumber(0)));
+        // The extra row is painted differently from a match row at the same height.
+        const QImage image = filtered->viewport()->grab().toImage();
+        const int x = filtered->gutterWidth() + 1;
+        QVERIFY(image.pixelColor(x, 2) != image.pixelColor(x, filtered->lineHeight() + 2));
+        // Turning the option off removes the row.
+        f.tab->setShowMarksInFilter(false);
+        QCOMPARE(filtered->rowCount().get(), std::uint64_t{2});
     }
 
     static void reloadClearsMarksWithANotice()

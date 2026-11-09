@@ -263,7 +263,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/model/mark_set.cpp`, gutter mark column, `M` key, context menu, next/previous (F-MARK-1 … F-MARK-5).
   - Done when: model and Qt Tests for toggle on single and multiple lines, navigation, clear with confirmation, copy marked lines.
 
-- [ ] **M5-02 Marks in filtered view** — Depends on: M5-01, M3-07
+- [x] **M5-02 Marks in filtered view** — Depends on: M5-01, M3-07 (PR #57)
   - Scope: merge of matches and marks in `FilteredLineSource` (F-FILT-9) with visual distinction; option toggle.
   - Done when: tests: marked non-matching lines appear in order; unmarking removes them; toggling the option.
 

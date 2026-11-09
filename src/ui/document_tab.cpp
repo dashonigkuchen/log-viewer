@@ -65,6 +65,7 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     m_filteredView->setHighlighter(m_highlighter.get());
     m_view->setMarks(m_marks.get());
     m_filteredView->setMarks(m_marks.get());
+    m_filteredSource->setMarks(m_marks.get());
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
     m_splitter->addWidget(m_view);
@@ -169,6 +170,16 @@ void DocumentTab::hideNotice()
     m_noticeBar->hide();
 }
 
+void DocumentTab::setShowMarksInFilter(bool show)
+{
+    m_filteredSource->setShowMarks(show);
+}
+
+bool DocumentTab::showMarksInFilter() const
+{
+    return m_filteredSource->showMarks();
+}
+
 void DocumentTab::setFollowing(bool following)
 {
     if (following == m_following) {
@@ -198,8 +209,8 @@ void DocumentTab::syncMainToFiltered(core::LineNumber line)
     if (m_syncing || m_view->isAutoScrolling()) {
         return;
     }
-    // Nearest match at or before `line`: the one before the first match after it.
-    const std::uint64_t after = m_filter->lowerBound(core::LineNumber(line.get() + 1));
+    // Nearest filtered row at or before `line`: the one before the first row after it.
+    const std::uint64_t after = m_filteredSource->rowsBefore(core::LineNumber(line.get() + 1));
     if (after == 0) {
         return;  // no match at or before the line
     }
@@ -255,6 +266,7 @@ DocumentTab::~DocumentTab()
     // The view refers to the source, the source to the document: detach before destroying them.
     m_view->setMarks(nullptr);
     m_filteredView->setMarks(nullptr);
+    m_filteredSource->setMarks(nullptr);
     m_view->setLineSource(nullptr);
 }
 

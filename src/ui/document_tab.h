@@ -67,6 +67,15 @@ public:
 
     [[nodiscard]] model::MarkSet& marks() const noexcept { return *m_marks; }
 
+    // Marked lines also appear in the filtered view (F-FILT-9; default on).
+    void setShowMarksInFilter(bool show);
+    [[nodiscard]] bool showMarksInFilter() const;
+
+    [[nodiscard]] model::FilteredLineSource& filteredSource() const noexcept
+    {
+        return *m_filteredSource;
+    }
+
     [[nodiscard]] const model::MatchHighlighter& highlighter() const noexcept
     {
         return *m_highlighter;

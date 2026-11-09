@@ -173,6 +173,17 @@ void MainWindow::createMenus()
             applyViewSettings();
         }
     });
+    m_showMarksAction = viewMenu->addAction(QStringLiteral("Show &Marks in Filtered View"));
+    m_showMarksAction->setObjectName(QStringLiteral("actionShowMarksInFilter"));
+    m_showMarksAction->setCheckable(true);
+    m_showMarksAction->setChecked(true);
+    connect(m_showMarksAction, &QAction::toggled, this, [this](bool show) {
+        if (m_settings != nullptr) {
+            m_settings->setShowMarksInFilter(show);
+        } else {
+            applyViewSettings();
+        }
+    });
     viewMenu->addSeparator();
 
     // Focus the filter field of the current tab (Ctrl+Shift+F; Ctrl+F is the find bar, F-FIND-1).
@@ -284,6 +295,7 @@ void MainWindow::setSettings(model::Settings* settings)
         connect(m_settings, &model::Settings::viewSettingsChanged, this,
                 qOverload<>(&MainWindow::applyViewSettings));
         m_lineNumbersAction->setChecked(m_settings->lineNumbersVisible());
+        m_showMarksAction->setChecked(m_settings->showMarksInFilter());
     }
     applyViewSettings();
 }
@@ -319,6 +331,8 @@ void MainWindow::applyViewSettings(DocumentTab* tab)
     if (tab == nullptr) {
         return;
     }
+    tab->setShowMarksInFilter(m_settings != nullptr ? m_settings->showMarksInFilter()
+                                                    : m_showMarksAction->isChecked());
     for (LogView* view : {tab->mainView(), tab->filteredView()}) {
         if (m_settings != nullptr) {
             view->setFont(viewFont());
