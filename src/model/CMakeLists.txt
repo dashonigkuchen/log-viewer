@@ -21,6 +21,8 @@ add_library(
     line_source.h
     highlight_sets.cpp
     highlight_sets.h
+    line_highlighter.cpp
+    line_highlighter.h
     bookmarks.cpp
     bookmarks.h
     mark_set.cpp

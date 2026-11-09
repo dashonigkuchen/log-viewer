@@ -2,6 +2,7 @@
 
 #include "core/util/strong_types.h"
 #include "model/bookmarks.h"
+#include "model/line_highlighter.h"
 #include "model/line_source.h"
 #include "model/mark_set.h"
 #include "model/match_highlighter.h"
@@ -121,6 +122,9 @@ public:
 
     // Row background of mark color `index` (0 = default, F-MARK-6).
     [[nodiscard]] QColor markColor(int index) const;
+
+    // Highlight rules of the tab (F-HL-5); null = none. Not owned.
+    void setLineHighlighter(const model::LineHighlighter* highlighter);
 
     // Highlighting of the find bar's query (F-FIND-3), painted in its own color; null = none.
     void setFindHighlighter(const model::MatchHighlighter* highlighter);
@@ -290,8 +294,24 @@ private:
     QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
     QPointer<const model::MatchHighlighter> m_findHighlighter;
     QPointer<model::MarkSet> m_marks;
+    QPointer<const model::LineHighlighter> m_lineHighlighter;
+    // Rectangles of UTF-16 column range [from, to) of a painted row.
+    [[nodiscard]] std::optional<QRectF> rangeRect(const DisplayMapping& mapping,
+                                                  const model::HighlightRange& range, int y) const;
     QPointer<model::Bookmarks> m_bookmarks;
     QColor m_bookmarkColor{30, 110, 220};
+    [[nodiscard]] QColor textColorFor(const model::DisplayLine& line,
+                                      const model::LineHighlight& rules) const;
+    void paintRuleSpanBackgrounds(QPainter& painter, const model::LineHighlight& rules,
+                                  const DisplayMapping& mapping, int y) const;
+    void paintSelection(QPainter& painter, std::uint64_t row, const model::DisplayLine& line,
+                        const DisplayMapping& mapping, int textX, int y) const;
+    // Whole-line rule background and the current-line indicator.
+    void paintRuleBackground(QPainter& painter, const model::LineHighlight& rules,
+                             std::uint64_t row, int y) const;
+    // Text of match-only rules with a foreground color.
+    void paintRuleForegrounds(QPainter& painter, const model::LineHighlight& rules,
+                              const DisplayMapping& mapping, double textX, int y) const;
     // Mark dot and bookmark ribbon in the mark column of `row` at height `y`.
     void paintMarkSymbols(QPainter& painter, core::LineNumber row, int y,
                           std::optional<int> markIndex) const;

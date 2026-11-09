@@ -2,6 +2,7 @@
 #include "model/app_paths.h"
 #include "model/file_log_sink.h"
 #include "model/filter_history.h"
+#include "model/highlight_sets.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
 #include "model/settings.h"
@@ -66,8 +67,18 @@ int main(int argc, char* argv[])
     QObject::connect(&history, &lv::model::FilterHistory::changed,
                      [&history, &settings] { history.save(settings.store()); });
 
+    lv::model::HighlightSets highlightSets;
+    highlightSets.load(settings.store());
+    const auto saveHighlightSets = [&highlightSets, &settings] {
+        highlightSets.save(settings.store());
+    };
+    QObject::connect(&highlightSets, &lv::model::HighlightSets::setChanged, saveHighlightSets);
+    QObject::connect(&highlightSets, &lv::model::HighlightSets::setsChanged, saveHighlightSets);
+    QObject::connect(&highlightSets, &lv::model::HighlightSets::defaultChanged, saveHighlightSets);
+
     lv::ui::MainWindow window;
     window.setFilterHistory(&history);
+    window.setHighlightSets(&highlightSets);
     window.setSettings(&settings);
     window.setRecentFiles(&recent);
     window.show();

@@ -731,6 +731,34 @@ void LogView::setHighlighter(const model::MatchHighlighter* highlighter)
     viewport()->update();
 }
 
+void LogView::setLineHighlighter(const model::LineHighlighter* highlighter)
+{
+    if (!m_lineHighlighter.isNull()) {
+        disconnect(m_lineHighlighter, nullptr, viewport(), nullptr);
+    }
+    m_lineHighlighter = highlighter;
+    if (highlighter != nullptr) {
+        connect(highlighter, &model::LineHighlighter::changed, viewport(),
+                qOverload<>(&QWidget::update));
+    }
+    viewport()->update();
+}
+
+std::optional<QRectF> LogView::rangeRect(const DisplayMapping& mapping,
+                                         const model::HighlightRange& range, int y) const
+{
+    const auto from = mapping.displayOffsets[static_cast<std::size_t>(range.from)];
+    const auto to = mapping.displayOffsets[static_cast<std::size_t>(range.to)];
+    if (to <= from) {
+        return std::nullopt;  // beyond the column limit
+    }
+    const QFontMetricsF metrics(font());
+    const double textX = gutterWidth() + kTextMargin - horizontalOffset();
+    const double left = textX + metrics.horizontalAdvance(mapping.text.left(from));
+    const double right = textX + metrics.horizontalAdvance(mapping.text.left(to));
+    return QRectF(left, y, right - left, m_lineHeight);
+}
+
 void LogView::setMatchHighlightColor(const QColor& color)
 {
     m_matchColor = color;
@@ -764,17 +792,10 @@ std::vector<QRectF> LogView::highlightRects(const model::MatchHighlighter* highl
     if (ranges.empty()) {
         return rects;
     }
-    const QFontMetricsF metrics(font());
-    const double textX = gutterWidth() + kTextMargin - horizontalOffset();
     for (const auto& range : ranges) {
-        const auto from = mapping.displayOffsets[static_cast<std::size_t>(range.from)];
-        const auto to = mapping.displayOffsets[static_cast<std::size_t>(range.to)];
-        if (to <= from) {
-            continue;  // beyond the column limit
+        if (const auto rect = rangeRect(mapping, range, y)) {
+            rects.push_back(*rect);
         }
-        const double left = textX + metrics.horizontalAdvance(mapping.text.left(from));
-        const double right = textX + metrics.horizontalAdvance(mapping.text.left(to));
-        rects.emplace_back(left, y, right - left, m_lineHeight);
     }
     return rects;
 }
@@ -1323,6 +1344,113 @@ void LogView::paintMarkSymbols(QPainter& painter, core::LineNumber row, int y,
     }
 }
 
+void LogView::paintRuleBackground(QPainter& painter, const model::LineHighlight& rules,
+                                  std::uint64_t row, int y) const
+{
+    const int gutter = gutterWidth();
+    const int width = viewport()->width();
+    const bool current = m_currentRow && m_currentRow->get() == row;
+    if (rules.background) {
+        painter.fillRect(gutter, y, width - gutter, m_lineHeight,
+                         QColor::fromRgba(*rules.background));
+    }
+    if (!current) {
+        return;
+    }
+    const QColor highlight = palette().color(QPalette::Highlight);
+    if (rules.background) {
+        // Keep the rule color visible: frame the current line instead of filling it.
+        painter.save();
+        painter.setPen(QPen(highlight, 1));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(gutter, y, width - gutter - 1, m_lineHeight - 1);
+        painter.restore();
+    } else {
+        painter.fillRect(gutter, y, width - gutter, m_lineHeight, highlight.lighter(170));
+    }
+}
+
+void LogView::paintRuleForegrounds(QPainter& painter, const model::LineHighlight& rules,
+                                   const DisplayMapping& mapping, double textX, int y) const
+{
+    // Match-only rules with a text color: redraw the text inside their ranges (later rules on top).
+    for (const auto& span : rules.spans) {
+        if (!span.foreground) {
+            continue;
+        }
+        const auto rect = rangeRect(mapping, span.range, y);
+        if (!rect) {
+            continue;
+        }
+        painter.save();
+        painter.setClipRect(
+            rect->intersected(QRectF(gutterWidth(), 0, viewport()->width(), viewport()->height())));
+        painter.setPen(QColor::fromRgba(*span.foreground));
+        painter.drawText(QPointF(textX, y + m_ascent), mapping.text);
+        painter.restore();
+    }
+}
+
+QColor LogView::textColorFor(const model::DisplayLine& line,
+                             const model::LineHighlight& rules) const
+{
+    const QPalette& colors = palette();
+    QColor color = colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text);
+    if (rules.foreground) {
+        color = QColor::fromRgba(*rules.foreground);
+    }
+    if (line.extra) {
+        // Marked line that does not match (F-FILT-9): dimmed text.
+        const QColor base = colors.color(QPalette::Base);
+        color.setRgbF((color.redF() * 0.6F) + (base.redF() * 0.4F),
+                      (color.greenF() * 0.6F) + (base.greenF() * 0.4F),
+                      (color.blueF() * 0.6F) + (base.blueF() * 0.4F));
+    }
+    return color;
+}
+
+void LogView::paintRuleSpanBackgrounds(QPainter& painter, const model::LineHighlight& rules,
+                                       const DisplayMapping& mapping, int y) const
+{
+    for (const auto& span : rules.spans) {
+        if (!span.background) {
+            continue;
+        }
+        if (const auto rect = rangeRect(mapping, span.range, y)) {
+            painter.fillRect(*rect, QColor::fromRgba(*span.background));
+        }
+    }
+}
+
+void LogView::paintSelection(QPainter& painter, std::uint64_t row, const model::DisplayLine& line,
+                             const DisplayMapping& mapping, int textX, int y) const
+{
+    const auto selected = m_selection.columnsForRow(row, line.text.size());
+    if (!selected) {
+        return;
+    }
+    // Selected part: highlight background and redraw the text in the highlight color.
+    const QPalette& colors = palette();
+    const QFontMetricsF metrics(font());
+    const QString& text = mapping.text;
+    const auto from = mapping.displayOffsets[static_cast<std::size_t>(selected->from)];
+    const auto to = mapping.displayOffsets[static_cast<std::size_t>(selected->to)];
+    const double left = textX + metrics.horizontalAdvance(text.left(from));
+    double right = textX + metrics.horizontalAdvance(text.left(to));
+    if (selected->lineEnd) {
+        right += metrics.horizontalAdvance(u' ');
+    }
+    const int gutter = gutterWidth();
+    const QRectF area(left, y, right - left, m_lineHeight);
+    painter.fillRect(area, colors.color(QPalette::Highlight));
+    painter.save();
+    painter.setClipRect(
+        area.intersected(QRectF(gutter, 0, viewport()->width() - gutter, viewport()->height())));
+    painter.setPen(colors.color(QPalette::HighlightedText));
+    painter.drawText(textX, y + m_ascent, text);
+    painter.restore();
+}
+
 void LogView::paintEvent(QPaintEvent* /*event*/)
 {
     QElapsedTimer timer;
@@ -1357,31 +1485,29 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
                     : m_marks->colorOf(m_source->originalLineNumber(core::LineNumber(row)));
             const bool marked = markIndex.has_value();
             const QColor rowMarkColor = markColor(markIndex.value_or(0));
-            if (m_currentRow && m_currentRow->get() == row) {
-                painter.fillRect(gutter, y, width - gutter, m_lineHeight,
-                                 colors.color(QPalette::Highlight).lighter(170));
-            }
+            const auto& line = lines[i];
+            const model::LineHighlight rules =
+                m_lineHighlighter.isNull() || line.unavailable
+                    ? model::LineHighlight{}
+                    : m_lineHighlighter->highlight(
+                          m_source->originalLineNumber(core::LineNumber(row)), line.text,
+                          line.partial);
+            paintRuleBackground(painter, rules, row, y);
             if (marked) {
                 painter.fillRect(gutter, y, width - gutter, m_lineHeight, rowMarkColor);
             }
             paintMarkSymbols(painter, core::LineNumber(row), y, markIndex);
-            const auto& line = lines[i];
             const DisplayMapping mapping = mapLine(line.text, line.truncated);
             const QString& text = mapping.text;
-            QColor textColor =
-                colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text);
             if (line.extra) {
-                // Marked line that does not match (F-FILT-9): dimmed text and a bar at the left.
-                const QColor base = colors.color(QPalette::Base);
-                textColor.setRgbF((textColor.redF() * 0.6F) + (base.redF() * 0.4F),
-                                  (textColor.greenF() * 0.6F) + (base.greenF() * 0.4F),
-                                  (textColor.blueF() * 0.6F) + (base.blueF() * 0.4F));
+                // Marked line that does not match (F-FILT-9): a bar at the left.
                 painter.fillRect(
                     gutter, y, 3, m_lineHeight,
                     QColor(rowMarkColor.red(), rowMarkColor.green(), rowMarkColor.blue()));
             }
-            painter.setPen(textColor);
+            painter.setPen(textColorFor(line, rules));
             painter.setClipRect(gutter, 0, width - gutter, height);
+            paintRuleSpanBackgrounds(painter, rules, mapping, y);
             for (const QRectF& rect : highlightRects(m_highlighter.data(), row, line, mapping, y)) {
                 painter.fillRect(rect, m_matchColor);
             }
@@ -1390,23 +1516,8 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
                 painter.fillRect(rect, m_findColor);
             }
             painter.drawText(textX, y + m_ascent, text);
-            if (const auto selected = m_selection.columnsForRow(row, line.text.size())) {
-                // Selected part: highlight background and redraw the text in the highlight color.
-                const auto from = mapping.displayOffsets[static_cast<std::size_t>(selected->from)];
-                const auto to = mapping.displayOffsets[static_cast<std::size_t>(selected->to)];
-                const double left = textX + metrics.horizontalAdvance(text.left(from));
-                double right = textX + metrics.horizontalAdvance(text.left(to));
-                if (selected->lineEnd) {
-                    right += metrics.horizontalAdvance(u' ');
-                }
-                const QRectF area(left, y, right - left, m_lineHeight);
-                painter.fillRect(area, colors.color(QPalette::Highlight));
-                painter.save();
-                painter.setClipRect(area.intersected(QRectF(gutter, 0, width - gutter, height)));
-                painter.setPen(colors.color(QPalette::HighlightedText));
-                painter.drawText(textX, y + m_ascent, text);
-                painter.restore();
-            }
+            paintRuleForegrounds(painter, rules, mapping, textX, y);
+            paintSelection(painter, row, line, mapping, textX, y);
             painter.setClipping(false);
             widest = std::max(widest, static_cast<int>(std::ceil(metrics.horizontalAdvance(text))));
 

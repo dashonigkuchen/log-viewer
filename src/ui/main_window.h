@@ -17,6 +17,7 @@ class QTabWidget;
 namespace lv::model
 {
 class FilterHistory;
+class HighlightSets;
 class RecentFiles;
 class Settings;
 }  // namespace lv::model
@@ -47,6 +48,10 @@ public:
 
     // The global filter history (F-HIST-1); by default an in-memory one owned by the window.
     void setFilterHistory(model::FilterHistory* history);
+    // Highlight sets for all tabs (F-HL-3); the window creates its own until one is set.
+    void setHighlightSets(model::HighlightSets* sets);
+
+    [[nodiscard]] model::HighlightSets* highlightSets() const noexcept { return m_highlightSets; }
 
     [[nodiscard]] model::FilterHistory* filterHistory() const noexcept { return m_filterHistory; }
 
@@ -114,6 +119,9 @@ private:
     QLabel* m_status = nullptr;
     model::RecentFiles* m_recent = nullptr;
     model::FilterHistory* m_filterHistory = nullptr;
+    model::HighlightSets* m_highlightSets = nullptr;
+    QMenu* m_highlightSetMenu = nullptr;
+    void updateHighlightSetMenu();
     QMenu* m_recentMenu = nullptr;
     QMenu* m_encodingMenu = nullptr;
     QActionGroup* m_encodingGroup = nullptr;

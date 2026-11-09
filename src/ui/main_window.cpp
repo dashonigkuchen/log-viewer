@@ -2,6 +2,8 @@
 
 #include "model/document.h"
 #include "model/filter_history.h"
+#include "model/highlight_sets.h"
+#include "model/line_highlighter.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
 #include "model/settings.h"
@@ -50,6 +52,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_status(new QLabel(this))
     , m_recent(new model::RecentFiles(this))
     , m_filterHistory(new model::FilterHistory(this))
+    , m_highlightSets(new model::HighlightSets(this))
 {
     setObjectName(QStringLiteral("mainWindow"));
     setWindowTitle(QStringLiteral("Log Viewer %1").arg(lv::model::versionString()));
@@ -236,6 +239,11 @@ void MainWindow::createMenus()
         }
     });
     createBookmarkActions(viewMenu);
+    // Highlight set of the current tab (F-HL-3).
+    m_highlightSetMenu = viewMenu->addMenu(QStringLiteral("&Highlight Set"));
+    m_highlightSetMenu->setObjectName(QStringLiteral("menuHighlightSet"));
+    connect(m_highlightSetMenu, &QMenu::aboutToShow, this, &MainWindow::updateHighlightSetMenu);
+    updateHighlightSetMenu();
     auto* toolBar = addToolBar(QStringLiteral("Main"));
     toolBar->setObjectName(QStringLiteral("mainToolBar"));
     toolBar->setMovable(false);
@@ -357,6 +365,52 @@ void MainWindow::setFilterHistory(model::FilterHistory* history)
     }
 }
 
+void MainWindow::setHighlightSets(model::HighlightSets* sets)
+{
+    m_highlightSets = sets;
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (auto* tab = documentTab(i)) {
+            tab->lineHighlighter().setSets(sets);
+        }
+    }
+    updateHighlightSetMenu();
+}
+
+void MainWindow::updateHighlightSetMenu()
+{
+    m_highlightSetMenu->clear();
+    auto* group = new QActionGroup(m_highlightSetMenu);
+    const auto* tab = currentDocumentTab();
+    const auto chosen = tab != nullptr ? tab->lineHighlighter().chosenSet() : std::nullopt;
+    const auto addEntry = [&](const QString& text, std::optional<std::size_t> index) {
+        QAction* action = m_highlightSetMenu->addAction(text);
+        action->setCheckable(true);
+        action->setChecked(index == chosen);
+        action->setEnabled(tab != nullptr);
+        action->setActionGroup(group);
+        connect(action, &QAction::triggered, this, [this, index] {
+            if (auto* current = currentDocumentTab()) {
+                current->lineHighlighter().setActiveSet(index);
+            }
+        });
+    };
+    QString defaultName;
+    if (m_highlightSets != nullptr && m_highlightSets->size() > 0) {
+        defaultName = m_highlightSets->set(m_highlightSets->defaultIndex()).name;
+    }
+    addEntry(QStringLiteral("Default (%1)").arg(defaultName), std::nullopt);
+    m_highlightSetMenu->addSeparator();
+    if (m_highlightSets != nullptr) {
+        for (std::size_t i = 0; i < m_highlightSets->size(); ++i) {
+            addEntry(m_highlightSets->set(i).name, i);
+        }
+    }
+    QAction* none = m_highlightSetMenu->actions().value(0);
+    if (none != nullptr) {
+        none->setObjectName(QStringLiteral("actionHighlightSetDefault"));
+    }
+}
+
 void MainWindow::updateRecentMenu()
 {
     m_recentMenu->clear();
@@ -434,6 +488,7 @@ DocumentTab* MainWindow::openFile(const std::filesystem::path& path)
     });
     applyViewSettings(tab);
     tab->filterBar()->setHistory(m_filterHistory);
+    tab->lineHighlighter().setSets(m_highlightSets);
     connect(tab, &DocumentTab::followingChanged, this, [this, tab] {
         if (tab == currentDocumentTab()) {
             updateFollowAction();

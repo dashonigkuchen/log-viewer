@@ -21,6 +21,7 @@ class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
 class Bookmarks;
+class LineHighlighter;
 class MarkSet;
 class MatchHighlighter;
 }  // namespace lv::model
@@ -69,6 +70,12 @@ public:
     [[nodiscard]] model::MarkSet& marks() const noexcept { return *m_marks; }
 
     [[nodiscard]] model::Bookmarks& bookmarks() const noexcept { return *m_bookmarks; }
+
+    // Highlight rules of this tab (F-HL-3, F-HL-5).
+    [[nodiscard]] model::LineHighlighter& lineHighlighter() const noexcept
+    {
+        return *m_lineHighlighter;
+    }
 
     // The view that has (or last had) the keyboard focus; the main view by default.
     [[nodiscard]] LogView* activeView() const;
@@ -138,6 +145,7 @@ private:
     std::unique_ptr<model::MatchHighlighter> m_highlighter;
     std::unique_ptr<model::MarkSet> m_marks;
     std::unique_ptr<model::Bookmarks> m_bookmarks;
+    std::unique_ptr<model::LineHighlighter> m_lineHighlighter;
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;

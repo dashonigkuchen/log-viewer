@@ -279,7 +279,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/model/highlight_sets.cpp` (F-HL-1 … F-HL-3, F-HL-6): rules, sets, ordering, compiled matcher cache, JSON import/export, persistence.
   - Done when: tests for precedence (first whole-line rule wins, match rules layered), JSON round trip, invalid JSON error handling.
 
-- [ ] **M5-06 Highlight painting** — Depends on: M5-05, M3-10
+- [x] **M5-06 Highlight painting** — Depends on: M5-05, M3-10 (PR #61)
   - Scope: apply rules in `LogView` for visible lines with caching (F-HL-5); per-tab active set.
   - Done when: rendering tests for whole-line and match-only rules; P-UI-1 with 20 rules on `long` profile (relaxed on CI).
 
