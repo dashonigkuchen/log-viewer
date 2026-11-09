@@ -275,7 +275,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: `src/model/bookmarks.cpp`, `src/ui/bookmarks_panel.cpp` (F-BOOK-1 … F-BOOK-4).
   - Done when: Qt Tests: add with default name, rename, delete, jump on double-click, `F2`/`Shift+F2`.
 
-- [ ] **M5-05 Highlight rules model** — Depends on: M3-04
+- [x] **M5-05 Highlight rules model** — Depends on: M3-04 (PR #60)
   - Scope: `src/model/highlight_sets.cpp` (F-HL-1 … F-HL-3, F-HL-6): rules, sets, ordering, compiled matcher cache, JSON import/export, persistence.
   - Done when: tests for precedence (first whole-line rule wins, match rules layered), JSON round trip, invalid JSON error handling.
 
