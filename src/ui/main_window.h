@@ -11,6 +11,7 @@ class QActionGroup;
 class QLabel;
 class QMenu;
 class QUrl;
+class QDockWidget;
 class QTabWidget;
 
 namespace lv::model
@@ -23,6 +24,7 @@ class Settings;
 namespace lv::ui
 {
 
+class BookmarksPanel;
 class DocumentTab;
 
 // The top-level window: tabs for documents, menus, and a status bar (SPEC F-FILE-1, F-TAB-1,
@@ -33,6 +35,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    [[nodiscard]] QDockWidget* bookmarksDock() const noexcept { return m_bookmarksDock; }
+
+    [[nodiscard]] BookmarksPanel* bookmarksPanel() const noexcept { return m_bookmarksPanel; }
+
     explicit MainWindow(QWidget* parent = nullptr);
 
     // The recent files list shown in File > Recent Files (F-FILE-9). By default the window owns
@@ -115,7 +121,10 @@ private:
     QAction* m_lineNumbersAction = nullptr;
     QAction* m_showMarksAction = nullptr;
     QAction* m_followAction = nullptr;
+    QDockWidget* m_bookmarksDock = nullptr;
+    BookmarksPanel* m_bookmarksPanel = nullptr;
     void updateFollowAction();
+    void createBookmarkActions(QMenu* menu);
 };
 
 }  // namespace lv::ui

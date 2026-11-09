@@ -271,7 +271,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-MARK-6.
   - Done when: tests for color assignment and painting.
 
-- [ ] **M5-04 Bookmarks and panel** — Depends on: M5-01
+- [x] **M5-04 Bookmarks and panel** — Depends on: M5-01 (PR #59)
   - Scope: `src/model/bookmarks.cpp`, `src/ui/bookmarks_panel.cpp` (F-BOOK-1 … F-BOOK-4).
   - Done when: Qt Tests: add with default name, rename, delete, jump on double-click, `F2`/`Shift+F2`.
 

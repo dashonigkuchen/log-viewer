@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/util/strong_types.h"
+#include "model/bookmarks.h"
 #include "model/line_source.h"
 #include "model/mark_set.h"
 #include "model/match_highlighter.h"
@@ -22,6 +23,8 @@
 #include <optional>
 #include <thread>
 #include <vector>
+
+class QPainter;
 
 namespace lv::ui
 {
@@ -99,6 +102,17 @@ public:
     void copyMarkedLines();
     // First row whose original line is >= `line` (rows are ascending), if any.
     [[nodiscard]] std::optional<core::LineNumber> rowAtOrAfter(core::LineNumber line) const;
+
+    // Bookmarks of the document (F-BOOK-1 … F-BOOK-4); null = none. Not owned.
+    void setBookmarks(model::Bookmarks* bookmarks);
+
+    [[nodiscard]] model::Bookmarks* bookmarks() const noexcept { return m_bookmarks; }
+
+    // Adds a bookmark on the current row (named after its text) or removes it (Ctrl+B).
+    void toggleBookmark();
+    // F2 / Shift+F2; false if there is none (the view only visits lines it shows).
+    bool goToNextBookmark();
+    bool goToPreviousBookmark();
 
     // Width of the mark column at the left edge of the gutter (0 without marks).
     [[nodiscard]] int markColumnWidth() const;
@@ -276,6 +290,14 @@ private:
     QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
     QPointer<const model::MatchHighlighter> m_findHighlighter;
     QPointer<model::MarkSet> m_marks;
+    QPointer<model::Bookmarks> m_bookmarks;
+    QColor m_bookmarkColor{30, 110, 220};
+    // Mark dot and bookmark ribbon in the mark column of `row` at height `y`.
+    void paintMarkSymbols(QPainter& painter, core::LineNumber row, int y,
+                          std::optional<int> markIndex) const;
+    // Moves to the first line in `step(line)` order that this view shows.
+    template <typename Step>
+    bool goToLineBy(Step step);
     QColor m_markColor{120, 170, 255, 90};  // light blue row background for marked lines
     std::function<bool(std::size_t)> m_confirmClearMarks;
     // Original line numbers of the selected rows (or the current row).
