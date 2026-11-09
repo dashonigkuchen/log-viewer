@@ -20,6 +20,7 @@ class Document;
 class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
+class MarkSet;
 class MatchHighlighter;
 }  // namespace lv::model
 
@@ -63,6 +64,8 @@ public:
     void openFindBar();
 
     [[nodiscard]] model::FilteredDocument& filter() const noexcept { return *m_filter; }
+
+    [[nodiscard]] model::MarkSet& marks() const noexcept { return *m_marks; }
 
     [[nodiscard]] const model::MatchHighlighter& highlighter() const noexcept
     {
@@ -116,6 +119,7 @@ private:
     std::unique_ptr<model::FilteredDocument> m_filter;
     std::unique_ptr<model::FilteredLineSource> m_filteredSource;
     std::unique_ptr<model::MatchHighlighter> m_highlighter;
+    std::unique_ptr<model::MarkSet> m_marks;
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
     LogView* m_filteredView = nullptr;

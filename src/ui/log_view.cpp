@@ -8,11 +8,13 @@
 #include <QAction>
 #include <QApplication>
 #include <QClipboard>
+#include <QContextMenuEvent>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFontMetricsF>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPaintEvent>
@@ -23,7 +25,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
+#include <stop_token>
 #include <string_view>
+#include <vector>
 
 namespace lv::ui
 {
@@ -223,6 +228,21 @@ void LogView::keyPressEvent(QKeyEvent* event)
     const bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
     const std::optional<core::LineNumber> before = m_currentRow;
     bool movesRow = true;
+    if (control && !shift && event->key() == Qt::Key_Down && !m_marks.isNull()) {
+        goToNextMark();
+        event->accept();
+        return;
+    }
+    if (control && !shift && event->key() == Qt::Key_Up && !m_marks.isNull()) {
+        goToPreviousMark();
+        event->accept();
+        return;
+    }
+    if (event->key() == Qt::Key_M && event->modifiers() == Qt::NoModifier && !m_marks.isNull()) {
+        toggleMarks();
+        event->accept();
+        return;
+    }
     switch (event->key()) {
     case Qt::Key_Up:
         userMovedUp();
@@ -313,6 +333,11 @@ void LogView::mousePressEvent(QMouseEvent* event)
     if (clickedRow >= rowCount().get()) {
         clearSelection();
         return;  // below the last row: keep the current row
+    }
+    if (point.x() < markColumnWidth()) {
+        // Click in the mark column toggles the mark of that row (F-MARK-1).
+        m_marks->toggle(m_source->originalLineNumber(core::LineNumber(clickedRow)));
+        return;
     }
     const TextPosition position = positionAt(point);
     const bool tripleClick = m_tripleClickTimer.isValid() &&
@@ -834,10 +859,15 @@ int LogView::horizontalOffset() const
     return horizontalScrollBar()->value();
 }
 
+int LogView::markColumnWidth() const
+{
+    return m_marks.isNull() ? 0 : std::max(8, (m_lineHeight * 3) / 4);
+}
+
 int LogView::gutterWidth() const
 {
     if (!m_lineNumbersVisible) {
-        return 0;
+        return markColumnWidth();
     }
     const QFontMetricsF metrics(font());
     // Rows show original line numbers; the last row has the largest one (ascending sources).
@@ -845,8 +875,185 @@ int LogView::gutterWidth() const
     const std::uint64_t largest =
         rows == 0 ? 1 : m_source->originalLineNumber(core::LineNumber(rows - 1)).get() + 1;
     const int digits = digitCount(largest);
-    return static_cast<int>(std::ceil(metrics.horizontalAdvance(QString(digits, u'9')))) +
+    return markColumnWidth() +
+           static_cast<int>(std::ceil(metrics.horizontalAdvance(QString(digits, u'9')))) +
            (2 * kGutterPadding);
+}
+
+void LogView::setMarks(model::MarkSet* marks)
+{
+    if (!m_marks.isNull()) {
+        disconnect(m_marks, nullptr, this, nullptr);
+        disconnect(m_marks, nullptr, viewport(), nullptr);
+    }
+    m_marks = marks;
+    if (marks != nullptr) {
+        connect(marks, &model::MarkSet::changed, viewport(), qOverload<>(&QWidget::update));
+    }
+    updateScrollBars();
+    viewport()->update();
+}
+
+std::vector<core::LineNumber> LogView::targetLines() const
+{
+    std::vector<core::LineNumber> lines;
+    const std::uint64_t rows = rowCount().get();
+    if (m_source.isNull() || rows == 0) {
+        return lines;
+    }
+    std::uint64_t first = 0;
+    std::uint64_t last = 0;
+    if (!m_selection.isEmpty()) {
+        first = m_selection.start().row;
+        last = m_selection.end().row;
+        // A character selection that ends at column 0 does not include that row.
+        if (!m_selection.lineMode && last > first && m_selection.end().column == 0) {
+            --last;
+        }
+    } else if (m_currentRow) {
+        first = last = m_currentRow->get();
+    } else {
+        return lines;
+    }
+    last = std::min(last, rows - 1);
+    for (std::uint64_t row = first; row <= last; ++row) {
+        lines.push_back(m_source->originalLineNumber(core::LineNumber(row)));
+    }
+    return lines;
+}
+
+void LogView::toggleMarks()
+{
+    if (m_marks.isNull()) {
+        return;
+    }
+    const auto lines = targetLines();
+    m_marks->toggle(lines);
+}
+
+std::optional<core::LineNumber> LogView::rowAtOrAfter(core::LineNumber line) const
+{
+    // Rows map to ascending original lines: binary search.
+    std::uint64_t low = 0;
+    std::uint64_t high = rowCount().get();
+    while (low < high) {
+        const std::uint64_t mid = low + ((high - low) / 2);
+        if (m_source->originalLineNumber(core::LineNumber(mid)) < line) {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+    return low < rowCount().get() ? std::optional(core::LineNumber(low)) : std::nullopt;
+}
+
+bool LogView::goToNextMark()
+{
+    if (m_marks.isNull() || m_source.isNull() || rowCount().get() == 0) {
+        return false;
+    }
+    const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
+    auto line = m_source->originalLineNumber(core::LineNumber(current));
+    // Marks may be on lines this view does not show (filtered view): skip them.
+    while (const auto mark = m_marks->next(line)) {
+        if (const auto row = rowAtOrAfter(*mark);
+            row && m_source->originalLineNumber(*row) == *mark) {
+            userMovedUp();  // leaves follow mode like any manual move
+            goToRow(*row);
+            return true;
+        }
+        line = *mark;
+    }
+    return false;
+}
+
+bool LogView::goToPreviousMark()
+{
+    if (m_marks.isNull() || m_source.isNull() || rowCount().get() == 0) {
+        return false;
+    }
+    const std::uint64_t current = m_currentRow ? m_currentRow->get() : 0;
+    auto line = m_source->originalLineNumber(core::LineNumber(current));
+    while (const auto mark = m_marks->previous(line)) {
+        if (const auto row = rowAtOrAfter(*mark);
+            row && m_source->originalLineNumber(*row) == *mark) {
+            userMovedUp();
+            goToRow(*row);
+            return true;
+        }
+        line = *mark;
+    }
+    return false;
+}
+
+void LogView::clearMarks()
+{
+    if (m_marks.isNull() || m_marks->empty()) {
+        return;
+    }
+    const std::size_t count = m_marks->size();
+    const bool confirmed =
+        m_confirmClearMarks
+            ? m_confirmClearMarks(count)
+            : QMessageBox::question(this, QStringLiteral("Clear Marks"),
+                                    QStringLiteral("Remove all %1 marks?").arg(count)) ==
+                  QMessageBox::Yes;
+    if (confirmed) {
+        m_marks->clear();
+    }
+}
+
+void LogView::copyMarkedLines()
+{
+    if (m_marks.isNull() || m_marks->empty() || m_source.isNull()) {
+        return;
+    }
+    // The marks of the whole document, whatever this view shows; read through the document's
+    // reader (rows = marks in line order).
+    auto reader = m_source->rowReader();
+    if (!reader) {
+        return;
+    }
+    const auto lines = m_marks->lines();
+    const std::uint64_t total = reader->snapshot.lineCount().get();
+    std::vector<core::LineNumber> existing;
+    std::ranges::copy_if(lines, std::back_inserter(existing),
+                         [total](core::LineNumber line) { return line.get() < total; });
+    if (existing.empty()) {
+        return;
+    }
+    reader->lineForRow = [existing](core::LineNumber row) {
+        return existing[static_cast<std::size_t>(row.get())];
+    };
+    reader->contiguous = false;
+    const model::CopyRange range{.firstRow = 0,
+                                 .lastRow = existing.size() - 1,
+                                 .firstColumn = 0,
+                                 .lastColumn = std::nullopt};
+    const auto text = model::extractText(*reader, range, std::stop_token{});
+    if (text && !text->isEmpty()) {
+        QApplication::clipboard()->setText(*text);
+    }
+}
+
+void LogView::contextMenuEvent(QContextMenuEvent* event)
+{
+    QMenu menu(this);
+    if (!m_marks.isNull()) {
+        QAction* toggle =
+            menu.addAction(QStringLiteral("Toggle Mark"), this, &LogView::toggleMarks);
+        toggle->setShortcut(QKeySequence(Qt::Key_M));
+        toggle->setEnabled(rowCount().get() > 0);
+        menu.addAction(QStringLiteral("Copy Marked Lines"), this, &LogView::copyMarkedLines)
+            ->setEnabled(!m_marks->empty());
+        menu.addAction(QStringLiteral("Clear All Marks..."), this, &LogView::clearMarks)
+            ->setEnabled(!m_marks->empty());
+        menu.addSeparator();
+    }
+    menu.addAction(QStringLiteral("Copy"), this, &LogView::copy)
+        ->setEnabled(!m_selection.isEmpty());
+    menu.addAction(QStringLiteral("Select All"), this, &LogView::selectAll);
+    menu.exec(event->globalPos());
 }
 
 QString LogView::displayText(const QString& text, bool truncatedByReader) const
@@ -997,9 +1204,25 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
         for (std::size_t i = 0; i < lines.size(); ++i) {
             const std::uint64_t row = first + i;
             const int y = static_cast<int>(i) * m_lineHeight;
+            const bool marked =
+                !m_marks.isNull() &&
+                m_marks->contains(m_source->originalLineNumber(core::LineNumber(row)));
             if (m_currentRow && m_currentRow->get() == row) {
                 painter.fillRect(gutter, y, width - gutter, m_lineHeight,
                                  colors.color(QPalette::Highlight).lighter(170));
+            }
+            if (marked) {
+                painter.fillRect(gutter, y, width - gutter, m_lineHeight, m_markColor);
+                // Mark symbol: a filled circle in the mark column (F-MARK-2).
+                const int size = std::max(4, markColumnWidth() - 4);
+                painter.save();
+                painter.setRenderHint(QPainter::Antialiasing);
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(
+                    QColor(m_markColor.red(), m_markColor.green(), m_markColor.blue()));
+                painter.drawEllipse(QRect((markColumnWidth() - size) / 2,
+                                          y + ((m_lineHeight - size) / 2), size, size));
+                painter.restore();
             }
             const auto& line = lines[i];
             const DisplayMapping mapping = mapLine(line.text, line.truncated);
@@ -1039,7 +1262,8 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
                 const std::uint64_t lineNumber =
                     m_source->originalLineNumber(core::LineNumber(row)).get() + 1;
                 painter.setPen(colors.color(QPalette::PlaceholderText));
-                painter.drawText(QRect(0, y, gutter - kGutterPadding, m_lineHeight),
+                painter.drawText(QRect(markColumnWidth(), y,
+                                       gutter - markColumnWidth() - kGutterPadding, m_lineHeight),
                                  Qt::AlignRight | Qt::AlignVCenter, QString::number(lineNumber));
             }
         }
