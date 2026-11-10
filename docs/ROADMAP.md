@@ -323,7 +323,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 - ~~**M6-07 German translation complete**~~ — Dropped: the UI is English only (ADR 0013).
 
-- [ ] **M6-08 Additional code pages** — Depends on: M1-08
+- [x] **M6-08 Additional code pages** — Depends on: M1-08 (PR #71)
   - Scope: F-ENC-5.
   - Done when: decode tests per code page.
 

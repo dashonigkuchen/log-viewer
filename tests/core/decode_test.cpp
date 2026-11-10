@@ -146,3 +146,40 @@ TEST_CASE("tabs and display columns (F-VIEW-4)", "[core][encoding]")
     CHECK(lv::core::displayColumns(u"\U0001F600x", 8) == std::vector<std::uint32_t>{0, 0, 1, 2});
     CHECK(lv::core::displayColumns(u"", 8) == std::vector<std::uint32_t>{0});
 }
+
+TEST_CASE("additional single-byte code pages", "[core][decode]")
+{
+    // F-ENC-5. Reference strings from the Unicode mapping tables.
+    SECTION("Windows-1250 (Central European)")
+    {
+        // "Příliš žluťoučký kůň" and the Polish "Łódź".
+        CHECK(decode("P\xF8\xEDli\x9A \x9Elu\x9Dou\xE8k\xFD k\xF9\xF2", Encoding::kWindows1250) ==
+              u"P\u0159\u00EDli\u0161 \u017Elu\u0165ou\u010Dk\u00FD k\u016F\u0148");
+        CHECK(decode("\xA3\xF3\x64\x9F", Encoding::kWindows1250) == u"\u0141\u00F3d\u017A");
+        CHECK(decode("\x80 \x8A\x8C", Encoding::kWindows1250) == u"\u20AC \u0160\u015A");
+        CHECK(decode("\x81", Encoding::kWindows1250) == u"\u0081");  // undefined byte
+    }
+    SECTION("Windows-1251 (Cyrillic)")
+    {
+        CHECK(decode("\xCF\xF0\xE8\xE2\xE5\xF2, \xEC\xE8\xF0!", Encoding::kWindows1251) ==
+              u"\u041F\u0440\u0438\u0432\u0435\u0442, \u043C\u0438\u0440!");
+        CHECK(decode("\xA8\xB8 \x80 \xB9", Encoding::kWindows1251) ==
+              u"\u0401\u0451 \u0402 \u2116");
+        CHECK(decode("\x98", Encoding::kWindows1251) == u"\u0098");  // undefined byte
+    }
+    SECTION("ISO-8859-15 (Latin-9)")
+    {
+        CHECK(decode("\xA4 \xA6\xA8 \xB4\xB8 \xBC\xBD\xBE", Encoding::kIso885915) ==
+              u"\u20AC \u0160\u0161 \u017D\u017E \u0152\u0153\u0178");
+        CHECK(decode("Gr\xF6\xDF\x65", Encoding::kIso885915) == u"Gr\u00F6\u00DFe");
+        CHECK(decode("\x80", Encoding::kIso885915) == u"\u0080");  // C1 as in ISO-8859-1
+    }
+    SECTION("ASCII is unchanged")
+    {
+        for (const Encoding encoding :
+             {Encoding::kWindows1250, Encoding::kWindows1251, Encoding::kIso885915}) {
+            CHECK(decode("plain ASCII 123 \t~", encoding) == u"plain ASCII 123 \t~");
+            CHECK(lv::core::traits(encoding).codeUnitSize == 1);
+        }
+    }
+}

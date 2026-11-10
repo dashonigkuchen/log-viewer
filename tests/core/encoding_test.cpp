@@ -98,8 +98,10 @@ TEST_CASE("encoding traits", "[core][encoding]")
 
 TEST_CASE("encoding names round-trip", "[core][encoding]")
 {
-    for (const Encoding encoding : {Encoding::kUtf8, Encoding::kUtf16Le, Encoding::kUtf16Be,
-                                    Encoding::kWindows1252, Encoding::kIso88591}) {
+    for (const Encoding encoding :
+         {Encoding::kUtf8, Encoding::kUtf16Le, Encoding::kUtf16Be, Encoding::kWindows1252,
+          Encoding::kIso88591, Encoding::kWindows1250, Encoding::kWindows1251,
+          Encoding::kIso885915}) {
         CHECK(lv::core::encodingFromName(lv::core::displayName(encoding)) == encoding);
     }
     CHECK(lv::core::displayName(Encoding::kUtf16Le) == "UTF-16 LE");

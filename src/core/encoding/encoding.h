@@ -17,6 +17,10 @@ enum class Encoding : std::uint8_t
     kUtf16Be,
     kWindows1252,
     kIso88591,
+    // F-ENC-5 (appended: values are not persisted, but keep the order stable anyway).
+    kWindows1250,
+    kWindows1251,
+    kIso885915,
 };
 
 // Static properties of an encoding that the indexer and the decoder need.

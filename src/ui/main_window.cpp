@@ -297,7 +297,8 @@ void MainWindow::createMenus()
     m_encodingMenu->addSeparator();
     for (const auto encoding :
          {core::Encoding::kUtf8, core::Encoding::kUtf16Le, core::Encoding::kUtf16Be,
-          core::Encoding::kWindows1252, core::Encoding::kIso88591}) {
+          core::Encoding::kWindows1252, core::Encoding::kIso88591, core::Encoding::kWindows1250,
+          core::Encoding::kWindows1251, core::Encoding::kIso885915}) {
         addEncoding(QString::fromUtf8(core::displayName(encoding).data()), encoding);
     }
     updateEncodingMenu();

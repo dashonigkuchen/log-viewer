@@ -50,6 +50,14 @@ struct Indexed
     File file;
     std::unique_ptr<LineIndex> index;
 
+    // Indexes with a given encoding instead of the detected one (code pages, F-ENC-5).
+    Indexed(const std::filesystem::path& path, lv::core::Encoding encoding)
+        : file(*File::open(path))
+        , index(std::make_unique<LineIndex>(encoding, 0))
+    {
+        REQUIRE(lv::core::Indexer::run(file, *index, std::stop_token{}).has_value());
+    }
+
     explicit Indexed(const std::filesystem::path& path)
         : file(*File::open(path))
     {
@@ -381,4 +389,48 @@ TEST_CASE("skipped lines are counted and the sequence sink publishes a prefix", 
     CHECK(sink.progress().skippedLines == 5);
     CHECK(sink.progress().searchedLines.get() == 50);
     CHECK(matches.empty());
+}
+
+TEST_CASE("code page files are searched by their decoded text", "[fs][search]")
+{
+    // F-ENC-5: non-ASCII bytes are decoded before matching ("мир" in Windows-1251,
+    // "žluť" in Windows-1250, "€" in ISO-8859-15).
+    const TempDir dir;
+    ThreadPool pool(2);
+
+    struct Case
+    {
+        lv::core::Encoding encoding;
+        std::string text;
+        std::string query;  // UTF-8
+        std::vector<std::uint64_t> expected;
+    };
+
+    const std::vector<Case> cases{
+        // Case-insensitive by default: both lines match.
+        {.encoding = lv::core::Encoding::kWindows1251,
+         .text = "ok\n\xEC\xE8\xF0 1\nx\n\xCC\xC8\xD0 2\n",
+         .query = "\xD0\xBC\xD0\xB8\xD1\x80",
+         .expected = {1, 3}},
+        {.encoding = lv::core::Encoding::kWindows1250,
+         .text = "a\n\x9Elu\x9D\nb\n",
+         .query = "\xC5\xBElu\xC5\xA5",
+         .expected = {1}},
+        {.encoding = lv::core::Encoding::kIso885915,
+         .text = "price \xA4 5\nnone\n",
+         .query = "\xE2\x82\xAC",
+         .expected = {0}},
+    };
+    for (const Case& test : cases) {
+        CAPTURE(lv::core::displayName(test.encoding));
+        writeText(dir / "cp.log", test.text);
+        const Indexed data(dir / "cp.log", test.encoding);
+        const auto matcher = compile({.text = test.query});
+        CheckingSink sink;
+        const SearchRequest request = makeRequest(data, *matcher);
+        REQUIRE(SearchEngine::run(request, pool, std::stop_token{}, sink).has_value());
+        CHECK(sink.matches == test.expected);
+        CHECK(sink.matches ==
+              reference(data, *matcher, 0, data.index->snapshot().lineCount().get()));
+    }
 }
