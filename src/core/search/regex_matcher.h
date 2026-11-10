@@ -2,10 +2,9 @@
 
 #include "core/search/matcher.h"
 
-#include <tl/expected.hpp>
-
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -49,7 +48,7 @@ enum class RegexOutcome : std::uint8_t
 class RegexMatcher final : public Matcher
 {
 public:
-    [[nodiscard]] static tl::expected<std::unique_ptr<RegexMatcher>, PatternError>
+    [[nodiscard]] static std::expected<std::unique_ptr<RegexMatcher>, PatternError>
     compile(std::string_view pattern, RegexOptions options = {});
 
     ~RegexMatcher() override;

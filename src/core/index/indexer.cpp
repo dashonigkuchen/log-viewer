@@ -98,7 +98,7 @@ Result<IndexStats> Indexer::run(const File& file, LineIndex& index, const std::s
     LV_ASSERT(options.blockSize > 0 && options.bufferCount >= 2);
     const auto size = file.size();
     if (!size) {
-        return tl::unexpected(size.error());
+        return std::unexpected(size.error());
     }
     const std::uint64_t start = index.appendedEnd();
     const std::uint64_t total = *size;
@@ -198,7 +198,7 @@ Result<IndexStats> Indexer::run(const File& file, LineIndex& index, const std::s
     stats.linesAdded = index.snapshot().completeLines - linesBefore;
     report(true);
     if (failure) {
-        return tl::unexpected(std::move(*failure));
+        return std::unexpected(std::move(*failure));
     }
     return stats;
 }

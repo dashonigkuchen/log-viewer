@@ -74,7 +74,7 @@ core::Result<QString> extractText(const RowReader& reader, const CopyRange& rang
             const auto block = content.reader.readLines(reader.snapshot, lines[runStart],
                                                         core::LineCount(runEnd - runStart));
             if (!block) {
-                return tl::unexpected(block.error());
+                return std::unexpected(block.error());
             }
             for (std::size_t i = 0; i < block->lines.size(); ++i) {
                 const std::uint64_t row = chunk + runStart + i;

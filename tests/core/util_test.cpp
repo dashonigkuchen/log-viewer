@@ -181,7 +181,7 @@ TEST_CASE("Result carries values and errors", "[core][util]")
     REQUIRE_FALSE(bad.has_value());
     CHECK(bad.error().code == lv::core::ErrorCode::kInvalidArgument);
     CHECK(bad.error().message == "not positive");
-    const auto doubled = parsePositive(4).map([](int v) { return v * 2; });
+    const auto doubled = parsePositive(4).transform([](int v) { return v * 2; });
     CHECK(doubled.value() == 8);
 }
 

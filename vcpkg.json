@@ -12,8 +12,7 @@
       "name": "pcre2",
       "features": ["jit"]
     },
-    "simdutf",
-    "tl-expected"
+    "simdutf"
   ],
   "features": {
     "bench": {

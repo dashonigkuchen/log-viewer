@@ -221,13 +221,13 @@ core::Result<EncodingChoice> chooseEncoding(const core::File& file,
 {
     const auto size = file.size();
     if (!size) {
-        return tl::unexpected(size.error());
+        return std::unexpected(size.error());
     }
     std::vector<std::byte> sample(
         static_cast<std::size_t>(std::min<std::uint64_t>(*size, core::kDetectionSampleSize)));
     const auto read = file.readAt(core::ByteOffset(0), sample);
     if (!read) {
-        return tl::unexpected(read.error());
+        return std::unexpected(read.error());
     }
     sample.resize(*read);
     const auto detected = core::detectEncoding(sample, sample.size() == *size);

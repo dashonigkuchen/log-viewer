@@ -14,8 +14,16 @@ runs:
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y -qq --no-install-recommends \
-          ninja-build lld clang-format-19 clang-tidy-19 \
+          ninja-build lld clang-19 lld-19 libclang-rt-19-dev clang-format-19 clang-tidy-19 \
           libgl-dev libxkbcommon-dev libvulkan-dev
+        # The image's default clang++ is 18, which cannot use libstdc++'s std::expected (C++23,
+        # ADR 0002). Make Clang 19 the default so the presets' clang++ is 19.
+        # clang and clang++ are separate alternatives on the image.
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 190
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 190
+        sudo update-alternatives --set clang /usr/bin/clang-19
+        sudo update-alternatives --set clang++ /usr/bin/clang++-19
+        clang++ --version | head -1
 
     - name: Read pinned versions
       id: versions

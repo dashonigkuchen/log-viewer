@@ -15,7 +15,7 @@ This document describes the target architecture. Roadmap steps build it piece by
 |             MarkSet, Bookmarks, HighlightSets, FilterHistory,   |
 |             Settings, FileWatcher, Session                      |
 +-----------------------------------------------------------------+
-| lv_core     C++20 + std only (+ PCRE2, simdutf): platform file, |
+| lv_core     C++23 + std only (+ PCRE2, simdutf): platform file, |
 |             encoding, line index, indexer, line reader, search, |
 |             boolean expressions, thread pool, change detector   |
 +-----------------------------------------------------------------+
@@ -100,7 +100,7 @@ All in namespace `lv::core`. Every module has its own directory under `src/core/
 
 ### 3.8 `concurrency/`, `util/`
 
-- `Result<T>` = `tl::expected<T, Error>`; `Error` has a code enum, an OS error code, and an English message.
+- `Result<T>` = `std::expected<T, Error>`; `Error` has a code enum, an OS error code, and an English message.
 - Strong types (`LineNumber`, …), `LV_ASSERT` (active in debug and sanitizer builds), scope guards.
 - Logging: `lv::core::log(Level, std::string_view)` forwards to a sink installed by the app (the app writes to `logviewer.log` in the settings directory, rotated at 1 MiB). No logging in hot loops.
 
@@ -152,7 +152,6 @@ Only these. Adding one needs the owner's approval and an ADR (AGENTS.md §4.2).
 | Qt 6 (Core, Gui, Widgets, Network for `QLocalServer` only, Test) | Build minimum 6.8; releases use the pinned version in `.github/qt-version` (currently 6.12 LTS) | LGPL-3.0, dynamic linking | model, ui, app | System packages (Linux dev), `aqtinstall` (CI, Windows) |
 | PCRE2 (8-bit, JIT) | Latest via vcpkg baseline | BSD-3-Clause with exception | core/search | vcpkg |
 | simdutf | Latest via vcpkg baseline | Apache-2.0 or MIT | core/encoding | vcpkg |
-| tl-expected | Latest via vcpkg baseline | CC0-1.0 | core | vcpkg |
 | Catch2 v3 | Latest via vcpkg baseline | BSL-1.0 | tests only | vcpkg |
 | Google Benchmark | Latest via vcpkg baseline | Apache-2.0 | bench only | vcpkg |
 

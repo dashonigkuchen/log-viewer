@@ -56,7 +56,7 @@ bool operator==(const Query& a, const Query& b)
            x.wholeWord == y.wholeWord && x.invert == y.invert;
 }
 
-tl::expected<std::shared_ptr<const CompiledQuery>, QueryError>
+std::expected<std::shared_ptr<const CompiledQuery>, QueryError>
 CompiledQuery::compile(const Query& query)
 {
     const Query normalized = query.normalized();
@@ -70,7 +70,7 @@ CompiledQuery::compile(const Query& query)
         auto regex = RegexMatcher::compile(normalized.text,
                                            RegexOptions{.caseSensitive = normalized.caseSensitive});
         if (!regex) {
-            return tl::unexpected(
+            return std::unexpected(
                 QueryError{.message = regex.error().message,
                            .position = codePoints(normalized.text, regex.error().offset)});
         }
@@ -81,7 +81,7 @@ CompiledQuery::compile(const Query& query)
         auto expr = BoolExpr::parse(normalized.text,
                                     BoolExprOptions{.caseSensitive = normalized.caseSensitive});
         if (!expr) {
-            return tl::unexpected(
+            return std::unexpected(
                 QueryError{.message = expr.error().message, .position = expr.error().position});
         }
         matcher = std::move(*expr);

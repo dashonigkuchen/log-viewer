@@ -2,10 +2,9 @@
 
 #include "core/search/matcher.h"
 
-#include <tl/expected.hpp>
-
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -55,7 +54,7 @@ struct QueryError
 class CompiledQuery final : public Matcher
 {
 public:
-    [[nodiscard]] static tl::expected<std::shared_ptr<const CompiledQuery>, QueryError>
+    [[nodiscard]] static std::expected<std::shared_ptr<const CompiledQuery>, QueryError>
     compile(const Query& query);
 
     CompiledQuery(Query query, std::unique_ptr<Matcher> matcher);

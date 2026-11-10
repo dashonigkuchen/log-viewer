@@ -4,7 +4,6 @@ configure_file(
     @ONLY
 )
 
-find_package(tl-expected CONFIG REQUIRED)
 find_package(simdutf CONFIG REQUIRED)
 find_package(pcre2 CONFIG REQUIRED)
 
@@ -40,6 +39,5 @@ target_include_directories(
 )
 target_link_libraries(
     lv_core
-    PUBLIC tl::expected
     PRIVATE lv::compile_options simdutf::simdutf PCRE2::8BIT
 )

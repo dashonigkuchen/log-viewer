@@ -6,9 +6,8 @@
 #include <QObject>
 #include <QString>
 
-#include <tl/expected.hpp>
-
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -157,7 +156,7 @@ public:
     // JSON import/export of sets (F-HL-6). Import validates everything and returns an error
     // message (nothing is added) on bad input.
     [[nodiscard]] static QByteArray toJson(const std::vector<HighlightSet>& sets);
-    [[nodiscard]] static tl::expected<std::vector<HighlightSet>, QString>
+    [[nodiscard]] static std::expected<std::vector<HighlightSet>, QString>
     fromJson(const QByteArray& json);
 
 signals:

@@ -34,7 +34,7 @@ Use American spelling (`color`, `behavior`, `initialize`, `canceled`).
 
 ## 2. Project in one paragraph
 
-A fast native desktop log viewer (C++20, Qt 6 Widgets). It indexes large text log files without loading them into memory, shows a main view and a filtered view below it, filters with regular expressions and boolean expressions, follows live logs, and supports marks, bookmarks, highlight rules, tabs, and a filter history. Primary platform is Windows 11 (portable zip). Linux is built and tested in CI. Details: `docs/VISION.md`, `docs/SPEC.md`.
+A fast native desktop log viewer (C++23, Qt 6 Widgets). It indexes large text log files without loading them into memory, shows a main view and a filtered view below it, filters with regular expressions and boolean expressions, follows live logs, and supports marks, bookmarks, highlight rules, tabs, and a filter history. Primary platform is Windows 11 (portable zip). Linux is built and tested in CI. Details: `docs/VISION.md`, `docs/SPEC.md`.
 
 ---
 
@@ -87,12 +87,12 @@ A fast native desktop log viewer (C++20, Qt 6 Widgets). It indexes large text lo
 
 ### Language and style
 
-- C++20. Compile with warnings as errors. Formatting is defined by `.clang-format`; never hand-format against it.
+- C++23 (only features supported by GCC 14, Clang 19, and MSVC; see ADR 0002). Compile with warnings as errors. Formatting is defined by `.clang-format`; never hand-format against it.
 - Names: types `PascalCase`, functions and variables `camelCase`, member variables `m_camelCase`, constants and enumerators `kPascalCase`, namespaces `lowercase`, macros `LV_UPPER_CASE` (avoid macros). Files `snake_case.h` / `snake_case.cpp`, one main class per file.
 - Namespaces: `lv::core`, `lv::model`, `lv::ui`.
 - Headers use `#pragma once`.
 - Prefer value types, `std::span`, `std::string_view`, `std::unique_ptr`. No raw owning pointers outside Qt parent-child ownership. No `new` without immediate ownership transfer.
-- No exceptions across module boundaries. Core APIs that can fail return `lv::core::Result<T>` (`tl::expected<T, Error>`). Exceptions from the standard library (for example `std::bad_alloc`) are allowed to terminate.
+- No exceptions across module boundaries. Core APIs that can fail return `lv::core::Result<T>` (`std::expected<T, Error>`). Exceptions from the standard library (for example `std::bad_alloc`) are allowed to terminate.
 - Use strong types for line numbers and byte offsets (`LineNumber`, `ByteOffset`, `LineCount`) in public APIs; never mix them with plain `int`. Line numbers are 64-bit and 0-based internally; the UI shows 1-based numbers.
 - No `int` for sizes or indexes into files. Use `std::uint64_t` / `std::size_t` / the strong types.
 - Thread-safety is documented on every class that is used from more than one thread (`// Thread-safety: ...`).
