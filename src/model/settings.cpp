@@ -92,6 +92,11 @@ void Settings::load()
     m_currentLineColor = readColor(*m_store, "Colors/currentLine");
     m_markColor = readColor(*m_store, "Colors/mark");
     m_matchColor = readColor(*m_store, "Colors/match");
+    m_store->beginGroup(key("Shortcuts"));
+    for (const QString& name : m_store->childKeys()) {
+        m_shortcuts[name] = m_store->value(name).toString();
+    }
+    m_store->endGroup();
     const QString scheme = m_store->value(key("View/colorScheme")).toString();
     m_colorScheme = ColorScheme::kSystem;
     if (scheme == QStringLiteral("light")) {
@@ -293,6 +298,21 @@ QByteArray Settings::filterSplitterState() const
 void Settings::setFilterSplitterState(const QByteArray& state)
 {
     m_store->setValue(key("View/filterSplitter"), state);
+}
+
+void Settings::setShortcuts(std::map<QString, QString> shortcuts)
+{
+    if (shortcuts == m_shortcuts) {
+        return;
+    }
+    m_shortcuts = std::move(shortcuts);
+    m_store->remove(key("Shortcuts"));
+    m_store->beginGroup(key("Shortcuts"));
+    for (const auto& [name, text] : m_shortcuts) {
+        m_store->setValue(name, text);
+    }
+    m_store->endGroup();
+    emit settingsChanged();
 }
 
 void Settings::sync()

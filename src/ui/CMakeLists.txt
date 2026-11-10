@@ -16,6 +16,8 @@ add_library(
     log_view.h
     settings_dialog.cpp
     settings_dialog.h
+    shortcuts.cpp
+    shortcuts.h
     single_instance.cpp
     single_instance.h
     main_window.cpp
