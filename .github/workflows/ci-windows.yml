@@ -110,10 +110,23 @@ jobs:
           restore-keys: |
             vcpkg-windows-msvc-release-
 
+      # Replaces ilammy/msvc-dev-cmd, which is unmaintained and still runs on the deprecated
+      # Node.js 20: import the environment of vcvarsall.bat x64 into the following steps.
       - name: Set up MSVC developer environment
-        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-        with:
-          arch: x64
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "Visual Studio with C++ tools not found" }
+          $vcvars = Join-Path $vs "VC\Auxiliary\Build\vcvarsall.bat"
+          Write-Host "Using $vcvars"
+          $before = @{}
+          Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          cmd /c "`"$vcvars`" x64 >nul && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$' -and $before[$Matches[1]] -ne $Matches[2]) {
+              "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
 
       - name: Configure
         run: cmake --preset windows-msvc-release
