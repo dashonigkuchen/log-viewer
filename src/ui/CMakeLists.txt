@@ -20,6 +20,8 @@ add_library(
     single_instance.h
     main_window.cpp
     main_window.h
+    overview_bar.cpp
+    overview_bar.h
     text_selection.cpp
     text_selection.h
 )

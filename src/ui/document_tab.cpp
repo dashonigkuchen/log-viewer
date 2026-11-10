@@ -15,6 +15,7 @@
 #include "ui/filter_bar.h"
 #include "ui/find_bar.h"
 #include "ui/log_view.h"
+#include "ui/overview_bar.h"
 
 #include <QDir>
 #include <QHBoxLayout>
@@ -84,7 +85,18 @@ DocumentTab::DocumentTab(const std::filesystem::path& path, QWidget* parent)
     }
     m_splitter->setObjectName(QStringLiteral("filterSplitter"));
     m_splitter->setChildrenCollapsible(false);
-    m_splitter->addWidget(m_view);
+    // F-VIEW-11: the main view with the overview bar on its right.
+    auto* mainPane = new QWidget(m_splitter);
+    mainPane->setObjectName(QStringLiteral("mainPane"));
+    auto* mainLayout = new QHBoxLayout(mainPane);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+    m_view->setParent(mainPane);
+    mainLayout->addWidget(m_view, 1);
+    m_overviewBar = new OverviewBar(*m_view, mainPane);
+    m_overviewBar->setSources(m_filter.get(), m_marks.get(), m_bookmarks.get());
+    mainLayout->addWidget(m_overviewBar);
+    m_splitter->addWidget(mainPane);
     m_splitter->addWidget(pane);
     m_splitter->setStretchFactor(0, 3);
     m_splitter->setStretchFactor(1, 1);
@@ -387,6 +399,7 @@ DocumentTab::~DocumentTab()
     delete m_findBar;  // detaches its highlighter from the views first
     m_findBar = nullptr;
     // The view refers to the source, the source to the document: detach before destroying them.
+    m_overviewBar->setSources(nullptr, nullptr, nullptr);
     m_view->setMarks(nullptr);
     m_filteredView->setMarks(nullptr);
     m_filteredSource->setMarks(nullptr);
