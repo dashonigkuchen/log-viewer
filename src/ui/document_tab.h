@@ -34,6 +34,7 @@ namespace lv::ui
 
 class FilterBar;
 class FindBar;
+class OverviewBar;
 class LogView;
 
 // One opened file in the main window (ARCHITECTURE §6): owns the Document and its filter, and
@@ -112,6 +113,8 @@ public:
 
     [[nodiscard]] QSplitter* splitter() const noexcept { return m_splitter; }
 
+    [[nodiscard]] OverviewBar* overviewBar() const noexcept { return m_overviewBar; }
+
     // Absolute, normalized path used to detect files that are already open.
     [[nodiscard]] const std::filesystem::path& canonicalPath() const noexcept { return m_path; }
 
@@ -165,6 +168,7 @@ private:
     QTimer* m_annotationTimer = nullptr;  // saves annotations after changes
     QSplitter* m_splitter = nullptr;
     LogView* m_view = nullptr;
+    OverviewBar* m_overviewBar = nullptr;
     LogView* m_filteredView = nullptr;
     FilterBar* m_filterBar = nullptr;
     FindBar* m_findBar = nullptr;

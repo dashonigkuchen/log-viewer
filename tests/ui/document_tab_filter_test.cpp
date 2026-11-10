@@ -6,6 +6,7 @@
 #include "ui/document_tab.h"
 #include "ui/log_view.h"
 #include "ui/main_window.h"
+#include "ui/overview_bar.h"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -84,7 +85,8 @@ private slots:
         // 200 rows (3 digits): it is as wide as the main view's gutter for 2000 lines.
         QCOMPARE(filtered->gutterWidth(), tab.mainView()->gutterWidth());
         QCOMPARE(tab.splitter()->count(), 2);
-        QCOMPARE(tab.splitter()->widget(0), tab.mainView());
+        QVERIFY(tab.splitter()->widget(0)->isAncestorOf(tab.mainView()));
+        QVERIFY(tab.splitter()->widget(0)->isAncestorOf(tab.overviewBar()));
         QCOMPARE(tab.splitter()->widget(1)->objectName(), QStringLiteral("filterPane"));
         QVERIFY(tab.splitter()->widget(1)->isAncestorOf(filtered));
     }

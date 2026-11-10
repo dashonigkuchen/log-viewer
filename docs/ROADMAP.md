@@ -313,7 +313,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-FILE-11, F-CLI-2 via `QLocalServer` (per-user name).
   - Done when: integration test starting two app processes; second forwards files and exits.
 
-- [ ] **M6-05 Overview bar** — Depends on: M5-04
+- [x] **M6-05 Overview bar** — Depends on: M5-04 (PR #69)
   - Scope: F-VIEW-11.
   - Done when: rendering and click tests.
 
