@@ -6,6 +6,7 @@
 #include "model/line_highlighter.h"
 #include "model/model_info.h"
 #include "model/recent_files.h"
+#include "model/session.h"
 #include "model/settings.h"
 #include "ui/bookmarks_panel.h"
 #include "ui/document_tab.h"
@@ -19,6 +20,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDir>
 #include <QDockWidget>
@@ -666,6 +668,70 @@ void MainWindow::openFiles(const QStringList& paths)
     for (const QString& path : paths) {
         openFile(std::filesystem::path(path.toStdU16String()));
     }
+}
+
+model::Session MainWindow::session() const
+{
+    model::Session result;
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        if (const auto* tab = documentTab(i)) {
+            result.tabs.push_back(tab->sessionState());
+        }
+    }
+    result.currentTab = std::max(0, m_tabs->currentIndex());
+    result.geometry = saveGeometry();
+    result.windowState = saveState();
+    return result;
+}
+
+int MainWindow::restoreSession(const model::Session& session, bool reopenTabs)
+{
+    if (!session.geometry.isEmpty()) {
+        restoreGeometry(session.geometry);
+    }
+    if (!session.windowState.isEmpty()) {
+        restoreState(session.windowState);
+    }
+    if (!reopenTabs) {
+        return 0;
+    }
+    QStringList missing;
+    int opened = 0;
+    int current = -1;
+    for (std::size_t i = 0; i < session.tabs.size(); ++i) {
+        const model::SessionTab& state = session.tabs[i];
+        const std::filesystem::path path(state.path.toStdU16String());
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(path, error)) {
+            missing << QDir::toNativeSeparators(state.path);
+            continue;
+        }
+        if (DocumentTab* tab = openFile(path)) {
+            tab->restoreSessionState(state);
+            if (static_cast<int>(i) == session.currentTab) {
+                current = m_tabs->indexOf(tab);
+            }
+            ++opened;
+        }
+    }
+    if (current >= 0) {
+        m_tabs->setCurrentIndex(current);
+    }
+    if (!missing.isEmpty()) {
+        statusBar()->showMessage(QStringLiteral("Not restored (file not found): %1")
+                                     .arg(missing.join(QStringLiteral(", "))),
+                                 15000);
+    }
+    return opened;
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (m_settings != nullptr) {
+        session().save(m_settings->store());
+        m_settings->sync();
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void MainWindow::showOpenDialog()

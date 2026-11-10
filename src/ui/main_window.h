@@ -19,6 +19,7 @@ class QTabWidget;
 namespace lv::model
 {
 class AnnotationStore;
+struct Session;
 class FilterHistory;
 class HighlightSets;
 class RecentFiles;
@@ -98,6 +99,12 @@ public:
     DocumentTab* openFile(const std::filesystem::path& path);
     void openFiles(const QStringList& paths);
 
+    // Session restore (F-FILE-10, F-TAB-5): the open tabs and the window layout.
+    [[nodiscard]] model::Session session() const;
+    // Restores the window layout and reopens the tabs; missing files are skipped and reported
+    // in the status bar. Returns the number of tabs opened.
+    int restoreSession(const model::Session& session, bool reopenTabs = true);
+
     // Opens the local files among dropped URLs (drag and drop, F-FILE-1).
     void openDroppedUrls(const QList<QUrl>& urls);
 
@@ -121,6 +128,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
+    // Saves the session to the settings (if set) before closing.
+    void closeEvent(QCloseEvent* event) override;
 
 private:
     void createMenus();

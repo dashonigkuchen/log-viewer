@@ -11,6 +11,7 @@
 #include "model/mark_set.h"
 #include "model/match_highlighter.h"
 #include "model/search_pool.h"
+#include "model/session.h"
 #include "ui/filter_bar.h"
 #include "ui/find_bar.h"
 #include "ui/log_view.h"
@@ -307,6 +308,39 @@ void DocumentTab::syncMainToFiltered(core::LineNumber line)
     m_filteredView->setCurrentRow(row);
     m_filteredView->ensureRowVisible(row);
     m_syncing = false;
+}
+
+model::SessionTab DocumentTab::sessionState() const
+{
+    model::SessionTab state;
+    state.path = QString::fromStdU16String(m_path.u16string());
+    state.topRow = m_view->topRow().get();
+    if (const auto current = m_view->currentRow()) {
+        state.currentRow = current->get();
+    }
+    state.filter = m_filter->query();
+    state.following = m_following;
+    return state;
+}
+
+void DocumentTab::restoreSessionState(const model::SessionTab& state)
+{
+    if (state.filter) {
+        // An invalid filter (should not happen) is ignored.
+        (void)m_filter->apply(*state.filter);
+        m_filterBar->restore();  // show the applied query
+    }
+    if (state.following) {
+        setFollowing(true);
+        return;
+    }
+    m_restoreTop = core::LineNumber(state.topRow);
+    if (state.currentRow) {
+        m_restoreCurrent = core::LineNumber(*state.currentRow);
+    }
+    if (m_document->state() == model::Document::State::kReady) {
+        restorePosition();
+    }
 }
 
 void DocumentTab::rememberPosition()
