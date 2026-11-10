@@ -10,12 +10,15 @@
 #include "model/session.h"
 #include "model/settings.h"
 #include "ui/main_window.h"
+#include "ui/single_instance.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QFileInfo>
 #include <QStringList>
 
+#include <cstdio>
 #include <memory>
 
 namespace
@@ -53,13 +56,48 @@ int main(int argc, char* argv[])
     parser.addPositionalArgument(QStringLiteral("files"),
                                  QApplication::translate("main", "Log files to open."),
                                  QStringLiteral("[files...]"));
+    const QCommandLineOption followOption(
+        QStringLiteral("follow"),
+        QApplication::translate("main", "Open the files in follow mode."));
+    const QCommandLineOption lineOption(
+        QStringLiteral("line"), QApplication::translate("main", "Go to line N of the first file."),
+        QStringLiteral("N"));
+    const QCommandLineOption newInstanceOption(
+        QStringLiteral("new-instance"),
+        QApplication::translate("main", "Start a new window instead of using a running one."));
+    parser.addOptions({followOption, lineOption, newInstanceOption});
     parser.process(app);  // Handles --help and --version and exits.
+
+    // F-CLI-2: absolute paths, so a running instance with another working directory finds them.
+    lv::ui::OpenRequest request;
+    for (const QString& file : parser.positionalArguments()) {
+        request.files << QDir::cleanPath(QFileInfo(file).absoluteFilePath());
+    }
+    request.follow = parser.isSet(followOption);
+    if (parser.isSet(lineOption)) {
+        bool ok = false;
+        const qulonglong line = parser.value(lineOption).toULongLong(&ok);
+        if (!ok || line == 0) {
+            (void)std::fputs("logviewer: --line expects a number >= 1\n", stderr);
+            return 1;
+        }
+        request.line = line;
+    }
 
     installFileLog();
     lv::core::log(
         lv::core::LogLevel::kInfo,
         QStringLiteral("Log Viewer %1 starting").arg(lv::model::versionString()).toStdString());
     lv::model::Settings settings(lv::model::settingsDirectory());
+
+    // F-FILE-11: hand the files to a running instance and exit.
+    lv::ui::SingleInstance instance(lv::model::settingsDirectory());
+    const bool single = settings.singleInstance() && !parser.isSet(newInstanceOption);
+    if (single && instance.sendToRunning(request)) {
+        lv::core::log(lv::core::LogLevel::kInfo, "Files handed to the running instance");
+        lv::core::setLogSink({});
+        return 0;
+    }
     lv::model::setSearchThreadCount(settings.searchThreads());  // before the pool is used
     lv::model::RecentFiles recent;
     recent.load(settings.store());
@@ -90,11 +128,18 @@ int main(int argc, char* argv[])
     window.setSettings(&settings);
     window.setRecentFiles(&recent);
     // F-FILE-10 / F-TAB-5: window layout always, tabs only if enabled and no files were given.
-    const QStringList files = parser.positionalArguments();
     window.restoreSession(lv::model::Session::load(settings.store()),
-                          settings.restoreSession() && files.isEmpty());
+                          settings.restoreSession() && request.files.isEmpty());
     window.show();
-    window.openFiles(files);  // F-FILE-1
+    window.openRequest(request);  // F-FILE-1, F-CLI-2
+    if (single) {
+        QObject::connect(&instance, &lv::ui::SingleInstance::openRequested, &window,
+                         &lv::ui::MainWindow::openRequest);
+        if (!instance.listen()) {
+            lv::core::log(lv::core::LogLevel::kWarning,
+                          "Single instance: could not listen; later starts open new windows");
+        }
+    }
     const int exitCode = QApplication::exec();
 
     lv::core::log(lv::core::LogLevel::kInfo, "Log Viewer exiting");

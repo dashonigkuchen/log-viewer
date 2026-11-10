@@ -37,7 +37,14 @@ if(LV_BUILD_TESTS AND NOT WIN32)
     add_test(NAME app.help COMMAND lv_app --help)
     set_tests_properties(
         app.help
-        PROPERTIES PASS_REGULAR_EXPRESSION "--version"
+        PROPERTIES PASS_REGULAR_EXPRESSION "--new-instance"
+                   LABELS app
+                   ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+    )
+    add_test(NAME app.badLine COMMAND lv_app --line abc)
+    set_tests_properties(
+        app.badLine
+        PROPERTIES WILL_FAIL ON
                    LABELS app
                    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )

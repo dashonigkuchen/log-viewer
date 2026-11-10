@@ -29,6 +29,7 @@ enum class ColorScheme : std::uint8_t;
 
 namespace lv::ui
 {
+struct OpenRequest;
 
 class BookmarksPanel;
 class HighlightDialog;
@@ -98,6 +99,10 @@ public:
     // dialog, drag and drop, and the command line. Returns the tab.
     DocumentTab* openFile(const std::filesystem::path& path);
     void openFiles(const QStringList& paths);
+
+    // Opens the files of a request (F-CLI-2): follow mode, and a jump to `line` (1-based) in
+    // the first file once it is loaded. Brings the window to the front.
+    void openRequest(const OpenRequest& request);
 
     // Session restore (F-FILE-10, F-TAB-5): the open tabs and the window layout.
     [[nodiscard]] model::Session session() const;
