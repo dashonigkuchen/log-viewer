@@ -15,6 +15,7 @@
 #include "ui/highlight_dialog.h"
 #include "ui/log_view.h"
 #include "ui/settings_dialog.h"
+#include "ui/shortcuts.h"
 #include "ui/single_instance.h"
 
 #include <QAction>
@@ -132,6 +133,9 @@ void MainWindow::createMenus()
     settingsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma));
     settingsAction->setMenuRole(QAction::PreferencesRole);
     connect(settingsAction, &QAction::triggered, this, [this] { editSettings(); });
+    QAction* shortcutsAction = fileMenu->addAction(QStringLiteral("&Keyboard Shortcuts..."));
+    shortcutsAction->setObjectName(QStringLiteral("actionKeyboardShortcuts"));
+    connect(shortcutsAction, &QAction::triggered, this, [this] { editShortcuts(); });
     fileMenu->addSeparator();
 
     QAction* exitAction = fileMenu->addAction(QStringLiteral("E&xit"));
@@ -305,6 +309,40 @@ void MainWindow::createMenus()
     aboutAction->setObjectName(QStringLiteral("actionAbout"));
     aboutAction->setMenuRole(QAction::AboutRole);
     connect(aboutAction, &QAction::triggered, this, &MainWindow::showAbout);
+    collectShortcutActions();
+}
+
+void MainWindow::collectShortcutActions()
+{
+    // Menu actions and window actions with a stable object name; the generated entries of the
+    // recent files, encoding, and highlight set menus are not configurable.
+    for (QAction* action : findChildren<QAction*>()) {
+        QObject* owner = action->parent();
+        const bool generated =
+            owner == m_recentMenu || owner == m_encodingMenu || owner == m_highlightSetMenu;
+        const bool ours =
+            owner == this || qobject_cast<QMenu*>(owner) != nullptr || owner == m_bookmarksDock;
+        if (!generated && ours && action->objectName().startsWith(QStringLiteral("action")) &&
+            !action->text().isEmpty() && action->menu() == nullptr) {
+            rememberDefaultShortcuts(*action);
+            m_shortcutActions.push_back(action);
+        }
+    }
+}
+
+void MainWindow::editShortcuts(const std::function<void(ShortcutsDialog&)>& prepare)
+{
+    if (m_settings == nullptr) {
+        return;
+    }
+    ShortcutsDialog dialog(m_shortcutActions, m_settings->shortcuts(), this);
+    if (prepare) {
+        prepare(dialog);
+    }
+    if (dialog.exec() == QDialog::Accepted) {
+        m_settings->setShortcuts(dialog.overrides());
+        m_settings->sync();
+    }
 }
 
 void MainWindow::setRecentFiles(model::RecentFiles* recent)
@@ -358,6 +396,7 @@ void MainWindow::applyViewSettings()
 {
     if (m_settings != nullptr) {
         applyColorScheme(m_settings->colorScheme());
+        applyShortcuts(m_shortcutActions, m_settings->shortcuts());
     }
     for (int i = 0; i < m_tabs->count(); ++i) {
         applyViewSettings(documentTab(i));

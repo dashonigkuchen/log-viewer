@@ -317,7 +317,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-VIEW-11.
   - Done when: rendering and click tests.
 
-- [ ] **M6-06 Configurable shortcuts** — Depends on: M6-01
+- [x] **M6-06 Configurable shortcuts** — Depends on: M6-01 (PR #70)
   - Scope: F-SET-5.
   - Done when: tests for rebinding and conflict detection.
 

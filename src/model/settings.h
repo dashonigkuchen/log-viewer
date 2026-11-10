@@ -5,6 +5,7 @@
 #include <QString>
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 
@@ -141,6 +142,16 @@ public:
 
     void setSearchThreads(int threads);
 
+    // Customized keyboard shortcuts (F-SET-5): action object name -> portable key sequence
+    // text (QKeySequence::PortableText); an empty text means "no shortcut". Actions without an
+    // entry use their defaults.
+    [[nodiscard]] const std::map<QString, QString>& shortcuts() const noexcept
+    {
+        return m_shortcuts;
+    }
+
+    void setShortcuts(std::map<QString, QString> shortcuts);
+
     // Path of the backup if the settings file was corrupt and has been reset (F-SET-3).
     [[nodiscard]] const QString& corruptBackup() const noexcept { return m_corruptBackup; }
 
@@ -182,6 +193,7 @@ private:
     bool m_restoreSession = true;
     bool m_singleInstance = true;
     int m_searchThreads = 0;
+    std::map<QString, QString> m_shortcuts;
     QString m_corruptBackup;
 };
 

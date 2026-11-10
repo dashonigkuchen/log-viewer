@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <vector>
 
 class QActionGroup;
 class QLabel;
@@ -33,6 +34,7 @@ struct OpenRequest;
 
 class BookmarksPanel;
 class HighlightDialog;
+class ShortcutsDialog;
 class SettingsDialog;
 class DocumentTab;
 
@@ -68,6 +70,15 @@ public:
     void editHighlightRules(const std::function<void(HighlightDialog&)>& prepare = {});
     // Opens the settings dialog (F-SET-1); `prepare` may adjust it before it is shown (tests).
     void editSettings(const std::function<void(SettingsDialog&)>& prepare = {});
+    // File > Keyboard Shortcuts (F-SET-5); `prepare` runs before exec (tests).
+    void editShortcuts(const std::function<void(ShortcutsDialog&)>& prepare = {});
+
+    // Actions whose shortcut can be changed (menu and window actions with a stable name).
+    [[nodiscard]] const std::vector<QAction*>& shortcutActions() const noexcept
+    {
+        return m_shortcutActions;
+    }
+
     // Qt's scheme for a setting; Unknown = follow the system (F-SET-4).
     [[nodiscard]] static Qt::ColorScheme toQtColorScheme(model::ColorScheme scheme);
     // Adds a match-only rule for `text` to the active set of `tab` (F-HL-7).
@@ -145,6 +156,7 @@ private:
     void updateEncodingMenu();
     void applyViewSettings();
     void applyViewSettings(DocumentTab* tab);
+    void collectShortcutActions();
     static void applyColorScheme(model::ColorScheme scheme);
     void changeZoom(int delta);
 
@@ -167,6 +179,7 @@ private:
     BookmarksPanel* m_bookmarksPanel = nullptr;
     void updateFollowAction();
     void createBookmarkActions(QMenu* menu);
+    std::vector<QAction*> m_shortcutActions;
 };
 
 }  // namespace lv::ui
