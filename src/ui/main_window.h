@@ -5,6 +5,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 
@@ -22,6 +23,7 @@ class FilterHistory;
 class HighlightSets;
 class RecentFiles;
 class Settings;
+enum class ColorScheme : std::uint8_t;
 }  // namespace lv::model
 
 namespace lv::ui
@@ -64,6 +66,8 @@ public:
     void editHighlightRules(const std::function<void(HighlightDialog&)>& prepare = {});
     // Opens the settings dialog (F-SET-1); `prepare` may adjust it before it is shown (tests).
     void editSettings(const std::function<void(SettingsDialog&)>& prepare = {});
+    // Qt's scheme for a setting; Unknown = follow the system (F-SET-4).
+    [[nodiscard]] static Qt::ColorScheme toQtColorScheme(model::ColorScheme scheme);
     // Adds a match-only rule for `text` to the active set of `tab` (F-HL-7).
     void highlightText(DocumentTab* tab, const QString& text);
 
@@ -127,6 +131,7 @@ private:
     void updateEncodingMenu();
     void applyViewSettings();
     void applyViewSettings(DocumentTab* tab);
+    static void applyColorScheme(model::ColorScheme scheme);
     void changeZoom(int delta);
 
     QTabWidget* m_tabs = nullptr;

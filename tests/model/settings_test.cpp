@@ -124,6 +124,7 @@ TEST_CASE("dialog settings round-trip and clamp", "[model][settings]")
     CHECK(loaded.currentLineColor() == 0xFF112233U);
     CHECK(loaded.markColor() == 0x80FF0000U);
     CHECK(loaded.matchColor() == 0x8000FF00U);
+    CHECK(loaded.colorScheme() == lv::model::ColorScheme::kSystem);
 }
 
 TEST_CASE("version 1 settings are migrated", "[model][settings]")
@@ -162,4 +163,29 @@ TEST_CASE("a corrupt settings file is backed up and replaced", "[model][settings
     const Settings again(qpath(dir.path()));
     CHECK(again.corruptBackup().isEmpty());
     CHECK(again.tabWidth() == 2);
+}
+
+TEST_CASE("color scheme and theme defaults", "[model][settings]")
+{
+    const lv::test::TempDir dir;
+    {
+        // A version 2 file with the old fixed defaults: migrated to "theme default".
+        QSettings raw(qpath(dir / "logviewer.ini"), QSettings::IniFormat);
+        raw.setValue(QStringLiteral("General/schemaVersion"), 2);
+        raw.setValue(QStringLiteral("Colors/mark"), QStringLiteral("#5A78AAFF"));
+        raw.setValue(QStringLiteral("Colors/match"), QStringLiteral("#80112233"));  // user's own
+    }
+    {
+        Settings settings(qpath(dir.path()));
+        CHECK_FALSE(settings.markColor().has_value());
+        CHECK(settings.matchColor() == 0x80112233U);
+        const QSignalSpy changed(&settings, &Settings::viewSettingsChanged);
+        settings.setColorScheme(lv::model::ColorScheme::kDark);
+        settings.setColorScheme(lv::model::ColorScheme::kDark);
+        settings.setMatchColor(std::nullopt);
+        CHECK(changed.count() == 2);
+    }
+    const Settings loaded(qpath(dir.path()));
+    CHECK(loaded.colorScheme() == lv::model::ColorScheme::kDark);
+    CHECK_FALSE(loaded.matchColor().has_value());
 }

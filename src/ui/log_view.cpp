@@ -765,6 +765,59 @@ void LogView::setMatchHighlightColor(const QColor& color)
     viewport()->update();
 }
 
+bool LogView::usesDarkColors() const
+{
+    return palette().color(QPalette::Base).lightness() < 128;
+}
+
+// Defaults (F-SET-4): translucent colors chosen for contrast with light or dark backgrounds.
+QColor LogView::matchHighlightColor() const
+{
+    if (m_matchColor.isValid()) {
+        return m_matchColor;
+    }
+    return usesDarkColors() ? QColor(214, 160, 0, 130) : QColor(255, 214, 0, 150);
+}
+
+QColor LogView::findHighlightColor() const
+{
+    if (m_findColor.isValid()) {
+        return m_findColor;
+    }
+    return usesDarkColors() ? QColor(0, 130, 230, 150) : QColor(0, 170, 255, 110);
+}
+
+QColor LogView::markColor() const
+{
+    if (m_markColor.isValid()) {
+        return m_markColor;
+    }
+    return usesDarkColors() ? QColor(80, 120, 200, 110) : QColor(120, 170, 255, 90);
+}
+
+QColor LogView::bookmarkColor() const
+{
+    return usesDarkColors() ? QColor(100, 165, 255) : QColor(30, 110, 220);
+}
+
+QColor LogView::readableTextOn(const QColor& background) const
+{
+    const QColor base = palette().color(QPalette::Base);
+    const float alpha = background.alphaF();
+    const auto blend = [alpha](float over, float under) {
+        return (over * alpha) + (under * (1.0F - alpha));
+    };
+    const float luminance = (0.2126F * blend(background.redF(), base.redF())) +
+                            (0.7152F * blend(background.greenF(), base.greenF())) +
+                            (0.0722F * blend(background.blueF(), base.blueF()));
+    const QColor text = palette().color(QPalette::Text);
+    const bool textIsDark = text.lightness() < 128;
+    if (luminance > 0.5F) {
+        return textIsDark ? text : QColor(20, 20, 20);
+    }
+    return textIsDark ? QColor(235, 235, 235) : text;
+}
+
 void LogView::setFindHighlighter(const model::MatchHighlighter* highlighter)
 {
     if (!m_findHighlighter.isNull()) {
@@ -892,8 +945,15 @@ void LogView::setCurrentLineColor(const QColor& color)
 
 QColor LogView::currentLineColor() const
 {
-    return m_currentLineColor.isValid() ? m_currentLineColor
-                                        : palette().color(QPalette::Highlight).lighter(170);
+    if (m_currentLineColor.isValid()) {
+        return m_currentLineColor;
+    }
+    QColor highlight = palette().color(QPalette::Highlight);
+    if (usesDarkColors()) {
+        highlight.setAlpha(70);  // a lighter highlight would glare on a dark background
+        return highlight;
+    }
+    return highlight.lighter(170);
 }
 
 void LogView::setColumnLimit(int columns)
@@ -978,10 +1038,10 @@ QColor LogView::markColor(int index) const
     static constexpr std::array<QRgb, 9> kColors{0xE53935, 0xFB8C00, 0xFDD835, 0x43A047, 0x00ACC1,
                                                  0x1E88E5, 0x8E24AA, 0xD81B60, 0x6D4C41};
     if (index <= 0 || index > static_cast<int>(kColors.size())) {
-        return m_markColor;
+        return markColor();
     }
     QColor color(kColors.at(static_cast<std::size_t>(index - 1)));
-    color.setAlpha(m_markColor.alpha());
+    color.setAlpha(markColor().alpha());
     return color;
 }
 
@@ -1332,6 +1392,8 @@ void LogView::changeEvent(QEvent* event)
     if (event->type() == QEvent::FontChange) {
         updateMetrics();
         viewport()->update();
+    } else if (event->type() == QEvent::PaletteChange) {
+        viewport()->update();  // theme defaults depend on the palette (F-SET-4)
     }
 }
 
@@ -1363,7 +1425,7 @@ void LogView::paintMarkSymbols(QPainter& painter, core::LineNumber row, int y,
         painter.save();
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(QPen(palette().color(QPalette::Base), 1));
-        painter.setBrush(m_bookmarkColor);
+        painter.setBrush(bookmarkColor());
         painter.drawPolygon(ribbon.data(), static_cast<int>(ribbon.size()));
         painter.restore();
     }
@@ -1400,7 +1462,7 @@ void LogView::paintRuleForegrounds(QPainter& painter, const model::LineHighlight
 {
     // Match-only rules with a text color: redraw the text inside their ranges (later rules on top).
     for (const auto& span : rules.spans) {
-        if (!span.foreground) {
+        if (!span.foreground && !span.background) {
             continue;
         }
         const auto rect = rangeRect(mapping, span.range, y);
@@ -1410,7 +1472,8 @@ void LogView::paintRuleForegrounds(QPainter& painter, const model::LineHighlight
         painter.save();
         painter.setClipRect(
             rect->intersected(QRectF(gutterWidth(), 0, viewport()->width(), viewport()->height())));
-        painter.setPen(QColor::fromRgba(*span.foreground));
+        painter.setPen(span.foreground ? QColor::fromRgba(*span.foreground)
+                                       : readableTextOn(QColor::fromRgba(*span.background)));
         painter.drawText(QPointF(textX, y + m_ascent), mapping.text);
         painter.restore();
     }
@@ -1423,6 +1486,10 @@ QColor LogView::textColorFor(const model::DisplayLine& line,
     QColor color = colors.color(line.unavailable ? QPalette::PlaceholderText : QPalette::Text);
     if (rules.foreground) {
         color = QColor::fromRgba(*rules.foreground);
+    } else if (rules.background) {
+        // A rule that only sets a background (for example a light red for errors) must stay
+        // readable on dark themes.
+        color = readableTextOn(QColor::fromRgba(*rules.background));
     }
     if (line.extra) {
         // Marked line that does not match (F-FILT-9): dimmed text.
@@ -1534,11 +1601,11 @@ void LogView::paintEvent(QPaintEvent* /*event*/)
             painter.setClipRect(gutter, 0, width - gutter, height);
             paintRuleSpanBackgrounds(painter, rules, mapping, y);
             for (const QRectF& rect : highlightRects(m_highlighter.data(), row, line, mapping, y)) {
-                painter.fillRect(rect, m_matchColor);
+                painter.fillRect(rect, matchHighlightColor());
             }
             for (const QRectF& rect :
                  highlightRects(m_findHighlighter.data(), row, line, mapping, y)) {
-                painter.fillRect(rect, m_findColor);
+                painter.fillRect(rect, findHighlightColor());
             }
             painter.drawText(textX, y + m_ascent, text);
             paintRuleForegrounds(painter, rules, mapping, textX, y);

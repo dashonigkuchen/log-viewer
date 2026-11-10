@@ -71,9 +71,15 @@ public:
     // Match highlighting of the current filter (F-FILT-8); null = none. Not owned.
     void setHighlighter(const model::MatchHighlighter* highlighter);
 
-    [[nodiscard]] QColor matchHighlightColor() const { return m_matchColor; }
+    // Colors of the view (F-SET-4): a color set here overrides the default, which depends on
+    // whether the palette is light or dark. An invalid color restores the default.
+    [[nodiscard]] QColor matchHighlightColor() const;
 
     void setMatchHighlightColor(const QColor& color);
+
+    // True if the palette's base color is dark (dark defaults are used).
+    [[nodiscard]] bool usesDarkColors() const;
+    [[nodiscard]] QColor bookmarkColor() const;
 
     // Viewport rectangles of the highlighted matches in a visible row (for tests).
     [[nodiscard]] std::vector<QRectF> matchRects(core::LineNumber row) const;
@@ -118,7 +124,7 @@ public:
     // Width of the mark column at the left edge of the gutter (0 without marks).
     [[nodiscard]] int markColumnWidth() const;
 
-    [[nodiscard]] QColor markColor() const { return m_markColor; }
+    [[nodiscard]] QColor markColor() const;
 
     // Default mark color (F-SET-1); the alpha also applies to the nine mark colors.
     void setMarkColor(const QColor& color);
@@ -135,7 +141,7 @@ public:
     // Highlighting of the find bar's query (F-FIND-3), painted in its own color; null = none.
     void setFindHighlighter(const model::MatchHighlighter* highlighter);
 
-    [[nodiscard]] QColor findHighlightColor() const { return m_findColor; }
+    [[nodiscard]] QColor findHighlightColor() const;
 
     [[nodiscard]] std::vector<QRectF> findMatchRects(core::LineNumber row) const;
 
@@ -299,7 +305,7 @@ private:
 
     QPointer<model::LineSource> m_source;
     QPointer<const model::MatchHighlighter> m_highlighter;
-    QColor m_matchColor{255, 214, 0, 150};  // amber; readable on light and dark backgrounds
+    QColor m_matchColor;  // invalid = theme default (amber)
     QPointer<const model::MatchHighlighter> m_findHighlighter;
     QPointer<model::MarkSet> m_marks;
     QPointer<const model::LineHighlighter> m_lineHighlighter;
@@ -307,7 +313,8 @@ private:
     [[nodiscard]] std::optional<QRectF> rangeRect(const DisplayMapping& mapping,
                                                   const model::HighlightRange& range, int y) const;
     QPointer<model::Bookmarks> m_bookmarks;
-    QColor m_bookmarkColor{30, 110, 220};
+    // Text color that is readable on `background` (blended over the base color).
+    [[nodiscard]] QColor readableTextOn(const QColor& background) const;
     [[nodiscard]] QColor textColorFor(const model::DisplayLine& line,
                                       const model::LineHighlight& rules) const;
     void paintRuleSpanBackgrounds(QPainter& painter, const model::LineHighlight& rules,
@@ -326,13 +333,13 @@ private:
     // Moves to the first line in `step(line)` order that this view shows.
     template <typename Step>
     bool goToLineBy(Step step);
-    QColor m_markColor{120, 170, 255, 90};  // light blue row background for marked lines
-    QColor m_currentLineColor;              // invalid = palette highlight, lightened
+    QColor m_markColor;         // invalid = theme default (blue row background)
+    QColor m_currentLineColor;  // invalid = derived from the palette highlight
     std::function<bool(std::size_t)> m_confirmClearMarks;
     // Original line numbers of the selected rows (or the current row).
     [[nodiscard]] std::vector<core::LineNumber> targetLines() const;
 
-    QColor m_findColor{0, 170, 255, 110};  // light blue, distinct from the filter highlight
+    QColor m_findColor;  // invalid = theme default (blue, distinct from the filter highlight)
     core::LineNumber m_topRow;
     std::optional<core::LineNumber> m_currentRow;
     bool m_lineNumbersVisible = true;

@@ -13,6 +13,14 @@ class QSettings;
 namespace lv::model
 {
 
+// Light / dark appearance (SPEC F-SET-4); kSystem follows the operating system.
+enum class ColorScheme : std::uint8_t
+{
+    kSystem,
+    kLight,
+    kDark,
+};
+
 // Typed access to the INI settings file (SPEC F-SET-2, F-SET-3, ARCHITECTURE §5). Values are
 // read once, cached, and written immediately when changed. Unknown keys are ignored; values out
 // of range fall back to their defaults; a corrupt file is renamed to *.corrupt and replaced.
@@ -24,8 +32,9 @@ class Settings : public QObject
     Q_OBJECT
 
 public:
-    // Version 2 added the settings dialog values (M6-01); version 1 files are migrated.
-    static constexpr int kSchemaVersion = 2;
+    // Version 2 added the settings dialog values (M6-01), version 3 theme-dependent color
+    // defaults (M6-02); older files are migrated.
+    static constexpr int kSchemaVersion = 3;
     static constexpr int kDefaultTabWidth = 8;
     static constexpr int kDefaultFontSize = 10;
     static constexpr int kMinFontSize = 4;
@@ -39,9 +48,8 @@ public:
     static constexpr int kDefaultHistorySize = 100;
     static constexpr int kMaxHistorySize = 1000;
     static constexpr int kMaxSearchThreads = 64;
-    // Colors as 0xAARRGGBB (QtCore only).
-    static constexpr std::uint32_t kDefaultMarkColor = 0x5A78AAFFU;
-    static constexpr std::uint32_t kDefaultMatchColor = 0x96FFD600U;
+    // Colors are 0xAARRGGBB (QtCore only); an unset color uses the light or dark default of the
+    // log view (F-SET-4).
 
     // Opens `<directory>/logviewer.ini` (the directory is created if needed).
     explicit Settings(const QString& directory, QObject* parent = nullptr);
@@ -93,13 +101,17 @@ public:
 
     void setCurrentLineColor(std::optional<std::uint32_t> color);
 
-    [[nodiscard]] std::uint32_t markColor() const noexcept { return m_markColor; }
+    [[nodiscard]] std::optional<std::uint32_t> markColor() const noexcept { return m_markColor; }
 
-    void setMarkColor(std::uint32_t color);
+    void setMarkColor(std::optional<std::uint32_t> color);
 
-    [[nodiscard]] std::uint32_t matchColor() const noexcept { return m_matchColor; }
+    [[nodiscard]] std::optional<std::uint32_t> matchColor() const noexcept { return m_matchColor; }
 
-    void setMatchColor(std::uint32_t color);
+    void setMatchColor(std::optional<std::uint32_t> color);
+
+    [[nodiscard]] ColorScheme colorScheme() const noexcept { return m_colorScheme; }
+
+    void setColorScheme(ColorScheme scheme);
 
     // File change polling interval in ms (F-TAIL-2).
     [[nodiscard]] int pollInterval() const noexcept { return m_pollInterval; }
@@ -148,7 +160,8 @@ signals:
 private:
     void load();
     void migrate(int fromVersion);
-    void setColorValue(const char* name, std::uint32_t& member, std::uint32_t color);
+    void setColorValue(const char* name, std::optional<std::uint32_t>& member,
+                       std::optional<std::uint32_t> color);
     void setIntValue(const char* name, int& member, int value, int min, int max);
     void setBoolValue(const char* name, bool& member, bool value);
 
@@ -160,8 +173,9 @@ private:
     bool m_lineNumbers = true;
     bool m_showMarksInFilter = true;
     std::optional<std::uint32_t> m_currentLineColor;
-    std::uint32_t m_markColor = kDefaultMarkColor;
-    std::uint32_t m_matchColor = kDefaultMatchColor;
+    std::optional<std::uint32_t> m_markColor;
+    std::optional<std::uint32_t> m_matchColor;
+    ColorScheme m_colorScheme = ColorScheme::kSystem;
     int m_pollInterval = kDefaultPollMs;
     int m_maxColumns = kDefaultMaxColumns;
     int m_historySize = kDefaultHistorySize;

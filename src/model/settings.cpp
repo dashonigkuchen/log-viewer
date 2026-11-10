@@ -7,6 +7,7 @@
 #include <QSettings>
 
 #include <algorithm>
+#include <utility>
 
 namespace lv::model
 {
@@ -89,8 +90,15 @@ void Settings::load()
     m_lineNumbers = m_store->value(key("View/lineNumbers"), true).toBool();
     m_showMarksInFilter = m_store->value(key("View/showMarksInFilter"), true).toBool();
     m_currentLineColor = readColor(*m_store, "Colors/currentLine");
-    m_markColor = readColor(*m_store, "Colors/mark").value_or(kDefaultMarkColor);
-    m_matchColor = readColor(*m_store, "Colors/match").value_or(kDefaultMatchColor);
+    m_markColor = readColor(*m_store, "Colors/mark");
+    m_matchColor = readColor(*m_store, "Colors/match");
+    const QString scheme = m_store->value(key("View/colorScheme")).toString();
+    m_colorScheme = ColorScheme::kSystem;
+    if (scheme == QStringLiteral("light")) {
+        m_colorScheme = ColorScheme::kLight;
+    } else if (scheme == QStringLiteral("dark")) {
+        m_colorScheme = ColorScheme::kDark;
+    }
     m_pollInterval =
         readInt(*m_store, "Files/pollInterval", kDefaultPollMs, kMinPollMs, kMaxPollMs);
     m_maxColumns =
@@ -104,6 +112,15 @@ void Settings::load()
 
 void Settings::migrate(int fromVersion)
 {
+    if (fromVersion >= 1 && fromVersion <= 2) {
+        // Version 2 stored the fixed light defaults; drop them so the theme's defaults apply.
+        for (const auto& [name, oldDefault] :
+             {std::pair{"Colors/mark", "#5A78AAFF"}, std::pair{"Colors/match", "#96FFD600"}}) {
+            if (m_store->value(key(name)).toString() == QString::fromLatin1(oldDefault)) {
+                m_store->remove(key(name));
+            }
+        }
+    }
     if (fromVersion == 1) {
         // Version 1 kept the polling interval under View/ (never released; example migration).
         const QString old = key("View/pollInterval");
@@ -114,13 +131,18 @@ void Settings::migrate(int fromVersion)
     }
 }
 
-void Settings::setColorValue(const char* name, std::uint32_t& member, std::uint32_t color)
+void Settings::setColorValue(const char* name, std::optional<std::uint32_t>& member,
+                             std::optional<std::uint32_t> color)
 {
     if (color == member) {
         return;
     }
     member = color;
-    m_store->setValue(key(name), colorText(color));
+    if (color.has_value()) {
+        m_store->setValue(key(name), colorText(*color));
+    } else {
+        m_store->remove(key(name));
+    }
     emit viewSettingsChanged();
 }
 
@@ -147,26 +169,33 @@ void Settings::setBoolValue(const char* name, bool& member, bool value)
 
 void Settings::setCurrentLineColor(std::optional<std::uint32_t> color)
 {
-    if (color == m_currentLineColor) {
-        return;
-    }
-    m_currentLineColor = color;
-    if (color) {
-        m_store->setValue(key("Colors/currentLine"), colorText(*color));
-    } else {
-        m_store->remove(key("Colors/currentLine"));
-    }
-    emit viewSettingsChanged();
+    setColorValue("Colors/currentLine", m_currentLineColor, color);
 }
 
-void Settings::setMarkColor(std::uint32_t color)
+void Settings::setMarkColor(std::optional<std::uint32_t> color)
 {
     setColorValue("Colors/mark", m_markColor, color);
 }
 
-void Settings::setMatchColor(std::uint32_t color)
+void Settings::setMatchColor(std::optional<std::uint32_t> color)
 {
     setColorValue("Colors/match", m_matchColor, color);
+}
+
+void Settings::setColorScheme(ColorScheme scheme)
+{
+    if (scheme == m_colorScheme) {
+        return;
+    }
+    m_colorScheme = scheme;
+    const char* text = "system";
+    if (scheme == ColorScheme::kLight) {
+        text = "light";
+    } else if (scheme == ColorScheme::kDark) {
+        text = "dark";
+    }
+    m_store->setValue(key("View/colorScheme"), QString::fromLatin1(text));
+    emit viewSettingsChanged();
 }
 
 void Settings::setPollInterval(int milliseconds)
