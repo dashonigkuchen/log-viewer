@@ -429,7 +429,7 @@ Result<SearchStats> SearchEngine::run(const SearchRequest& request, ThreadPool& 
         }
     }
     if (failure) {
-        return tl::unexpected(*failure);
+        return std::unexpected(*failure);
     }
     if (canceled || cancel.stop_requested()) {
         return makeError(ErrorCode::kCanceled, "search canceled");

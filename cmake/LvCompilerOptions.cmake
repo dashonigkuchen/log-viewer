@@ -4,7 +4,7 @@
 add_library(lv_compile_options INTERFACE)
 add_library(lv::compile_options ALIAS lv_compile_options)
 
-target_compile_features(lv_compile_options INTERFACE cxx_std_20)
+target_compile_features(lv_compile_options INTERFACE cxx_std_23)
 
 if(MSVC)
     target_compile_options(

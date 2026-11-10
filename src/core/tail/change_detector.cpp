@@ -21,7 +21,7 @@ Result<Fingerprint> readFingerprint(const File& file, std::size_t length)
         const auto read =
             file.readAt(ByteOffset(filled), std::span(buffer).subspan(filled, wanted - filled));
         if (!read) {
-            return tl::unexpected(read.error());
+            return std::unexpected(read.error());
         }
         if (*read == 0) {
             break;  // end of file
@@ -84,12 +84,12 @@ Result<FileSnapshot> ChangeDetector::snapshot(const File& file)
 {
     const auto size = file.size();
     if (!size) {
-        return tl::unexpected(size.error());
+        return std::unexpected(size.error());
     }
     const auto fingerprint = readFingerprint(file, static_cast<std::size_t>(std::min<std::uint64_t>(
                                                        *size, Fingerprint::kFingerprintBytes)));
     if (!fingerprint) {
-        return tl::unexpected(fingerprint.error());
+        return std::unexpected(fingerprint.error());
     }
     return FileSnapshot{.size = *size, .fingerprint = *fingerprint};
 }
@@ -99,7 +99,7 @@ Result<FileSnapshot> ChangeDetector::snapshotAt(const File& file, std::uint64_t 
     const auto fingerprint = readFingerprint(file, static_cast<std::size_t>(std::min<std::uint64_t>(
                                                        size, Fingerprint::kFingerprintBytes)));
     if (!fingerprint) {
-        return tl::unexpected(fingerprint.error());
+        return std::unexpected(fingerprint.error());
     }
     return FileSnapshot{.size = size, .fingerprint = *fingerprint};
 }
@@ -110,12 +110,12 @@ Result<Observation> ChangeDetector::observe(const File& open, const std::filesys
     Observation now;
     const auto size = open.size();
     if (!size) {
-        return tl::unexpected(size.error());
+        return std::unexpected(size.error());
     }
     now.size = *size;
     const auto fingerprint = readFingerprint(open, last.fingerprint.length);
     if (!fingerprint) {
-        return tl::unexpected(fingerprint.error());
+        return std::unexpected(fingerprint.error());
     }
     now.fingerprint = *fingerprint;
 
@@ -128,14 +128,14 @@ Result<Observation> ChangeDetector::observe(const File& open, const std::filesys
         const bool missing = code == ErrorCode::kNotFound;
 #endif
         if (!missing) {
-            return tl::unexpected(pathIdentity.error());
+            return std::unexpected(pathIdentity.error());
         }
         now.pathState = PathState::kMissing;
         return now;
     }
     const auto openIdentity = open.identity();
     if (!openIdentity) {
-        return tl::unexpected(openIdentity.error());
+        return std::unexpected(openIdentity.error());
     }
     now.sameFile = *openIdentity == *pathIdentity;
     return now;
@@ -146,7 +146,7 @@ Result<Change> ChangeDetector::check(const File& open, const std::filesystem::pa
 {
     const auto now = observe(open, path, last);
     if (!now) {
-        return tl::unexpected(now.error());
+        return std::unexpected(now.error());
     }
     return classify(last, *now);
 }

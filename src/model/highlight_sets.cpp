@@ -30,13 +30,13 @@ QString colorToString(std::optional<Argb> color)
 }
 
 // "#RRGGBB" (opaque) or "#AARRGGBB"; empty or null = unset.
-tl::expected<std::optional<Argb>, QString> colorFromJson(const QJsonValue& value)
+std::expected<std::optional<Argb>, QString> colorFromJson(const QJsonValue& value)
 {
     if (value.isNull() || value.isUndefined()) {
         return std::optional<Argb>{};
     }
     if (!value.isString()) {
-        return tl::unexpected(QStringLiteral("a color must be a string like \"#RRGGBB\""));
+        return std::unexpected(QStringLiteral("a color must be a string like \"#RRGGBB\""));
     }
     const QString text = value.toString();
     if (text.isEmpty()) {
@@ -45,7 +45,7 @@ tl::expected<std::optional<Argb>, QString> colorFromJson(const QJsonValue& value
     bool ok = false;
     const uint parsed = text.mid(1).toUInt(&ok, 16);
     if (!text.startsWith(u'#') || !ok || (text.size() != 7 && text.size() != 9)) {
-        return tl::unexpected(QStringLiteral("invalid color \"%1\"").arg(text));
+        return std::unexpected(QStringLiteral("invalid color \"%1\"").arg(text));
     }
     return std::optional<Argb>(text.size() == 7 ? (0xFF000000U | parsed) : parsed);
 }
@@ -70,16 +70,16 @@ QJsonObject ruleToJson(const HighlightRule& rule)
     return object;
 }
 
-tl::expected<HighlightRule, QString> ruleFromJson(const QJsonValue& value)
+std::expected<HighlightRule, QString> ruleFromJson(const QJsonValue& value)
 {
     if (!value.isObject()) {
-        return tl::unexpected(QStringLiteral("a rule must be an object"));
+        return std::unexpected(QStringLiteral("a rule must be an object"));
     }
     const QJsonObject object = value.toObject();
     HighlightRule rule;
     const QJsonValue pattern = object.value(QStringLiteral("pattern"));
     if (!pattern.isString() || pattern.toString().isEmpty()) {
-        return tl::unexpected(QStringLiteral("a rule needs a non-empty \"pattern\""));
+        return std::unexpected(QStringLiteral("a rule needs a non-empty \"pattern\""));
     }
     rule.pattern = pattern.toString();
     rule.regex = object.value(QStringLiteral("regex")).toBool(false);
@@ -91,16 +91,16 @@ tl::expected<HighlightRule, QString> ruleFromJson(const QJsonValue& value)
     } else if (scope == QStringLiteral("match")) {
         rule.scope = HighlightScope::kMatchOnly;
     } else {
-        return tl::unexpected(
+        return std::unexpected(
             QStringLiteral("unknown scope \"%1\" (use \"line\" or \"match\")").arg(scope));
     }
     auto foreground = colorFromJson(object.value(QStringLiteral("foreground")));
     if (!foreground) {
-        return tl::unexpected(foreground.error());
+        return std::unexpected(foreground.error());
     }
     auto background = colorFromJson(object.value(QStringLiteral("background")));
     if (!background) {
-        return tl::unexpected(background.error());
+        return std::unexpected(background.error());
     }
     rule.foreground = *foreground;
     rule.background = *background;
@@ -356,48 +356,49 @@ QByteArray HighlightSets::toJson(const std::vector<HighlightSet>& sets)
     return QJsonDocument(root).toJson(QJsonDocument::Indented);
 }
 
-tl::expected<std::vector<HighlightSet>, QString> HighlightSets::fromJson(const QByteArray& json)
+std::expected<std::vector<HighlightSet>, QString> HighlightSets::fromJson(const QByteArray& json)
 {
     QJsonParseError parseError{};
     const QJsonDocument document = QJsonDocument::fromJson(json, &parseError);
     if (parseError.error != QJsonParseError::NoError) {
-        return tl::unexpected(QStringLiteral("Invalid JSON at offset %1: %2")
-                                  .arg(parseError.offset)
-                                  .arg(parseError.errorString()));
+        return std::unexpected(QStringLiteral("Invalid JSON at offset %1: %2")
+                                   .arg(parseError.offset)
+                                   .arg(parseError.errorString()));
     }
     if (!document.isObject() || document.object().value(QStringLiteral("format")).toString() !=
                                     QString::fromLatin1(kFormat)) {
-        return tl::unexpected(QStringLiteral("Not a highlight set file."));
+        return std::unexpected(QStringLiteral("Not a highlight set file."));
     }
     const QJsonObject root = document.object();
     if (root.value(QStringLiteral("version")).toInt(0) > kVersion) {
-        return tl::unexpected(
+        return std::unexpected(
             QStringLiteral("The file was written by a newer version (format version %1).")
                 .arg(root.value(QStringLiteral("version")).toInt()));
     }
     const QJsonValue setsValue = root.value(QStringLiteral("sets"));
     if (!setsValue.isArray()) {
-        return tl::unexpected(QStringLiteral("\"sets\" must be an array."));
+        return std::unexpected(QStringLiteral("\"sets\" must be an array."));
     }
     std::vector<HighlightSet> sets;
     const QJsonArray setsArray = setsValue.toArray();
     for (qsizetype s = 0; s < setsArray.size(); ++s) {
         const QJsonValue setValue = setsArray.at(s);
         if (!setValue.isObject()) {
-            return tl::unexpected(QStringLiteral("Set %1: must be an object.").arg(s + 1));
+            return std::unexpected(QStringLiteral("Set %1: must be an object.").arg(s + 1));
         }
         const QJsonObject setObject = setValue.toObject();
         HighlightSet set;
         set.name = setObject.value(QStringLiteral("name")).toString();
         const QJsonValue rulesValue = setObject.value(QStringLiteral("rules"));
         if (!rulesValue.isArray()) {
-            return tl::unexpected(QStringLiteral("Set %1: \"rules\" must be an array.").arg(s + 1));
+            return std::unexpected(
+                QStringLiteral("Set %1: \"rules\" must be an array.").arg(s + 1));
         }
         const QJsonArray rules = rulesValue.toArray();
         for (qsizetype r = 0; r < rules.size(); ++r) {
             auto rule = ruleFromJson(rules.at(r));
             if (!rule) {
-                return tl::unexpected(
+                return std::unexpected(
                     QStringLiteral("Set %1, rule %2: %3").arg(s + 1).arg(r + 1).arg(rule.error()));
             }
             set.rules.push_back(std::move(*rule));

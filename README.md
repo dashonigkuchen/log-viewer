@@ -2,7 +2,7 @@
 
 > Working title. The project will likely be renamed before its first public release.
 
-A fast, native desktop log viewer for large text log files, written in C++20 and Qt 6 Widgets.
+A fast, native desktop log viewer for large text log files, written in C++23 and Qt 6 Widgets.
 
 **Status:** planning. No usable build yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 

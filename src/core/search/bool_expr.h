@@ -2,10 +2,9 @@
 
 #include "core/search/matcher.h"
 
-#include <tl/expected.hpp>
-
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -37,7 +36,7 @@ struct BoolExprOptions
 class BoolExpr final : public Matcher
 {
 public:
-    [[nodiscard]] static tl::expected<std::unique_ptr<BoolExpr>, ExprError>
+    [[nodiscard]] static std::expected<std::unique_ptr<BoolExpr>, ExprError>
     parse(std::string_view text, BoolExprOptions options = {});
 
     ~BoolExpr() override;

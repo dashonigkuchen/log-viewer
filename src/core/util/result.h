@@ -1,8 +1,7 @@
 #pragma once
 
-#include <tl/expected.hpp>
-
 #include <cstdint>
+#include <expected>
 #include <ostream>
 #include <string>
 #include <string_view>
@@ -45,13 +44,13 @@ struct Error
 std::ostream& operator<<(std::ostream& out, const Error& error);
 
 template <typename T>
-using Result = tl::expected<T, Error>;
+using Result = std::expected<T, Error>;
 
 // Convenience for `return makeError(ErrorCode::kNotFound, "...");` in functions returning Result.
-[[nodiscard]] inline tl::unexpected<Error> makeError(ErrorCode code, std::string message,
-                                                     std::int64_t systemCode = 0)
+[[nodiscard]] inline std::unexpected<Error> makeError(ErrorCode code, std::string message,
+                                                      std::int64_t systemCode = 0)
 {
-    return tl::unexpected<Error>(
+    return std::unexpected<Error>(
         Error{.code = code, .systemCode = systemCode, .message = std::move(message)});
 }
 

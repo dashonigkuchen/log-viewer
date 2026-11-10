@@ -12,7 +12,7 @@ namespace lv::core
 namespace
 {
 
-tl::unexpected<Error> changedError(const File& file)
+std::unexpected<Error> changedError(const File& file)
 {
     return makeError(ErrorCode::kOutOfRange,
                      "file '" + file.path().string() + "' is shorter than its index; it changed");
@@ -48,7 +48,7 @@ Result<void> LineReader::readDirect(std::uint64_t offset, std::span<std::byte> o
     m_readCalls.fetch_add(1, std::memory_order_relaxed);
     const auto read = m_file->readAt(ByteOffset(offset), out);
     if (!read) {
-        return tl::unexpected(read.error());
+        return std::unexpected(read.error());
     }
     if (*read < out.size()) {
         return changedError(*m_file);
@@ -95,7 +95,7 @@ Result<void> LineReader::readRange(std::uint64_t offset, std::span<std::byte> ou
         m_readCalls.fetch_add(1, std::memory_order_relaxed);
         const auto read = m_file->readAt(ByteOffset(page * pageSize), buffer);
         if (!read) {
-            return tl::unexpected(read.error());
+            return std::unexpected(read.error());
         }
         if (*read < needed(runEnd) + ((runEnd - page) * pageSize)) {
             return changedError(*m_file);
@@ -183,7 +183,7 @@ Result<LineBlock> LineReader::readLines(const LineIndex::Snapshot& snapshot, Lin
         const auto size = static_cast<std::size_t>(window.end - window.begin);
         if (auto read = readRange(window.begin, std::span(block.bytes).subspan(position, size));
             !read) {
-            return tl::unexpected(read.error());
+            return std::unexpected(read.error());
         }
         const std::size_t lastLine = w + 1 < windows.size() ? windows[w + 1].firstLine : lineCount;
         for (std::size_t i = window.firstLine; i < lastLine; ++i) {

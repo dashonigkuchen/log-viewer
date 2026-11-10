@@ -7,7 +7,7 @@
 The engine (indexing, encoding, search, change detection) is the performance- and correctness-critical part and must be tested thoroughly and fast.
 
 ## Decision
-`lv_core` uses only the C++ standard library plus PCRE2, simdutf, and tl-expected. It does not link Qt; a CMake check enforces this. Qt glue lives in `lv_model`, widgets in `lv_ui`.
+`lv_core` uses only the C++ standard library plus PCRE2 and simdutf. It does not link Qt; a CMake check enforces this. Qt glue lives in `lv_model`, widgets in `lv_ui`.
 
 ## Consequences
 Core tests run without an event loop, under all sanitizers, and benchmarks are not affected by Qt. A thin adaptation layer is needed (strings, signals).

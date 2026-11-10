@@ -85,10 +85,10 @@ public:
         , m_options(options)
     {}
 
-    tl::expected<std::unique_ptr<BoolExpr>, ExprError> run()
+    std::expected<std::unique_ptr<BoolExpr>, ExprError> run()
     {
         if (auto tokens = tokenize(); !tokens) {
-            return tl::unexpected(tokens.error());
+            return std::unexpected(tokens.error());
         }
         if (m_tokens.front().kind == TokenKind::kEnd) {
             return fail("empty expression", 0);
@@ -97,7 +97,7 @@ public:
         m_expr = expr.get();
         auto root = parseOr();
         if (!root) {
-            return tl::unexpected(root.error());
+            return std::unexpected(root.error());
         }
         const Token& next = peek();
         if (next.kind == TokenKind::kRParen) {
@@ -111,15 +111,15 @@ public:
     }
 
 private:
-    using NodeResult = tl::expected<std::size_t, ExprError>;
+    using NodeResult = std::expected<std::size_t, ExprError>;
 
-    [[nodiscard]] tl::unexpected<ExprError> fail(std::string message, std::size_t byteOffset) const
+    [[nodiscard]] std::unexpected<ExprError> fail(std::string message, std::size_t byteOffset) const
     {
-        return tl::unexpected(
+        return std::unexpected(
             ExprError{.message = std::move(message), .position = codePoints(m_text, byteOffset)});
     }
 
-    tl::expected<void, ExprError> tokenize()
+    std::expected<void, ExprError> tokenize()
     {
         std::size_t i = 0;
         while (true) {
@@ -139,13 +139,13 @@ private:
             } else if (c == '"') {
                 auto token = readLiteral(i);
                 if (!token) {
-                    return tl::unexpected(token.error());
+                    return std::unexpected(token.error());
                 }
                 m_tokens.push_back(std::move(*token));
             } else if (c == '/') {
                 auto token = readRegex(i);
                 if (!token) {
-                    return tl::unexpected(token.error());
+                    return std::unexpected(token.error());
                 }
                 m_tokens.push_back(std::move(*token));
             } else {
@@ -171,7 +171,7 @@ private:
     }
 
     // A term must be followed by whitespace, a parenthesis, or the end.
-    tl::expected<void, ExprError> checkTermEnd(std::size_t i) const
+    [[nodiscard]] std::expected<void, ExprError> checkTermEnd(std::size_t i) const
     {
         if (i < m_text.size() && isWordChar(m_text[i])) {
             return fail("expected whitespace or a parenthesis after the term", i);
@@ -179,7 +179,7 @@ private:
         return {};
     }
 
-    tl::expected<Token, ExprError> readLiteral(std::size_t& i) const
+    std::expected<Token, ExprError> readLiteral(std::size_t& i) const
     {
         Token token = makeToken(TokenKind::kLiteral, i);
         const std::size_t start = i;
@@ -210,12 +210,12 @@ private:
         }
         token.source = std::string(m_text.substr(start, i - start));
         if (auto end = checkTermEnd(i); !end) {
-            return tl::unexpected(end.error());
+            return std::unexpected(end.error());
         }
         return token;
     }
 
-    tl::expected<Token, ExprError> readRegex(std::size_t& i) const
+    std::expected<Token, ExprError> readRegex(std::size_t& i) const
     {
         Token token = makeToken(TokenKind::kRegex, i);
         const std::size_t start = i;
@@ -406,8 +406,8 @@ private:
     BoolExpr* m_expr = nullptr;
 };
 
-tl::expected<std::unique_ptr<BoolExpr>, ExprError> BoolExpr::parse(std::string_view text,
-                                                                   BoolExprOptions options)
+std::expected<std::unique_ptr<BoolExpr>, ExprError> BoolExpr::parse(std::string_view text,
+                                                                    BoolExprOptions options)
 {
     return BoolExprParser(text, options).run();
 }

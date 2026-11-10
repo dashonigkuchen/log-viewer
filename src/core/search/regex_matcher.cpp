@@ -75,7 +75,7 @@ void RegexMatcher::CodeDeleter::operator()(pcre2_real_code_8* code) const noexce
     pcre2_code_free(code);
 }
 
-tl::expected<std::unique_ptr<RegexMatcher>, PatternError>
+std::expected<std::unique_ptr<RegexMatcher>, PatternError>
 RegexMatcher::compile(std::string_view pattern, RegexOptions options)
 {
     std::uint32_t flags = PCRE2_UTF | PCRE2_UCP;
@@ -87,8 +87,8 @@ RegexMatcher::compile(std::string_view pattern, RegexOptions options)
     std::unique_ptr<pcre2_real_code_8, CodeDeleter> code(
         pcre2_compile(toPcre(pattern), pattern.size(), flags, &errorCode, &errorOffset, nullptr));
     if (!code) {
-        return tl::unexpected(PatternError{.message = errorMessage(errorCode),
-                                           .offset = static_cast<std::size_t>(errorOffset)});
+        return std::unexpected(PatternError{.message = errorMessage(errorCode),
+                                            .offset = static_cast<std::size_t>(errorOffset)});
     }
     const bool jit = pcre2_jit_compile(code.get(), PCRE2_JIT_COMPLETE) == 0;
     return std::unique_ptr<RegexMatcher>(

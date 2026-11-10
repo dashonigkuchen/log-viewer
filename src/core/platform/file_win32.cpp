@@ -18,7 +18,7 @@ HANDLE nativeHandle(std::intptr_t handle)
     return reinterpret_cast<HANDLE>(handle);  // NOLINT(performance-no-int-to-ptr)
 }
 
-tl::unexpected<Error> systemError(std::string what, const std::filesystem::path& path, DWORD code)
+std::unexpected<Error> systemError(std::string what, const std::filesystem::path& path, DWORD code)
 {
     ErrorCode errorCode = ErrorCode::kIoError;
     switch (code) {
