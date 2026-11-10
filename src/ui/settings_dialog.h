@@ -3,6 +3,7 @@
 #include <QDialog>
 
 class QCheckBox;
+class QComboBox;
 class QFontComboBox;
 class QLineEdit;
 class QSpinBox;
@@ -41,6 +42,8 @@ public:
 
     [[nodiscard]] QCheckBox* lineNumbersBox() const noexcept { return m_lineNumbers; }
 
+    [[nodiscard]] QComboBox* schemeBox() const noexcept { return m_scheme; }
+
     [[nodiscard]] QLineEdit* currentLineEdit() const noexcept { return m_currentLine; }
 
     [[nodiscard]] QLineEdit* markEdit() const noexcept { return m_mark; }
@@ -68,6 +71,7 @@ private:
     QSpinBox* m_fontSize = nullptr;
     QSpinBox* m_tabWidth = nullptr;
     QCheckBox* m_lineNumbers = nullptr;
+    QComboBox* m_scheme = nullptr;
     QLineEdit* m_currentLine = nullptr;
     QLineEdit* m_mark = nullptr;
     QLineEdit* m_match = nullptr;

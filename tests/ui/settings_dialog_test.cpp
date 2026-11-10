@@ -11,10 +11,12 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QElapsedTimer>
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QStatusBar>
+#include <QStyleHints>
 #include <QTest>
 #include <QTimer>
 
@@ -64,6 +66,7 @@ private slots:
             dialog.sessionBox()->setChecked(false);
             dialog.singleInstanceBox()->setChecked(false);
             dialog.threadsBox()->setValue(2);
+            dialog.schemeBox()->setCurrentIndex(2);  // Dark
             QTimer::singleShot(0, &dialog, &QDialog::accept);
         });
         // Effect on the open tab.
@@ -86,13 +89,18 @@ private slots:
         QVERIFY(!loaded.lineNumbersVisible());
         QCOMPARE(loaded.maxColumns(), 200);
         QCOMPARE(loaded.currentLineColor().value_or(0), 0xFF101010U);
-        QCOMPARE(loaded.markColor(), 0x80FF0000U);
-        QCOMPARE(loaded.matchColor(), 0xFF00FF00U);
+        QCOMPARE(loaded.markColor().value_or(0), 0x80FF0000U);
+        QCOMPARE(loaded.matchColor().value_or(0), 0xFF00FF00U);
         QCOMPARE(loaded.pollInterval(), 2000);
         QCOMPARE(loaded.filterHistorySize(), 5);
         QVERIFY(!loaded.restoreSession());
         QVERIFY(!loaded.singleInstance());
         QCOMPARE(loaded.searchThreads(), 2);
+        QCOMPARE(loaded.colorScheme(), lv::model::ColorScheme::kDark);
+        QCOMPARE(lv::ui::MainWindow::toQtColorScheme(loaded.colorScheme()), Qt::ColorScheme::Dark);
+        QCOMPARE(lv::ui::MainWindow::toQtColorScheme(lv::model::ColorScheme::kSystem),
+                 Qt::ColorScheme::Unknown);
+        QGuiApplication::styleHints()->unsetColorScheme();
     }
 
     static void cancelAndInvalidColorsChangeNothing()

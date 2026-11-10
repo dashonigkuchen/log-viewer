@@ -156,3 +156,9 @@ set_target_properties(lv_ui_settings_dialog_tests PROPERTIES WIN32_EXECUTABLE OF
 target_link_libraries(lv_ui_settings_dialog_tests PRIVATE lv::ui lv_test_support Qt6::Test lv::compile_options)
 add_test(NAME ui.SettingsDialog COMMAND lv_ui_settings_dialog_tests -o "-,txt")
 set_tests_properties(ui.SettingsDialog PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")
+
+qt_add_executable(lv_ui_color_scheme_tests color_scheme_test.cpp fake_line_source.h)
+set_target_properties(lv_ui_color_scheme_tests PROPERTIES WIN32_EXECUTABLE OFF)
+target_link_libraries(lv_ui_color_scheme_tests PRIVATE lv::ui Qt6::Test lv::compile_options)
+add_test(NAME ui.ColorScheme COMMAND lv_ui_color_scheme_tests -o "-,txt")
+set_tests_properties(ui.ColorScheme PROPERTIES LABELS ui ENVIRONMENT "${LV_UI_TEST_ENVIRONMENT}")

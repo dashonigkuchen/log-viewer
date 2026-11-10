@@ -5,6 +5,7 @@
 
 #include <QCheckBox>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFontComboBox>
 #include <QFontDatabase>
@@ -98,16 +99,23 @@ SettingsDialog::SettingsDialog(model::Settings& settings, QWidget* parent)
         row->addWidget(pick);
         return row;
     };
-    const std::optional<std::uint32_t> currentLine = settings.currentLineColor();
+    const auto text = [](std::optional<std::uint32_t> color) {
+        return color.has_value() ? argbText(*color) : QString();
+    };
+    const QString themeDefault = QStringLiteral("empty = default for the theme");
+    m_scheme = new QComboBox(colors);
+    m_scheme->addItem(QStringLiteral("System"));
+    m_scheme->addItem(QStringLiteral("Light"));
+    m_scheme->addItem(QStringLiteral("Dark"));
+    m_scheme->setCurrentIndex(static_cast<int>(settings.colorScheme()));
     auto* colorForm = new QFormLayout(colors);
+    colorForm->addRow(QStringLiteral("Theme:"), m_scheme);
     colorForm->addRow(QStringLiteral("Current line:"),
-                      colorRow(m_currentLine,
-                               currentLine.has_value() ? argbText(*currentLine) : QString(),
-                               QStringLiteral("empty = from the system theme")));
+                      colorRow(m_currentLine, text(settings.currentLineColor()), themeDefault));
     colorForm->addRow(QStringLiteral("Marks:"),
-                      colorRow(m_mark, argbText(settings.markColor()), QString()));
+                      colorRow(m_mark, text(settings.markColor()), themeDefault));
     colorForm->addRow(QStringLiteral("Filter matches:"),
-                      colorRow(m_match, argbText(settings.matchColor()), QString()));
+                      colorRow(m_match, text(settings.matchColor()), themeDefault));
 
     // Behavior.
     auto* behavior = new QGroupBox(QStringLiteral("Behavior"), this);
@@ -148,7 +156,7 @@ bool SettingsDialog::apply()
     const auto currentLine = HighlightDialog::parseColor(m_currentLine->text());
     const auto mark = HighlightDialog::parseColor(m_mark->text());
     const auto match = HighlightDialog::parseColor(m_match->text());
-    if (!currentLine || !mark || !*mark || !match || !*match) {
+    if (!currentLine || !mark || !match) {
         QMessageBox::warning(this, windowTitle(),
                              QStringLiteral("Please enter colors as #RRGGBB or #AARRGGBB."));
         return false;
@@ -159,8 +167,9 @@ bool SettingsDialog::apply()
     m_settings->setLineNumbersVisible(m_lineNumbers->isChecked());
     m_settings->setMaxColumns(m_columns->value());
     m_settings->setCurrentLineColor(*currentLine);
-    m_settings->setMarkColor(**mark);
-    m_settings->setMatchColor(**match);
+    m_settings->setMarkColor(*mark);
+    m_settings->setMatchColor(*match);
+    m_settings->setColorScheme(static_cast<model::ColorScheme>(m_scheme->currentIndex()));
     m_settings->setPollInterval(m_poll->value());
     m_settings->setFilterHistorySize(m_history->value());
     m_settings->setRestoreSession(m_session->isChecked());

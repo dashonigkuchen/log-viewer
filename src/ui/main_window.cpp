@@ -27,6 +27,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -39,6 +40,7 @@
 #include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
+#include <QStyleHints>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QToolBar>
@@ -351,9 +353,32 @@ void MainWindow::changeZoom(int delta)
 
 void MainWindow::applyViewSettings()
 {
+    if (m_settings != nullptr) {
+        applyColorScheme(m_settings->colorScheme());
+    }
     for (int i = 0; i < m_tabs->count(); ++i) {
         applyViewSettings(documentTab(i));
     }
+}
+
+void MainWindow::applyColorScheme(model::ColorScheme scheme)
+{
+    // F-SET-4: Qt follows the system theme unless a scheme is requested.
+    // Platforms without theme support (for example offscreen) ignore the request.
+    QGuiApplication::styleHints()->setColorScheme(toQtColorScheme(scheme));
+}
+
+Qt::ColorScheme MainWindow::toQtColorScheme(model::ColorScheme scheme)
+{
+    switch (scheme) {
+    case model::ColorScheme::kLight:
+        return Qt::ColorScheme::Light;
+    case model::ColorScheme::kDark:
+        return Qt::ColorScheme::Dark;
+    case model::ColorScheme::kSystem:
+        break;
+    }
+    return Qt::ColorScheme::Unknown;
 }
 
 void MainWindow::applyViewSettings(DocumentTab* tab)
@@ -375,8 +400,11 @@ void MainWindow::applyViewSettings(DocumentTab* tab)
             view->setTabWidth(m_settings->tabWidth());
             view->setLineNumbersVisible(m_settings->lineNumbersVisible());
             view->setColumnLimit(m_settings->maxColumns());
-            view->setMarkColor(QColor::fromRgba(m_settings->markColor()));
-            view->setMatchHighlightColor(QColor::fromRgba(m_settings->matchColor()));
+            const auto toColor = [](std::optional<std::uint32_t> rgba) {
+                return rgba.has_value() ? QColor::fromRgba(*rgba) : QColor();
+            };
+            view->setMarkColor(toColor(m_settings->markColor()));
+            view->setMatchHighlightColor(toColor(m_settings->matchColor()));
             const std::optional<std::uint32_t> currentLine = m_settings->currentLineColor();
             view->setCurrentLineColor(currentLine.has_value() ? QColor::fromRgba(*currentLine)
                                                               : QColor());

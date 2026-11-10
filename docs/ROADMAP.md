@@ -301,7 +301,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-SET-1, settings migration and corrupt file handling (F-SET-3).
   - Done when: Qt Tests change each setting and verify effect and persistence; corrupt INI file is backed up and replaced.
 
-- [ ] **M6-02 Dark mode and color defaults** — Depends on: M6-01
+- [x] **M6-02 Dark mode and color defaults** — Depends on: M6-01 (PR #66; owner visual check open)
   - Scope: F-SET-4.
   - Done when: rendering tests in both schemes; owner visual check on Windows **[Owner]**.
 
