@@ -138,6 +138,9 @@ bool searchableInPlace(std::span<const std::byte> data, Encoding encoding)
         return simdutf::validate_utf8(asChars(data.data()), data.size());
     case Encoding::kWindows1252:
     case Encoding::kIso88591:
+    case Encoding::kWindows1250:
+    case Encoding::kWindows1251:
+    case Encoding::kIso885915:
         return simdutf::validate_ascii(asChars(data.data()), data.size());
     case Encoding::kUtf16Le:
     case Encoding::kUtf16Be:

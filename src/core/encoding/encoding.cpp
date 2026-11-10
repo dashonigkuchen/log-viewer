@@ -39,12 +39,15 @@ struct NameEntry
     std::string_view name;
 };
 
-constexpr std::array<NameEntry, 5> kNames{{
+constexpr std::array<NameEntry, 8> kNames{{
     {.encoding = Encoding::kUtf8, .name = "UTF-8"},
     {.encoding = Encoding::kUtf16Le, .name = "UTF-16 LE"},
     {.encoding = Encoding::kUtf16Be, .name = "UTF-16 BE"},
     {.encoding = Encoding::kWindows1252, .name = "Windows-1252"},
     {.encoding = Encoding::kIso88591, .name = "ISO-8859-1"},
+    {.encoding = Encoding::kWindows1250, .name = "Windows-1250"},
+    {.encoding = Encoding::kWindows1251, .name = "Windows-1251"},
+    {.encoding = Encoding::kIso885915, .name = "ISO-8859-15"},
 }};
 
 bool startsWith(std::span<const std::byte> data, std::span<const std::byte> prefix) noexcept
@@ -96,6 +99,9 @@ const EncodingTraits& traits(Encoding encoding) noexcept
         return kUtf16BeTraits;
     case Encoding::kWindows1252:
     case Encoding::kIso88591:
+    case Encoding::kWindows1250:
+    case Encoding::kWindows1251:
+    case Encoding::kIso885915:
         return kSingleByteTraits;
     }
     return kUtf8Traits;

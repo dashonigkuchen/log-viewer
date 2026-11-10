@@ -19,6 +19,65 @@ constexpr std::array<char16_t, 32> kWindows1252High{
     u'\u02DC', u'\u2122', u'\u0161', u'\u203A', u'\u0153', u'\u009D', u'\u017E', u'\u0178',
 };
 
+// Bytes 0x80..0xFF; generated from the Unicode mappings (undefined bytes map to the
+// code point of the byte, as the WHATWG Windows-1252 mapping does).
+constexpr std::array<char16_t, 128> kWindows1250High{
+    u'\u20AC', u'\u0081', u'\u201A', u'\u0083', u'\u201E', u'\u2026', u'\u2020', u'\u2021',
+    u'\u0088', u'\u2030', u'\u0160', u'\u2039', u'\u015A', u'\u0164', u'\u017D', u'\u0179',
+    u'\u0090', u'\u2018', u'\u2019', u'\u201C', u'\u201D', u'\u2022', u'\u2013', u'\u2014',
+    u'\u0098', u'\u2122', u'\u0161', u'\u203A', u'\u015B', u'\u0165', u'\u017E', u'\u017A',
+    u'\u00A0', u'\u02C7', u'\u02D8', u'\u0141', u'\u00A4', u'\u0104', u'\u00A6', u'\u00A7',
+    u'\u00A8', u'\u00A9', u'\u015E', u'\u00AB', u'\u00AC', u'\u00AD', u'\u00AE', u'\u017B',
+    u'\u00B0', u'\u00B1', u'\u02DB', u'\u0142', u'\u00B4', u'\u00B5', u'\u00B6', u'\u00B7',
+    u'\u00B8', u'\u0105', u'\u015F', u'\u00BB', u'\u013D', u'\u02DD', u'\u013E', u'\u017C',
+    u'\u0154', u'\u00C1', u'\u00C2', u'\u0102', u'\u00C4', u'\u0139', u'\u0106', u'\u00C7',
+    u'\u010C', u'\u00C9', u'\u0118', u'\u00CB', u'\u011A', u'\u00CD', u'\u00CE', u'\u010E',
+    u'\u0110', u'\u0143', u'\u0147', u'\u00D3', u'\u00D4', u'\u0150', u'\u00D6', u'\u00D7',
+    u'\u0158', u'\u016E', u'\u00DA', u'\u0170', u'\u00DC', u'\u00DD', u'\u0162', u'\u00DF',
+    u'\u0155', u'\u00E1', u'\u00E2', u'\u0103', u'\u00E4', u'\u013A', u'\u0107', u'\u00E7',
+    u'\u010D', u'\u00E9', u'\u0119', u'\u00EB', u'\u011B', u'\u00ED', u'\u00EE', u'\u010F',
+    u'\u0111', u'\u0144', u'\u0148', u'\u00F3', u'\u00F4', u'\u0151', u'\u00F6', u'\u00F7',
+    u'\u0159', u'\u016F', u'\u00FA', u'\u0171', u'\u00FC', u'\u00FD', u'\u0163', u'\u02D9',
+};
+
+constexpr std::array<char16_t, 128> kWindows1251High{
+    u'\u0402', u'\u0403', u'\u201A', u'\u0453', u'\u201E', u'\u2026', u'\u2020', u'\u2021',
+    u'\u20AC', u'\u2030', u'\u0409', u'\u2039', u'\u040A', u'\u040C', u'\u040B', u'\u040F',
+    u'\u0452', u'\u2018', u'\u2019', u'\u201C', u'\u201D', u'\u2022', u'\u2013', u'\u2014',
+    u'\u0098', u'\u2122', u'\u0459', u'\u203A', u'\u045A', u'\u045C', u'\u045B', u'\u045F',
+    u'\u00A0', u'\u040E', u'\u045E', u'\u0408', u'\u00A4', u'\u0490', u'\u00A6', u'\u00A7',
+    u'\u0401', u'\u00A9', u'\u0404', u'\u00AB', u'\u00AC', u'\u00AD', u'\u00AE', u'\u0407',
+    u'\u00B0', u'\u00B1', u'\u0406', u'\u0456', u'\u0491', u'\u00B5', u'\u00B6', u'\u00B7',
+    u'\u0451', u'\u2116', u'\u0454', u'\u00BB', u'\u0458', u'\u0405', u'\u0455', u'\u0457',
+    u'\u0410', u'\u0411', u'\u0412', u'\u0413', u'\u0414', u'\u0415', u'\u0416', u'\u0417',
+    u'\u0418', u'\u0419', u'\u041A', u'\u041B', u'\u041C', u'\u041D', u'\u041E', u'\u041F',
+    u'\u0420', u'\u0421', u'\u0422', u'\u0423', u'\u0424', u'\u0425', u'\u0426', u'\u0427',
+    u'\u0428', u'\u0429', u'\u042A', u'\u042B', u'\u042C', u'\u042D', u'\u042E', u'\u042F',
+    u'\u0430', u'\u0431', u'\u0432', u'\u0433', u'\u0434', u'\u0435', u'\u0436', u'\u0437',
+    u'\u0438', u'\u0439', u'\u043A', u'\u043B', u'\u043C', u'\u043D', u'\u043E', u'\u043F',
+    u'\u0440', u'\u0441', u'\u0442', u'\u0443', u'\u0444', u'\u0445', u'\u0446', u'\u0447',
+    u'\u0448', u'\u0449', u'\u044A', u'\u044B', u'\u044C', u'\u044D', u'\u044E', u'\u044F',
+};
+
+constexpr std::array<char16_t, 128> kIso885915High{
+    u'\u0080', u'\u0081', u'\u0082', u'\u0083', u'\u0084', u'\u0085', u'\u0086', u'\u0087',
+    u'\u0088', u'\u0089', u'\u008A', u'\u008B', u'\u008C', u'\u008D', u'\u008E', u'\u008F',
+    u'\u0090', u'\u0091', u'\u0092', u'\u0093', u'\u0094', u'\u0095', u'\u0096', u'\u0097',
+    u'\u0098', u'\u0099', u'\u009A', u'\u009B', u'\u009C', u'\u009D', u'\u009E', u'\u009F',
+    u'\u00A0', u'\u00A1', u'\u00A2', u'\u00A3', u'\u20AC', u'\u00A5', u'\u0160', u'\u00A7',
+    u'\u0161', u'\u00A9', u'\u00AA', u'\u00AB', u'\u00AC', u'\u00AD', u'\u00AE', u'\u00AF',
+    u'\u00B0', u'\u00B1', u'\u00B2', u'\u00B3', u'\u017D', u'\u00B5', u'\u00B6', u'\u00B7',
+    u'\u017E', u'\u00B9', u'\u00BA', u'\u00BB', u'\u0152', u'\u0153', u'\u0178', u'\u00BF',
+    u'\u00C0', u'\u00C1', u'\u00C2', u'\u00C3', u'\u00C4', u'\u00C5', u'\u00C6', u'\u00C7',
+    u'\u00C8', u'\u00C9', u'\u00CA', u'\u00CB', u'\u00CC', u'\u00CD', u'\u00CE', u'\u00CF',
+    u'\u00D0', u'\u00D1', u'\u00D2', u'\u00D3', u'\u00D4', u'\u00D5', u'\u00D6', u'\u00D7',
+    u'\u00D8', u'\u00D9', u'\u00DA', u'\u00DB', u'\u00DC', u'\u00DD', u'\u00DE', u'\u00DF',
+    u'\u00E0', u'\u00E1', u'\u00E2', u'\u00E3', u'\u00E4', u'\u00E5', u'\u00E6', u'\u00E7',
+    u'\u00E8', u'\u00E9', u'\u00EA', u'\u00EB', u'\u00EC', u'\u00ED', u'\u00EE', u'\u00EF',
+    u'\u00F0', u'\u00F1', u'\u00F2', u'\u00F3', u'\u00F4', u'\u00F5', u'\u00F6', u'\u00F7',
+    u'\u00F8', u'\u00F9', u'\u00FA', u'\u00FB', u'\u00FC', u'\u00FD', u'\u00FE', u'\u00FF',
+};
+
 class Output
 {
 public:
@@ -183,6 +242,15 @@ void decodeSingleByte(std::span<const std::byte> raw, bool windows1252, Output& 
     }
 }
 
+// Code pages whose upper half (0x80..0xFF) comes from a table; ASCII stays as is.
+void decodeTable(std::span<const std::byte> raw, const std::array<char16_t, 128>& high, Output& out)
+{
+    for (std::size_t i = 0; i < raw.size(); ++i) {
+        const unsigned value = byteAt(raw, i);
+        out.codePoint(value < 0x80U ? value : high.at(value - 0x80U), i);
+    }
+}
+
 }  // namespace
 
 void decodeLine(std::span<const std::byte> raw, Encoding encoding, std::u16string& out,
@@ -205,6 +273,15 @@ void decodeLine(std::span<const std::byte> raw, Encoding encoding, std::u16strin
         break;
     case Encoding::kIso88591:
         decodeSingleByte(raw, false, output);
+        break;
+    case Encoding::kWindows1250:
+        decodeTable(raw, kWindows1250High, output);
+        break;
+    case Encoding::kWindows1251:
+        decodeTable(raw, kWindows1251High, output);
+        break;
+    case Encoding::kIso885915:
+        decodeTable(raw, kIso885915High, output);
         break;
     }
     output.finish(raw.size());
