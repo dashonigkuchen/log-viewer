@@ -22,6 +22,7 @@ class DocumentLineSource;
 class FilteredDocument;
 class FilteredLineSource;
 class AnnotationStore;
+struct SessionTab;
 class Bookmarks;
 class LineHighlighter;
 class MarkSet;
@@ -84,6 +85,11 @@ public:
     void setAnnotationStore(model::AnnotationStore* store);
     // Writes the current marks and bookmarks to the store now.
     void saveAnnotations();
+
+    // Position, filter, and follow mode for session restore (F-FILE-10).
+    [[nodiscard]] model::SessionTab sessionState() const;
+    // Applies a saved state: the filter at once, the position when the document is ready.
+    void restoreSessionState(const model::SessionTab& state);
 
     // The view that has (or last had) the keyboard focus; the main view by default.
     [[nodiscard]] LogView* activeView() const;

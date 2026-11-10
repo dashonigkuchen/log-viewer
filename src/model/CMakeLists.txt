@@ -38,6 +38,8 @@ add_library(
     recent_files.h
     search_pool.cpp
     search_pool.h
+    session.cpp
+    session.h
     settings.cpp
     settings.h
     text_copy.cpp

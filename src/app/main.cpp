@@ -7,6 +7,7 @@
 #include "model/model_info.h"
 #include "model/recent_files.h"
 #include "model/search_pool.h"
+#include "model/session.h"
 #include "model/settings.h"
 #include "ui/main_window.h"
 
@@ -88,8 +89,12 @@ int main(int argc, char* argv[])
     window.setHighlightSets(&highlightSets);
     window.setSettings(&settings);
     window.setRecentFiles(&recent);
+    // F-FILE-10 / F-TAB-5: window layout always, tabs only if enabled and no files were given.
+    const QStringList files = parser.positionalArguments();
+    window.restoreSession(lv::model::Session::load(settings.store()),
+                          settings.restoreSession() && files.isEmpty());
     window.show();
-    window.openFiles(parser.positionalArguments());  // F-FILE-1
+    window.openFiles(files);  // F-FILE-1
     const int exitCode = QApplication::exec();
 
     lv::core::log(lv::core::LogLevel::kInfo, "Log Viewer exiting");

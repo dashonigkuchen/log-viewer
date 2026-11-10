@@ -305,7 +305,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-SET-4.
   - Done when: rendering tests in both schemes; owner visual check on Windows **[Owner]**.
 
-- [ ] **M6-03 Session restore and window state** — Depends on: M6-01, M4-05
+- [x] **M6-03 Session restore and window state** — Depends on: M6-01, M4-05 (PR #67)
   - Scope: F-FILE-10, F-TAB-5.
   - Done when: tests: save session, restart main window object, same tabs/filters/positions restored; missing files skipped with notice.
 
