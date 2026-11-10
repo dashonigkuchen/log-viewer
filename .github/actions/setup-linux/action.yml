@@ -18,8 +18,11 @@ runs:
           libgl-dev libxkbcommon-dev libvulkan-dev
         # The image's default clang++ is 18, which cannot use libstdc++'s std::expected (C++23,
         # ADR 0002). Make Clang 19 the default so the presets' clang++ is 19.
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 190 \
-          --slave /usr/bin/clang++ clang++ /usr/bin/clang++-19
+        # clang and clang++ are separate alternatives on the image.
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 190
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 190
+        sudo update-alternatives --set clang /usr/bin/clang-19
+        sudo update-alternatives --set clang++ /usr/bin/clang++-19
         clang++ --version | head -1
 
     - name: Read pinned versions
