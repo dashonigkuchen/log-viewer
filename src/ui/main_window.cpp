@@ -15,6 +15,7 @@
 #include "ui/highlight_dialog.h"
 #include "ui/log_view.h"
 #include "ui/settings_dialog.h"
+#include "ui/single_instance.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -668,6 +669,34 @@ void MainWindow::openFiles(const QStringList& paths)
     for (const QString& path : paths) {
         openFile(std::filesystem::path(path.toStdU16String()));
     }
+}
+
+void MainWindow::openRequest(const OpenRequest& request)
+{
+    bool first = true;
+    for (const QString& file : request.files) {
+        DocumentTab* tab = openFile(std::filesystem::path(file.toStdU16String()));
+        if (tab == nullptr) {
+            continue;
+        }
+        if (request.follow) {
+            tab->setFollowing(true);
+        } else if (first && request.line) {
+            // Applied once the file is indexed (the restore path of the tab).
+            model::SessionTab state = tab->sessionState();
+            state.filter.reset();
+            state.topRow = *request.line > 1 ? *request.line - 1 : 0;
+            state.currentRow = state.topRow;
+            state.following = false;
+            tab->restoreSessionState(state);
+        }
+        first = false;
+    }
+    if (isMinimized()) {
+        showNormal();
+    }
+    raise();
+    activateWindow();
 }
 
 model::Session MainWindow::session() const

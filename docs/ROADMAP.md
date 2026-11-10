@@ -309,7 +309,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-FILE-10, F-TAB-5.
   - Done when: tests: save session, restart main window object, same tabs/filters/positions restored; missing files skipped with notice.
 
-- [ ] **M6-04 Single instance and CLI options** — Depends on: M2-06
+- [x] **M6-04 Single instance and CLI options** — Depends on: M2-06 (PR #68)
   - Scope: F-FILE-11, F-CLI-2 via `QLocalServer` (per-user name).
   - Done when: integration test starting two app processes; second forwards files and exits.
 

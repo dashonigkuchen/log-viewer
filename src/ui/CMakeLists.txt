@@ -16,6 +16,8 @@ add_library(
     log_view.h
     settings_dialog.cpp
     settings_dialog.h
+    single_instance.cpp
+    single_instance.h
     main_window.cpp
     main_window.h
     text_selection.cpp
@@ -25,6 +27,6 @@ add_library(lv::ui ALIAS lv_ui)
 
 target_link_libraries(
     lv_ui
-    PUBLIC lv::model Qt6::Widgets
+    PUBLIC lv::model Qt6::Widgets Qt6::Network
     PRIVATE lv::compile_options
 )

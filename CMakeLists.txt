@@ -31,7 +31,7 @@ include(LvCompilerOptions)
 include(LvSanitizers)
 include(LvChecks)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Network Widgets)
 qt_standard_project_setup()
 
 if(LV_BUILD_TESTS)
