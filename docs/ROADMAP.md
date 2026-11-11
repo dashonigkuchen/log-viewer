@@ -350,6 +350,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 - [ ] **M7-05 Documentation for users** — Depends on: M6-01
   - Scope: `docs/USER_GUIDE.md` (features, shortcuts, boolean syntax, settings, portable mode), README screenshots.
+  - Status: guide and screenshots added (PR #76); owner review open.
   - Done when: owner review **[Owner]**.
 
 - [ ] **M7-06 Version 1.0.0** — Depends on: all Must requirements implemented
