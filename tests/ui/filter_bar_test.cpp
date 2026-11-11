@@ -283,6 +283,40 @@ private slots:
         action->trigger();
         QVERIFY(tab->filterBar()->input()->hasFocus());
     }
+
+    static void stopAndEscapeCancelTheSearch()
+    {
+        // F-FILT-6: a Stop button (visible only while searching) and Escape cancel the search.
+        Fixture f;
+        QVERIFY(f.ready());
+        QVERIFY(!f.bar().stopButton()->isVisibleTo(&f.bar()));
+        f.bar().input()->setText(QStringLiteral("ERROR"));
+        QVERIFY(f.bar().apply());
+        QVERIFY(waitFor([&] { return f.filter().state() == FilteredDocument::State::kDone; }));
+        QVERIFY(!f.bar().stopButton()->isVisibleTo(&f.bar()));
+
+        // While searching (forced by a state the test can observe).
+        f.bar().input()->setText(QStringLiteral("WARN"));
+        QVERIFY(f.bar().apply());
+        if (f.filter().state() == FilteredDocument::State::kSearching) {
+            QVERIFY(f.bar().stopButton()->isVisibleTo(&f.bar()));
+            QTest::mouseClick(f.bar().stopButton(), Qt::LeftButton);
+            QCOMPARE(f.filter().state(), FilteredDocument::State::kCanceled);
+            QVERIFY(f.bar().statusLabel()->text().startsWith(QStringLiteral("Stopped at")));
+            QVERIFY(!f.bar().stopButton()->isVisibleTo(&f.bar()));
+        }
+        QVERIFY(waitFor([&] { return f.filter().state() != FilteredDocument::State::kSearching; }));
+
+        // Escape while searching cancels, otherwise it restores the field.
+        f.bar().input()->setText(QStringLiteral("INFO"));
+        QVERIFY(f.bar().apply());
+        const bool searching = f.filter().state() == FilteredDocument::State::kSearching;
+        QTest::keyClick(f.bar().input(), Qt::Key_Escape);
+        if (searching) {
+            QCOMPARE(f.filter().state(), FilteredDocument::State::kCanceled);
+            QCOMPARE(f.bar().input()->text(), QStringLiteral("INFO"));
+        }
+    }
 };
 
 QTEST_MAIN(FilterBarTest)

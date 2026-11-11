@@ -14,6 +14,7 @@
 #include <QComboBox>
 #include <QElapsedTimer>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QStyleHints>
@@ -143,6 +144,23 @@ private slots:
         lv::ui::MainWindow window;
         window.setSettings(&settings);
         QVERIFY(window.statusBar()->currentMessage().contains(QStringLiteral("reset")));
+    }
+
+    static void clearFilterHistoryButton()
+    {
+        // F-HIST-3: the settings dialog clears the filter history.
+        const lv::test::TempDir dir;
+        lv::model::Settings settings(QString::fromStdU16String((dir / "s").u16string()));
+        lv::model::FilterHistory history;
+        history.add({.text = "ERROR"});
+        history.add({.text = "WARN"});
+        const SettingsDialog dialog(settings, &history);
+        QVERIFY(dialog.clearHistoryButton()->isEnabled());
+        QTest::mouseClick(dialog.clearHistoryButton(), Qt::LeftButton);
+        QVERIFY(history.entries().empty());
+        QVERIFY(!dialog.clearHistoryButton()->isEnabled());
+        const SettingsDialog without(settings);
+        QVERIFY(!without.clearHistoryButton()->isEnabled());
     }
 };
 

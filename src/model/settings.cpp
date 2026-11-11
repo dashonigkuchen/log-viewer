@@ -134,6 +134,12 @@ void Settings::migrate(int fromVersion)
             m_store->remove(old);
         }
     }
+    if (fromVersion >= 1 && fromVersion <= 3) {
+        // Up to version 3 the dialog stored the old 1000 ms default; use the new default.
+        if (m_store->value(key("Files/pollInterval")).toInt() == 1000) {
+            m_store->remove(key("Files/pollInterval"));
+        }
+    }
 }
 
 void Settings::setColorValue(const char* name, std::optional<std::uint32_t>& member,

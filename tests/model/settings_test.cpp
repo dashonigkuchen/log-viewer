@@ -189,3 +189,23 @@ TEST_CASE("color scheme and theme defaults", "[model][settings]")
     CHECK(loaded.colorScheme() == lv::model::ColorScheme::kDark);
     CHECK_FALSE(loaded.matchColor().has_value());
 }
+
+TEST_CASE("the old 1000 ms polling default is migrated", "[model][settings]")
+{
+    const lv::test::TempDir dir;
+    {
+        QSettings raw(qpath(dir / "logviewer.ini"), QSettings::IniFormat);
+        raw.setValue(QStringLiteral("General/schemaVersion"), 3);
+        raw.setValue(QStringLiteral("Files/pollInterval"), 1000);
+    }
+    CHECK(Settings(qpath(dir.path())).pollInterval() == Settings::kDefaultPollMs);
+    CHECK(Settings::kDefaultPollMs == 250);
+
+    const lv::test::TempDir custom;
+    {
+        QSettings raw(qpath(custom / "logviewer.ini"), QSettings::IniFormat);
+        raw.setValue(QStringLiteral("General/schemaVersion"), 3);
+        raw.setValue(QStringLiteral("Files/pollInterval"), 2000);  // the user's own value
+    }
+    CHECK(Settings(qpath(custom.path())).pollInterval() == 2000);
+}

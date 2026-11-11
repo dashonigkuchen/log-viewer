@@ -31,7 +31,7 @@ class FileWatcher : public QObject
 
 public:
     static constexpr int kCoalesceMs = 50;
-    static constexpr int kDefaultPollMs = 1000;
+    static constexpr int kDefaultPollMs = 250;  // F-TAIL-2 / F-TAIL-4
     static constexpr int kMinPollMs = 100;
     static constexpr int kMaxPollMs = 10000;
 

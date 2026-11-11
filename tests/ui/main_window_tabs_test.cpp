@@ -7,8 +7,10 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QElapsedTimer>
 #include <QLabel>
+#include <QMenu>
 #include <QPointer>
 #include <QTabBar>
 #include <QTabWidget>
@@ -192,6 +194,61 @@ private slots:
         QVERIFY(window.findChild<QLabel*>(QStringLiteral("documentStatus"))
                     ->text()
                     .contains(QStringLiteral("Line 3")));
+    }
+
+    static void tabContextMenuActions()
+    {
+        // F-TAB-4: copy full path, open folder, reload, close, close others, close all.
+        const lv::test::TempDir dir;
+        writeText(dir / "a.log", "a\n");
+        writeText(dir / "b.log", "b\n");
+        writeText(dir / "c.log", "c\n");
+        lv::ui::MainWindow window;
+        auto* a = window.openFile(dir / "a.log");
+        QVERIFY(waitReady(a));
+        QVERIFY(waitReady(window.openFile(dir / "b.log")));
+        QVERIFY(waitReady(window.openFile(dir / "c.log")));
+        QVERIFY(window.createTabContextMenu(7) == nullptr);
+
+        const auto trigger = [&window](int index, const QString& text) {
+            const auto menu = window.createTabContextMenu(index);
+            QVERIFY(menu != nullptr);
+            QAction* found = nullptr;
+            for (QAction* action : menu->actions()) {
+                if (action->text() == text) {
+                    found = action;
+                }
+            }
+            QVERIFY2(found != nullptr, qPrintable(text));
+            found->trigger();
+        };
+        QStringList texts;
+        const auto firstMenu = window.createTabContextMenu(0);  // keep it alive while iterating
+        for (QAction* action : firstMenu->actions()) {
+            if (!action->isSeparator()) {
+                texts << action->text();
+            }
+        }
+        QCOMPARE(texts, QStringList({QStringLiteral("Copy Full Path"),
+                                     QStringLiteral("Open Containing Folder"),
+                                     QStringLiteral("Reload"), QStringLiteral("Close"),
+                                     QStringLiteral("Close Others"), QStringLiteral("Close All")}));
+
+        trigger(0, QStringLiteral("Copy Full Path"));
+        QCOMPARE(QApplication::clipboard()->text(), nativePath(dir / "a.log"));
+
+        const auto generation = a->document().generation();
+        trigger(0, QStringLiteral("Reload"));
+        QVERIFY(a->document().generation() > generation);
+        QVERIFY(waitReady(a));
+
+        trigger(2, QStringLiteral("Close"));
+        QCOMPARE(window.tabWidget()->count(), 2);
+        trigger(1, QStringLiteral("Close Others"));
+        QCOMPARE(window.tabWidget()->count(), 1);
+        QCOMPARE(window.tabWidget()->tabText(0), QStringLiteral("b.log"));
+        trigger(0, QStringLiteral("Close All"));
+        QCOMPARE(window.tabWidget()->count(), 0);
     }
 };
 

@@ -70,7 +70,7 @@ When behavior is unclear, agents ask the owner and record the answer here.
 | F-FILT-3 | Must | Regex syntax: PCRE2 (Perl-compatible), UTF mode when the document is UTF-8 or UTF-16 (converted), JIT enabled. |
 | F-FILT-4 | Must | Boolean expression syntax (mode **Boolean**): terms combined with `AND`, `OR`, `NOT` and parentheses; precedence `NOT` > `AND` > `OR`. A term is either a quoted literal `"text"` or a regex `/pattern/` (escape `/` as `\/`, `"` as `\"`). Operators are case-insensitive keywords. Example: `/ERROR\|FATAL/ AND NOT "heartbeat"`. Grammar in §5.1. |
 | F-FILT-5 | Must | The filter applies when the user presses `Enter` (not while typing); changing the mode or an option applies the entered text immediately (nothing happens while the field is empty; an invalid query shows the error and keeps the previous result). `Esc` in the field restores the last applied filter. A **Clear** button removes the filter (filtered view becomes empty). |
-| F-FILT-6 | Must | Filtering runs in the background on all CPU cores, shows progress and match count, and can be canceled. Partial results are shown while it runs, in line order. |
+| F-FILT-6 | Must | Filtering runs in the background on all CPU cores, shows progress and match count, and can be canceled (**Stop** button or `Escape` in the filter field; the matches found so far stay). Partial results are shown while it runs, in line order. |
 | F-FILT-7 | Must | Clicking a line in the filtered view scrolls the main view to that line and makes it current (and vice versa: the filtered view selects the nearest matching line at or before the main view's current line). |
 | F-FILT-8 | Must | Matched substrings are highlighted in the filtered view and in the main view (configurable color). |
 | F-FILT-9 | Must | Option "Show marks in filtered view" (default on): marked lines (F-MARK) are always included in the filtered view, visually distinct from matches. |
@@ -101,7 +101,7 @@ flags    := "i"            (case-insensitive for this term only)
 | --- | --- | --- |
 | F-HIST-1 | Must | Every applied filter (text plus mode and options) is stored in a global history, most recent first, deduplicated (re-applying moves it to the top). Maximum 100 entries (configurable). |
 | F-HIST-2 | Must | The filter field is an editable combo box: the dropdown shows the history; `Up`/`Down` in the field cycle through history entries; typing shows matching history entries as completion. |
-| F-HIST-3 | Must | History entries can be deleted individually (`Del` in the dropdown) and the whole history can be cleared in settings. |
+| F-HIST-3 | Must | History entries can be deleted individually (`Del` in the dropdown) and the whole history can be cleared in settings (also **View > Clear Filter History**). |
 | F-HIST-4 | Must | The history is persisted across restarts. |
 | F-HIST-5 | Should | Entries can be pinned; pinned entries stay at the top and are never evicted. |
 
@@ -143,9 +143,9 @@ Two separate concepts, matching how the owner works:
 | ID | Status | Requirement |
 | --- | --- | --- |
 | F-TAIL-1 | Must | Each document watches its file. When the file grows, new lines are indexed incrementally and appended to the main view and, if they match, to the filtered view (incremental filtering, never a full re-scan). |
-| F-TAIL-2 | Must | Change detection uses OS notifications and a polling fallback (default every 1000 ms, configurable 100–10,000 ms). Polling compares size and modification time. The polling fallback is always active as a safety net. |
+| F-TAIL-2 | Must | Change detection uses OS notifications and a polling fallback (default every 250 ms, configurable 100–10,000 ms). Polling compares size and modification time. The polling fallback is always active as a safety net. |
 | F-TAIL-3 | Must | **Follow mode** (`F10` or toolbar toggle, per tab): when on, both views stay scrolled to the end as lines arrive. Scrolling up manually turns follow mode off; `Ctrl+End` or the toggle turns it back on. |
-| F-TAIL-4 | Must | New lines appear on screen within 500 ms of being written (polling at default interval) and within 100 ms when OS notifications work. |
+| F-TAIL-4 | Must | New lines appear on screen within 500 ms of being written (polling at the default 250 ms interval) and within 100 ms when OS notifications work. |
 | F-TAIL-5 | Must | **Truncation** (file size smaller than indexed size, or the first 4 KiB changed): the document re-indexes from the beginning, marks and bookmarks are cleared, the user sees a non-modal notice in the tab. |
 | F-TAIL-6 | Must | **Rotation** (the path now refers to a different file, detected by file ID: Windows file index, POSIX inode/device): the document reopens the path and re-indexes from the beginning, with the same notice as F-TAIL-5. Until the new file exists, the tab keeps the old content and shows "file missing". |
 | F-TAIL-7 | Must | **Deletion:** the tab keeps the indexed content (still readable while the handle is open on POSIX; on Windows, content already displayed stays visible from the cache, and reading further shows a notice) and shows "file deleted". If the file reappears, it behaves like rotation. |

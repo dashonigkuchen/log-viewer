@@ -523,7 +523,7 @@ void MainWindow::editSettings(const std::function<void(SettingsDialog&)>& prepar
     if (m_settings == nullptr) {
         return;
     }
-    SettingsDialog dialog(*m_settings, this);
+    SettingsDialog dialog(*m_settings, m_filterHistory, this);
     if (prepare) {
         prepare(dialog);
     }
@@ -893,6 +893,11 @@ void MainWindow::createBookmarkActions(QMenu* menu)
             }
         });
     };
+    // F-MARK-3: mark navigation is a window action, so its keys can be changed (F-SET-5).
+    add(QStringLiteral("actionNextMark"), QStringLiteral("Next Mark"),
+        QKeySequence(Qt::CTRL | Qt::Key_Down), [](LogView* view) { view->goToNextMark(); });
+    add(QStringLiteral("actionPreviousMark"), QStringLiteral("Previous Mark"),
+        QKeySequence(Qt::CTRL | Qt::Key_Up), [](LogView* view) { view->goToPreviousMark(); });
     add(QStringLiteral("actionToggleBookmark"), QStringLiteral("Toggle Boo&kmark"),
         QKeySequence(Qt::CTRL | Qt::Key_B), [](LogView* view) { view->toggleBookmark(); });
     add(QStringLiteral("actionNextBookmark"), QStringLiteral("Next Bookmark"),
@@ -915,12 +920,19 @@ void MainWindow::updateStatus()
 
 void MainWindow::showTabContextMenu(const QPoint& position)
 {
-    const int index = m_tabs->tabBar()->tabAt(position);
+    if (const auto menu = createTabContextMenu(m_tabs->tabBar()->tabAt(position))) {
+        menu->exec(m_tabs->tabBar()->mapToGlobal(position));
+    }
+}
+
+std::unique_ptr<QMenu> MainWindow::createTabContextMenu(int index)
+{
     auto* tab = documentTab(index);
     if (tab == nullptr) {
-        return;
+        return nullptr;
     }
-    QMenu menu(this);
+    auto menuOwner = std::make_unique<QMenu>(this);
+    QMenu& menu = *menuOwner;
     menu.addAction(QStringLiteral("Copy Full Path"), this,
                    [tab] { QApplication::clipboard()->setText(tab->toolTip()); });
     menu.addAction(QStringLiteral("Open Containing Folder"), this, [tab] {
@@ -937,7 +949,7 @@ void MainWindow::showTabContextMenu(const QPoint& position)
     menu.addAction(QStringLiteral("Close Others"), this,
                    [this, tab] { closeOtherTabs(m_tabs->indexOf(tab)); });
     menu.addAction(QStringLiteral("Close All"), this, &MainWindow::closeAllTabs);
-    menu.exec(m_tabs->tabBar()->mapToGlobal(position));
+    return menuOwner;
 }
 
 bool MainWindow::eventFilter(QObject* watched, QEvent* event)

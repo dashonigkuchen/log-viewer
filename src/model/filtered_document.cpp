@@ -5,6 +5,7 @@
 
 #include <QMetaObject>
 
+#include <algorithm>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -212,6 +213,26 @@ void FilteredDocument::clear()
     m_compiled.reset();
     restart();
     setState(State::kInactive);
+}
+
+void FilteredDocument::cancel()
+{
+    if (m_state != State::kSearching && m_state != State::kPending) {
+        return;
+    }
+    stopWorker();
+    const std::uint64_t before = m_matchCount;
+    {
+        // Results that the worker published but the UI has not drained yet become visible.
+        const std::scoped_lock lock(m_shared->mutex);
+        m_matchCount = std::max<std::uint64_t>(m_matchCount, m_shared->matchCount);
+        m_progress = m_shared->progress;
+        ++m_shared->generation;  // drop events still queued for this search
+    }
+    if (m_matchCount > before) {
+        emit matchesAppended(m_matchCount);
+    }
+    setState(State::kCanceled);
 }
 
 core::LineNumber FilteredDocument::matchAt(std::uint64_t index) const
