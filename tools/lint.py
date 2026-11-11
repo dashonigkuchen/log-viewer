@@ -89,8 +89,10 @@ def run_no_network() -> int:
     for problem in network:
         print(f"network API used (SPEC F-ROB-4): {problem}")
     translation = find_translation_uses(files)
-    translation += [str(path.relative_to(REPO)) for path in REPO.rglob("*.ts")
-                    if "build" not in path.relative_to(REPO).parts and path.parts[-2] != "node_modules"]
+    # Only tracked files: CI checks out vcpkg (with TypeScript .ts scripts) inside the repo.
+    tracked = subprocess.run(["git", "ls-files", "*.ts"], cwd=REPO, capture_output=True,
+                             text=True, check=True).stdout.split()
+    translation += tracked
     for problem in translation:
         print(f"translation used (SPEC F-I18N-1): {problem}")
     problems = len(network) + len(translation)
