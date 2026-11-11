@@ -175,7 +175,9 @@ Agent procedure for a Dependabot PR: check out the PR branch, build and run all 
 1. Owner decides to release; an agent prepares a PR that updates `CHANGELOG.md` and the version in `CMakeLists.txt` (`project(... VERSION x.y.z)`).
 2. After merge, the owner creates the tag `vX.Y.Z` on `main`.
 3. `release.yml` builds `LogViewer-X.Y.Z-windows-x64.zip`: `logviewer.exe`, Qt DLLs and plugins via `windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw`, MSVC runtime DLLs (app-local), `LICENSE`, `THIRD-PARTY-NOTICES.md`, `README.txt`. Plus `SHA256SUMS.txt`.
-4. The release is created as a **draft**; the owner tests the zip on Windows 11 and publishes it.
+4. The release is created as a **draft** (release notes = the version's `CHANGELOG.md` section); the owner tests the zip on Windows 11 and publishes it.
+
+`release.yml` reuses `ci-windows.yml` (build, tests, crash dump check, `windeployqt`) and packages its artifact on Linux; the tag must match the project version. Pull requests that change `release.yml`, `packaging/`, or `THIRD-PARTY-NOTICES.md` (with the `windows` label) and manual runs are dry runs: they upload the zip and `SHA256SUMS.txt` as the `release-X.Y.Z` artifact without creating a release. `packaging/README.txt` is the zip's README (`@VERSION@` is filled in).
 
 Versioning: Semantic Versioning, `0.x` until 1.0.
 
