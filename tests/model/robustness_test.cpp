@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <new>
 #include <random>
 #include <span>
 #include <string>
@@ -297,4 +298,38 @@ TEST_CASE("a file that disappears while it is indexed does not crash", "[model][
            opened.document.state() == Document::State::kError));
     opened.readAll();
     CHECK(removed.load());
+}
+
+TEST_CASE("running out of memory in the workers shows an error, no crash", "[model][robust]")
+{
+    const TempDir dir;
+    std::string text;
+    for (int i = 0; i < 100000; ++i) {
+        text += (i % 7 == 0 ? "ERROR " : "info ") + std::to_string(i) + " padding text\n";
+    }
+    writeBytes(dir / "oom.log", text);
+    const auto target = dir / "oom.log";
+    const FaultHookGuard guard;
+    std::atomic<bool> fail{true};
+    // std::bad_alloc thrown from a read simulates an allocation failure in the worker.
+    File::setReadFaultHook([target, &fail](const std::filesystem::path& path, ByteOffset offset,
+                                           std::size_t) -> std::optional<lv::core::Error> {
+        if (fail.load() && path == target && offset.get() >= std::uint64_t{1024} * 1024) {
+            throw std::bad_alloc();
+        }
+        return std::nullopt;
+    });
+    Opened opened(target);
+    REQUIRE(opened.ready());
+    CHECK(opened.document.state() == Document::State::kError);
+    CHECK(opened.document.errorMessage().contains(QStringLiteral("memory")));
+
+    fail = false;
+    opened.document.reload();
+    REQUIRE(waitFor([&] { return opened.document.state() == Document::State::kReady; }));
+
+    fail = true;
+    REQUIRE_FALSE(opened.filter.apply({.text = "ERROR"}).has_value());
+    REQUIRE(waitFor([&] { return opened.filter.state() == FilteredDocument::State::kError; }));
+    CHECK(opened.filter.errorMessage().contains(QStringLiteral("memory")));
 }

@@ -17,6 +17,8 @@
 namespace lv::model
 {
 
+static_assert(FileWatcher::kDefaultPollMs == 250, "keep Document::m_pollInterval in sync");
+
 DocumentContent::DocumentContent(core::File openedFile, core::Encoding encoding,
                                  std::uint64_t dataStart, std::uint64_t contentGeneration)
     : file(std::move(openedFile))

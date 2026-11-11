@@ -38,6 +38,16 @@ class NoNetworkTest(unittest.TestCase):
         self.assertEqual(self.check("QLocalServer server; QLocalSocket socket;"), [])
         self.assertEqual(self.check("// QTcpSocket is not used (F-ROB-4)"), [])
 
+    def test_translations_are_found(self) -> None:
+        with tempfile.TemporaryDirectory(dir=lint.REPO) as directory:
+            path = Path(directory) / "x.cpp"
+            for text, count in (("QTranslator translator;", 1), ('label->setText(tr("Open"));', 1),
+                                ("app.installTranslator(&t);", 1), ("int str(int);", 0),
+                                ("const auto ptr(nullptr);", 0)):
+                with self.subTest(text=text):
+                    path.write_text(text, encoding="utf-8")
+                    self.assertEqual(len(lint.find_translation_uses([path])), count)
+
     def test_the_sources_are_clean(self) -> None:
         self.assertEqual(lint.run_no_network(), 0)
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
     LogViewer
-    VERSION 0.1.0
+    VERSION 1.0.0
     DESCRIPTION "Fast native log viewer"
     HOMEPAGE_URL "https://github.com/dashonigkuchen/log-viewer"
     LANGUAGES CXX

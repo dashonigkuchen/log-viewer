@@ -175,3 +175,28 @@ TEST_CASE("unpublished lines are invisible", "[core][index]")
     CHECK(snapshot.completeLines.get() == 3);
     CHECK(snapshot.lineCount().get() == 4);
 }
+
+TEST_CASE("offsets near 2^63 keep exact lines (F-FILE-6)", "[core][index]")
+{
+    // A synthetic index whose lines end near 2^63 bytes: no real file is needed because the
+    // index only stores line end offsets.
+    constexpr std::uint64_t kBase = std::uint64_t{1} << 62U;
+    LineIndex index(Encoding::kUtf8, 0);
+    std::vector<std::uint64_t> ends;
+    for (std::uint64_t i = 1; i <= 1000; ++i) {
+        ends.push_back(i * (kBase / 1000 * 2 - 7));  // the last end is just below 2^63
+    }
+    index.append(ends);
+    index.publish(ends.back() + 1);
+    const auto snapshot = index.snapshot();
+    REQUIRE(snapshot.lineCount().get() == 1001);  // 1000 lines plus the pending tail
+    for (const std::uint64_t line :
+         {std::uint64_t{0}, std::uint64_t{1}, std::uint64_t{500}, std::uint64_t{999}}) {
+        const ByteRange range = index.rawLineRange(snapshot, LineNumber(line));
+        CHECK(range.end().get() == ends[line] - 1);  // excludes the line feed
+        CHECK(index.lineContaining(snapshot, ByteOffset(ends[line] - 1)) == LineNumber(line));
+        CHECK(index.lineContaining(snapshot, ByteOffset(ends[line])) == LineNumber(line + 1));
+    }
+    CHECK(ends.back() < (std::uint64_t{1} << 63U));
+    CHECK(ends.back() > (std::uint64_t{1} << 63U) - (std::uint64_t{1} << 40U));
+}

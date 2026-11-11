@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QElapsedTimer>
 #include <QLineEdit>
 #include <QTest>
@@ -137,6 +138,25 @@ private slots:
         QTest::keyClick(f.bar().input(), Qt::Key_Down);  // back to the applied (none)
         QVERIFY(f.bar().input()->text().isEmpty());
         QCOMPARE(f.tab->filter().state(), FilteredDocument::State::kInactive);  // never applied
+    }
+
+    static void typingShowsMatchingHistoryEntries()
+    {
+        // F-HIST-2: typing completes from the history (case-insensitive, anywhere in the text).
+        Fixture f;
+        f.history.add({.text = "connection refused"});
+        f.history.add({.text = "timeout"});
+        f.history.add({.text = "Connection reset"});
+        auto* completer = f.bar().historyBox()->completer();
+        QVERIFY(completer != nullptr);
+        completer->setCompletionPrefix(QStringLiteral("connection"));
+        QStringList found;
+        for (int row = 0; completer->setCurrentRow(row); ++row) {
+            found << completer->currentCompletion();
+        }
+        found.sort();
+        QCOMPARE(found, QStringList({QStringLiteral("Connection reset"),
+                                     QStringLiteral("connection refused")}));
     }
 
     static void deleteRemovesAnEntryAndClearEmptiesTheHistory()
