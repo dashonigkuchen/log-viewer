@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -201,4 +202,27 @@ TEST_CASE("open reports errors", "[core][fs]")
         CHECK(denied.error().code == ErrorCode::kPermissionDenied);
     }
 #endif
+}
+
+TEST_CASE("the read fault hook fails reads and can be removed", "[fs][file]")
+{
+    const lv::test::TempDir dir;
+    lv::test::LogWriter(dir / "f.log", true).append("hello world\n");
+    const auto file = lv::core::File::open(dir / "f.log");
+    REQUIRE(file.has_value());
+    std::array<std::byte, 5> buffer{};
+    lv::core::File::setReadFaultHook([](const std::filesystem::path&, lv::core::ByteOffset offset,
+                                        std::size_t) -> std::optional<lv::core::Error> {
+        if (offset.get() >= 6) {
+            return lv::core::Error{
+                .code = lv::core::ErrorCode::kIoError, .systemCode = 0, .message = "injected"};
+        }
+        return std::nullopt;
+    });
+    CHECK(file->readAt(lv::core::ByteOffset(0), buffer).has_value());
+    const auto failed = file->readAt(lv::core::ByteOffset(6), buffer);
+    REQUIRE_FALSE(failed.has_value());
+    CHECK(failed.error().message == "injected");
+    lv::core::File::setReadFaultHook({});
+    CHECK(file->readAt(lv::core::ByteOffset(6), buffer).value_or(0) == 5);
 }

@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <functional>
 #include <memory>
+#include <new>
 #include <optional>
 #include <utility>
 
@@ -298,7 +299,19 @@ void FilteredDocument::startSearch()
                                                   .pool = pool,
                                                   .shared = shared,
                                                   .schedule = schedule});
-    m_worker = std::jthread([worker](const std::stop_token& stop) { worker->run(stop); });
+    m_worker = std::jthread([worker](const std::stop_token& stop) {
+        try {
+            worker->run(stop);
+        } catch (const std::bad_alloc&) {
+            // F-ROB-2: the results so far stay visible; the tab shows the error.
+            worker->schedule([](Shared& state) {
+                state.finished = true;
+                state.error = core::Error{.code = core::ErrorCode::kOutOfMemory,
+                                          .systemCode = 0,
+                                          .message = "not enough memory for the filter results"};
+            });
+        }
+    });
 }
 
 void FilteredDocument::drainEvents()

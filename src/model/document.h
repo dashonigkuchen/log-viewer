@@ -139,6 +139,7 @@ private:
 
     void startWorker();
     void stopWorker();
+    void failOutOfMemory(std::uint64_t generation);
     void runWorker(const std::stop_token& stop, std::uint64_t generation,
                    std::optional<core::Encoding> encodingOverride);
     // Checks the file for changes on a worker (or once the current worker is done).

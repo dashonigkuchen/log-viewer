@@ -84,6 +84,9 @@ void File::close() noexcept
 
 Result<std::size_t> File::readAt(ByteOffset offset, std::span<std::byte> buffer) const
 {
+    if (auto fault = injectedFault(offset, buffer.size())) {
+        return std::unexpected(std::move(*fault));
+    }
     std::size_t total = 0;
     while (total < buffer.size()) {
         const std::uint64_t position = offset.get() + total;
