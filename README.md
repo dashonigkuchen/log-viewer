@@ -4,48 +4,32 @@
 
 A fast, native desktop log viewer for large text log files, written in C++23 and Qt 6 Widgets.
 
-**Status:** planning. No usable build yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status:** feature-complete for 1.0, in hardening (milestone M7). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Goals
+![Log Viewer with a boolean filter, highlight rules, marks, and bookmarks](docs/images/main-window.png)
 
-- Open large log files instantly and scroll through them smoothly. Files are read directly from disk and never fully loaded into memory.
-- Filter with regular expressions and boolean expressions (`AND`, `OR`, `NOT`) in a separate filtered view below the main view.
-- Follow live logs (tail) while they are being written, rotated, or truncated.
-- Marks, bookmarks, configurable highlight rules, multiple tabs, and a filter history.
-- Primary platform: Windows 11 (portable, no installer). Linux is built and tested in CI as a second platform.
+## Features
+
+- Opens multi-gigabyte logs in a moment and scrolls smoothly; files are read from disk, never fully loaded into memory.
+- Filtered view below the main view with literal, regex (PCRE2), and boolean filters (`/ERROR/ AND NOT "heartbeat"`), searched on all cores.
+- Follows live logs while they are written, truncated, or rotated.
+- Marks in nine colors, named bookmarks, highlight rules in sets, find, filter history, tabs, an overview bar.
+- Dark mode, session restore, configurable shortcuts, single instance, several encodings.
+- Windows 11 first (portable zip, no installer); Linux is built and tested in CI.
 - No network access, no telemetry, no update checker.
 
-See [docs/VISION.md](docs/VISION.md) for the full scope and [docs/SPEC.md](docs/SPEC.md) for the detailed behavior.
+See the [user guide](docs/USER_GUIDE.md), [docs/VISION.md](docs/VISION.md) for the scope, and [docs/SPEC.md](docs/SPEC.md) for the detailed behavior.
 
 ## Try it
 
-There is no release yet. Preview builds for Windows 11 (x64) are produced by CI:
+Releases are published on the [releases page](https://github.com/dashonigkuchen/log-viewer/releases) once 1.0 is out. Until then, preview builds for Windows 11 (x64) come from CI:
 
-1. Open the latest successful [CI Windows run on `main`](https://github.com/dashonigkuchen/log-viewer/actions/workflows/ci-windows.yml?query=branch%3Amain+is%3Asuccess) (requires access to this repository).
+1. Open the latest successful [CI Windows run on `main`](https://github.com/dashonigkuchen/log-viewer/actions/workflows/ci-windows.yml?query=branch%3Amain+is%3Asuccess) (requires a GitHub login).
 2. Download the artifact `LogViewer-<version>-<sha>-windows-x64` (kept for 7 days) and unzip it.
-3. Start `logviewer.exe`. The executable is not signed yet, so SmartScreen may ask: choose "More info", then "Run anyway".
+3. Start `logviewer.exe`. The executable is not signed, so SmartScreen may ask: choose "More info", then "Run anyway".
 4. Open a log file with `Ctrl+O`, drag and drop, or `logviewer.exe path\to\file.log`.
 
 Put an empty `portable.ini` next to `logviewer.exe` to keep settings in that folder instead of `%APPDATA%\LogViewer`.
-
-To generate a test log of about 60 MB in PowerShell:
-
-```powershell
-$path = "$env:USERPROFILE\Desktop\test.log"
-$w = [System.IO.StreamWriter]::new($path, $false, [System.Text.UTF8Encoding]::new($false))
-$levels = 'INFO','INFO','INFO','DEBUG','WARN','ERROR'
-$rnd = [Random]::new(42)
-$t = [datetime]'2026-11-06 08:00:00'
-for ($i = 0; $i -lt 500000; $i++) {
-  $t = $t.AddMilliseconds($rnd.Next(1, 50))
-  $lvl = $levels[$rnd.Next($levels.Count)]
-  $line = "{0:yyyy-MM-dd HH:mm:ss.fff} [{1,-5}] [thread-{2}] OrderService - Processed request id={3} duration={4}ms" -f $t, $lvl, $rnd.Next(1,16), $i, $rnd.Next(1,900)
-  $w.WriteLine($line)
-}
-$w.Close()
-```
-
-Filtering (M3) and live tailing (M4) are not available yet; see [the roadmap](docs/ROADMAP.md).
 
 ## How this project is built
 
@@ -59,6 +43,7 @@ The code is a clean-room implementation. It contains no code from other log view
 
 | Document | Purpose |
 | --- | --- |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | How to use Log Viewer: filters, marks, highlight rules, settings, shortcuts |
 | [AGENTS.md](AGENTS.md) | Binding rules and workflow for every contributor, human or AI |
 | [docs/VISION.md](docs/VISION.md) | What the product is and is not |
 | [docs/SPEC.md](docs/SPEC.md) | Detailed functional specification |
