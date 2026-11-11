@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <new>
 #include <span>
 #include <string>
 #include <utility>
@@ -165,9 +166,27 @@ void Document::startWorker()
     setMissing(false);
     setState(State::kIndexing);
     emit reset(generation);
-    m_worker =
-        std::jthread([this, generation, encoding = m_encodingOverride](
-                         const std::stop_token& stop) { runWorker(stop, generation, encoding); });
+    m_worker = std::jthread(
+        [this, generation, encoding = m_encodingOverride](const std::stop_token& stop) {
+            // F-ROB-2: out of memory in the worker shows an error in the tab instead of ending the
+            // application.
+            try {
+                runWorker(stop, generation, encoding);
+            } catch (const std::bad_alloc&) {
+                failOutOfMemory(generation);
+            }
+        });
+}
+
+void Document::failOutOfMemory(std::uint64_t generation)
+{
+    core::log(core::LogLevel::kError, "out of memory while reading '" + m_path.string() + "'");
+    post(generation, [this] {
+        m_content.reset();
+        m_errorMessage = QStringLiteral("Not enough memory to open the file.");
+        m_workerBusy = false;
+        setState(State::kError);
+    });
 }
 
 void Document::post(std::uint64_t generation, std::function<void()> function)

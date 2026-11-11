@@ -331,7 +331,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 ## M7 – Hardening and 1.0 release
 
-- [ ] **M7-01 Robustness test suite** — Depends on: M4-06
+- [x] **M7-01 Robustness test suite** — Depends on: M4-06 (PR #72)
   - Scope: F-ROB-1, F-ROB-2: fixtures and tests for binary files, NUL bytes, `\r`-only files, 16 MiB line, I/O error injection via a fake `File`.
   - Done when: all pass under ASan/UBSan.
 

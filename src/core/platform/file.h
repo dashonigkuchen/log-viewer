@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <optional>
 #include <span>
 
 namespace lv::core
@@ -54,10 +56,20 @@ public:
 
     [[nodiscard]] Result<FileIdentity> identity() const;
 
+    // Fault injection for tests (SPEC F-ROB-1, F-ROB-2). While a hook is installed, every
+    // readAt() asks it first; a returned error fails that read. The hook may be called from any
+    // thread. Not used by the application. Pass an empty function to remove it.
+    using ReadFaultHook = std::function<std::optional<Error>(const std::filesystem::path& path,
+                                                             ByteOffset offset, std::size_t size)>;
+    static void setReadFaultHook(ReadFaultHook hook);
+
     // The path the file was opened with.
     [[nodiscard]] const std::filesystem::path& path() const noexcept { return m_path; }
 
 private:
+    // The hook's verdict for a read; nullopt if no hook is installed or it lets the read pass.
+    [[nodiscard]] std::optional<Error> injectedFault(ByteOffset offset, std::size_t size) const;
+
     using NativeHandle = std::intptr_t;
     static constexpr NativeHandle kInvalidHandle = -1;
 
