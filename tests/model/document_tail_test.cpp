@@ -195,3 +195,28 @@ TEST_CASE("new lines arrive within the polling latency budget (P-TAIL-1)", "[mod
     WARN("worst polling latency: " << worst << " ms");
     CHECK(worst <= 100 + 100 + 150);  // interval + 100 ms budget, plus slack for slow CI runners
 }
+
+TEST_CASE("new lines arrive within 500 ms at the default polling interval (F-TAIL-4)",
+          "[model][tail]")
+{
+    const TempDir dir;
+    const auto path = dir / "app.log";
+    LogWriter writer(path, true);
+    writer.append("start\n");
+    Document document(path);
+    document.setWatchNotificationsEnabled(false);  // polling only, default interval (250 ms)
+    document.open();
+    REQUIRE(readyWithSize(document, 6));
+    qint64 worst = 0;
+    std::uint64_t size = 6;
+    for (int i = 0; i < 4; ++i) {
+        QElapsedTimer timer;
+        timer.start();
+        writer.append("tick\n");
+        size += 5;
+        REQUIRE(readyWithSize(document, size));
+        worst = std::max(worst, timer.elapsed());
+    }
+    WARN("worst latency at the default interval: " << worst << " ms");
+    CHECK(worst <= 500 + 150);  // budget, plus slack for slow CI runners
+}

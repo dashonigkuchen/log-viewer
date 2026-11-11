@@ -171,7 +171,7 @@ private:
     std::vector<PendingEvent> m_events;
     bool m_drainScheduled = false;
     FileWatcher* m_watcher = nullptr;  // child; created when first indexed
-    int m_pollInterval = 1000;
+    int m_pollInterval = 250;  // FileWatcher::kDefaultPollMs (F-TAIL-4); checked in document.cpp
     bool m_watchNotifications = true;
     bool m_workerBusy = false;  // a worker of the current generation is running
     bool m_recheck = false;     // a change arrived while the worker was busy

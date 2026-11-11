@@ -38,6 +38,8 @@ public:
     bool apply();
 
     // Widgets for tests.
+    [[nodiscard]] QCheckBox* systemFontBox() const noexcept { return m_systemFont; }
+
     [[nodiscard]] QFontComboBox* fontBox() const noexcept { return m_font; }
 
     [[nodiscard]] QSpinBox* fontSizeBox() const noexcept { return m_fontSize; }

@@ -10,6 +10,7 @@
 #include "ui/main_window.h"
 
 #include <QApplication>
+#include <QDockWidget>
 #include <QElapsedTimer>
 #include <QLineEdit>
 #include <QSplitter>
@@ -131,6 +132,7 @@ private slots:
             window.resize(777, 555);
             window.show();
             QVERIFY(QTest::qWaitForWindowExposed(&window));
+            window.bookmarksDock()->show();  // F-TAB-5: the dock layout is restored too
             window.close();
         }
         MainWindow window;
@@ -139,6 +141,10 @@ private slots:
             window.restoreSession(lv::model::Session::load(settingsHolder.settings.store()), false),
             0);
         QCOMPARE(window.size(), QSize(777, 555));
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QVERIFY(window.bookmarksDock()->isVisible());
+        QCOMPARE(window.dockWidgetArea(window.bookmarksDock()), Qt::RightDockWidgetArea);
     }
 
 private:

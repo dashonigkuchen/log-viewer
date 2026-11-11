@@ -15,6 +15,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -390,7 +391,15 @@ Result<SearchStats> SearchEngine::run(const SearchRequest& request, ThreadPool& 
                 [&request, &mutex, &done, slot](const std::stop_token& token) {
                     ChunkResult local;
                     local.job = slot->job;
-                    searchChunk(request, token, local);
+                    try {
+                        searchChunk(request, token, local);
+                    } catch (const std::bad_alloc&) {
+                        // F-ROB-2: report it like an I/O error instead of terminating the pool.
+                        local.matches.clear();
+                        local.error = Error{.code = ErrorCode::kOutOfMemory,
+                                            .systemCode = 0,
+                                            .message = "not enough memory for the search"};
+                    }
                     const std::scoped_lock lock(mutex);
                     *slot = std::move(local);
                     slot->done = true;

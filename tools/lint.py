@@ -7,8 +7,9 @@ Usage:
   lint.py tidy         --clang-tidy EXE --build-dir DIR [--all] [--base REF] [--jobs N]
   lint.py no-network
 
-no-network (also part of format-check) fails if src/ uses network APIs (SPEC F-ROB-4); only
-QLocalServer/QLocalSocket (single instance, a local pipe) are allowed.
+no-network (also part of format-check) fails if src/ uses network APIs (SPEC F-ROB-4; only
+QLocalServer/QLocalSocket for the single instance pipe are allowed) or translation machinery
+(QTranslator, tr(), .ts files; SPEC F-I18N-1).
 
 Files are the C++ sources tracked by git (plus untracked, not ignored ones) in
 src/, tests/, bench/, and tools/. The tidy command checks only .cpp files changed
@@ -59,23 +60,43 @@ NETWORK_PATTERNS = re.compile(
 )
 
 
-def find_network_uses(files: list[Path]) -> list[str]:
+# SPEC F-I18N-1 / ADR 0013: English-only UI, no translation machinery.
+TRANSLATION_PATTERNS = re.compile(r"\b(QTranslator|installTranslator|qsTr|QT_TR_NOOP|tr)\s*\(|\bQTranslator\b")
+
+
+def find_pattern_uses(files: list[Path], pattern: re.Pattern[str]) -> list[str]:
     problems = []
     for path in files:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             code = line.split("//", 1)[0]
-            match = NETWORK_PATTERNS.search(code)
+            match = pattern.search(code)
             if match:
                 problems.append(f"{path.relative_to(REPO)}:{number}: {match.group(0)}")
     return problems
 
 
+def find_network_uses(files: list[Path]) -> list[str]:
+    return find_pattern_uses(files, NETWORK_PATTERNS)
+
+
+def find_translation_uses(files: list[Path]) -> list[str]:
+    return find_pattern_uses(files, TRANSLATION_PATTERNS)
+
+
 def run_no_network() -> int:
     files = [path for path in source_files() if path.relative_to(REPO).parts[0] == "src"]
-    problems = find_network_uses(files)
-    for problem in problems:
+    network = find_network_uses(files)
+    for problem in network:
         print(f"network API used (SPEC F-ROB-4): {problem}")
-    print(f"no-network: {len(files)} files checked, {len(problems)} problem(s).")
+    translation = find_translation_uses(files)
+    # Only tracked files: CI checks out vcpkg (with TypeScript .ts scripts) inside the repo.
+    tracked = subprocess.run(["git", "ls-files", "*.ts"], cwd=REPO, capture_output=True,
+                             text=True, check=True).stdout.split()
+    translation += tracked
+    for problem in translation:
+        print(f"translation used (SPEC F-I18N-1): {problem}")
+    problems = len(network) + len(translation)
+    print(f"no-network: {len(files)} files checked, {problems} problem(s).")
     return 1 if problems else 0
 
 

@@ -13,6 +13,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QElapsedTimer>
+#include <QFontComboBox>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSpinBox>
@@ -54,8 +55,12 @@ private slots:
         window.setSettings(&settings);
         auto* tab = window.openFile(dir / "a.log");
         QVERIFY(tab != nullptr);
-        window.editSettings([](SettingsDialog& dialog) {
+        QString chosenFamily;
+        window.editSettings([&chosenFamily](SettingsDialog& dialog) {
             dialog.fontSizeBox()->setValue(14);
+            dialog.systemFontBox()->setChecked(false);
+            dialog.fontBox()->setCurrentFont(QFont(QStringLiteral("DejaVu Sans Mono")));
+            chosenFamily = dialog.fontBox()->currentFont().family();
             dialog.tabWidthBox()->setValue(3);
             dialog.lineNumbersBox()->setChecked(false);
             dialog.columnsBox()->setValue(200);
@@ -73,6 +78,7 @@ private slots:
         // Effect on the open tab.
         auto* view = tab->mainView();
         QCOMPARE(view->font().pointSize(), 14);
+        QCOMPARE(view->font().family(), chosenFamily);
         QCOMPARE(view->tabWidth(), 3);
         QVERIFY(!view->lineNumbersVisible());
         QCOMPARE(view->columnLimit(), 200);
@@ -86,6 +92,7 @@ private slots:
         // Persistence.
         const Settings loaded(qpath(dir / "settings"));
         QCOMPARE(loaded.fontSize(), 14);
+        QCOMPARE(loaded.fontFamily(), chosenFamily);
         QCOMPARE(loaded.tabWidth(), 3);
         QVERIFY(!loaded.lineNumbersVisible());
         QCOMPARE(loaded.maxColumns(), 200);

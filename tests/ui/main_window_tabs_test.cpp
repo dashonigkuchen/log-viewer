@@ -1,3 +1,4 @@
+#include "core/platform/file.h"
 #include "log_writer.h"
 #include "model/document.h"
 #include "temp_dir.h"
@@ -12,12 +13,17 @@
 #include <QLabel>
 #include <QMenu>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTest>
 #include <QUrl>
 
+#include <chrono>
+#include <filesystem>
+#include <optional>
 #include <string>
+#include <thread>
 
 namespace
 {
@@ -249,6 +255,70 @@ private slots:
         QCOMPARE(window.tabWidget()->tabText(0), QStringLiteral("b.log"));
         trigger(0, QStringLiteral("Close All"));
         QCOMPARE(window.tabWidget()->count(), 0);
+    }
+
+    static void tabsCanBeReordered()
+    {
+        // F-TAB-2: tabs can be dragged; moving keeps every tab with its document.
+        const lv::test::TempDir dir;
+        writeText(dir / "a.log", "a\n");
+        writeText(dir / "b.log", "b\n");
+        lv::ui::MainWindow window;
+        auto* a = window.openFile(dir / "a.log");
+        auto* b = window.openFile(dir / "b.log");
+        QVERIFY(waitReady(a));
+        QVERIFY(waitReady(b));
+        auto* bar = window.tabWidget()->tabBar();
+        QVERIFY(bar->isMovable());
+        bar->moveTab(0, 1);
+        QCOMPARE(window.documentTab(0), b);
+        QCOMPARE(window.documentTab(1), a);
+        QCOMPARE(window.tabWidget()->tabText(0), QStringLiteral("b.log"));
+        window.closeTab(1);
+        QCOMPARE(window.tabWidget()->count(), 1);
+        QCOMPARE(window.documentTab(0), b);
+    }
+
+    static void indexingShowsLinesProgressAndAnIndicator()
+    {
+        // F-FILE-4 (lines before indexing ends), F-TAB-3 (indicator), F-TAB-6 (size, progress).
+        const lv::test::TempDir dir;
+        std::string text;
+        for (int i = 0; i < 100000; ++i) {
+            text += "line " + std::to_string(i) + " with some padding text\n";  // ~3 MiB
+        }
+        writeText(dir / "slow.log", text);
+        const auto target = dir / "slow.log";
+        // Slow down every indexing block after the first (512 KiB) so the test sees the state.
+        lv::core::File::setReadFaultHook([target](const std::filesystem::path& path,
+                                                  lv::core::ByteOffset offset,
+                                                  std::size_t) -> std::optional<lv::core::Error> {
+            if (path == target && offset.get() >= std::uint64_t{512} * 1024) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(150));
+            }
+            return std::nullopt;
+        });
+        const auto clearHook = qScopeGuard([] { lv::core::File::setReadFaultHook({}); });
+        lv::ui::MainWindow window;
+        auto* tab = window.openFile(target);
+        QElapsedTimer timer;
+        timer.start();
+        while ((tab->document().lineCount().get() == 0 ||
+                !window.statusText().contains(QStringLiteral("Indexing "))) &&
+               timer.elapsed() < 10000) {
+            QApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+        QCOMPARE(tab->document().state(), lv::model::Document::State::kIndexing);
+        QVERIFY(tab->document().lineCount().get() > 0);
+        QVERIFY(window.tabWidget()->tabText(0).endsWith(QStringLiteral("\u23F3")));
+        QVERIFY2(window.statusText().contains(QStringLiteral("Indexing ")),
+                 qPrintable(window.statusText()));
+        QVERIFY(window.statusText().contains(QStringLiteral("MiB")));
+        QVERIFY(waitReady(tab));
+        QCOMPARE(window.tabWidget()->tabText(0), QStringLiteral("slow.log"));
+        QVERIFY(!window.statusText().contains(QStringLiteral("Indexing")));
+        QVERIFY(window.statusText().contains(QStringLiteral("100,000 lines")) ||
+                window.statusText().contains(QStringLiteral("100000 lines")));
     }
 };
 

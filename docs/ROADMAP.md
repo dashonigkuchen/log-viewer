@@ -356,6 +356,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 - [ ] **M7-06 Version 1.0.0** — Depends on: all Must requirements implemented
   - Scope: audit `SPEC.md`: every Must has an implementing step and a test (table in the PR), `CHANGELOG.md`, version bump.
   - Done when: owner tags `v1.0.0` **[Owner]**.
+  - Status: audit and gaps (PR #77), tests for the partial items, CHANGELOG, and version 1.0.0 (PR #78); owner tag `v1.0.0` open.
 
 ---
 

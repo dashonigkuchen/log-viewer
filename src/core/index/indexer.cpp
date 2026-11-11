@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include <new>
 #include <optional>
 #include <span>
 #include <thread>
@@ -128,8 +129,16 @@ Result<IndexStats> Indexer::run(const File& file, LineIndex& index, const std::s
             const std::uint64_t wanted = std::min<std::uint64_t>(block.data.size(), total - offset);
             block.offset = offset;
             block.error.reset();
-            const auto read = file.readAt(
-                ByteOffset(offset), std::span(block.data.data(), static_cast<std::size_t>(wanted)));
+            Result<std::size_t> read = 0;
+            try {
+                read = file.readAt(ByteOffset(offset),
+                                   std::span(block.data.data(), static_cast<std::size_t>(wanted)));
+            } catch (const std::bad_alloc&) {
+                // F-ROB-2: an exception must not escape the thread (that would terminate).
+                read = std::unexpected(Error{.code = ErrorCode::kOutOfMemory,
+                                             .systemCode = 0,
+                                             .message = "not enough memory to read the file"});
+            }
             if (read) {
                 block.size = *read;
             } else {
