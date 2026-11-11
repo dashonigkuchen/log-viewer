@@ -181,3 +181,18 @@ jobs:
           path: dist/
           retention-days: 7
           if-no-files-found: error
+
+      # M7-04: benchmark tools for the performance acceptance on the owner notebook.
+      - name: Collect performance tools
+        run: |
+          New-Item -ItemType Directory -Force perf | Out-Null
+          Copy-Item build/windows-msvc-release/bench/lv_bench.exe, tools/perf_acceptance.ps1 perf/
+          Get-ChildItem perf | Format-Table Name, Length
+
+      - name: Upload performance tools
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: LogViewer-perf-${{ steps.versions.outputs.version }}-${{ github.sha }}-windows-x64
+          path: perf/
+          retention-days: 7
+          if-no-files-found: error
