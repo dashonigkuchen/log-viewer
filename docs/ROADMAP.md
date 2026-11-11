@@ -345,6 +345,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
 
 - [ ] **M7-04 Performance acceptance on owner notebook** — Depends on: M5-06, M4-07 **[Owner]**
   - Scope: script `tools/perf_acceptance.ps1` that generates data, runs benchmarks, and prints a results table; owner runs it, also measures klogg for comparison.
+  - Status: script and the `LogViewer-perf-…` CI artifact added (PR #75); owner run open.
   - Done when: all budgets met or the owner accepts documented deviations; results logged.
 
 - [ ] **M7-05 Documentation for users** — Depends on: M6-01

@@ -181,3 +181,21 @@ jobs:
           path: dist/
           retention-days: 7
           if-no-files-found: error
+
+      # M7-04: benchmark tools for the performance acceptance on the owner notebook.
+      - name: Collect performance tools
+        run: |
+          New-Item -ItemType Directory -Force perf | Out-Null
+          # The output directory depends on the generator settings; look the executable up.
+          $bench = Get-ChildItem build/windows-msvc-release -Recurse -Filter lv_bench.exe | Select-Object -First 1
+          if (-not $bench) { throw "lv_bench.exe not found in the build directory" }
+          Copy-Item $bench.FullName, tools/perf_acceptance.ps1 perf/
+          Get-ChildItem perf | Format-Table Name, Length
+
+      - name: Upload performance tools
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: LogViewer-perf-${{ steps.versions.outputs.version }}-${{ github.sha }}-windows-x64
+          path: perf/
+          retention-days: 7
+          if-no-files-found: error
