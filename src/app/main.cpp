@@ -1,6 +1,7 @@
 #include "core/util/log.h"
 #include "model/annotation_store.h"
 #include "model/app_paths.h"
+#include "model/crash_handler.h"
 #include "model/file_log_sink.h"
 #include "model/filter_history.h"
 #include "model/highlight_sets.h"
@@ -65,7 +66,10 @@ int main(int argc, char* argv[])
     const QCommandLineOption newInstanceOption(
         QStringLiteral("new-instance"),
         QApplication::translate("main", "Start a new window instead of using a running one."));
-    parser.addOptions({followOption, lineOption, newInstanceOption});
+    // Hidden: crashes on purpose so CI can check that a dump is written (F-ROB-5).
+    QCommandLineOption crashTestOption(QStringLiteral("crash-test"));
+    crashTestOption.setFlags(QCommandLineOption::HiddenFromHelp);
+    parser.addOptions({followOption, lineOption, newInstanceOption, crashTestOption});
     parser.process(app);  // Handles --help and --version and exits.
 
     // F-CLI-2: absolute paths, so a running instance with another working directory finds them.
@@ -85,6 +89,12 @@ int main(int argc, char* argv[])
     }
 
     installFileLog();
+    // F-ROB-5: local minidumps in the settings directory (Windows only).
+    lv::model::installCrashHandler(lv::model::settingsDirectory() + QStringLiteral("/dumps"));
+    if (parser.isSet(crashTestOption)) {
+        lv::core::log(lv::core::LogLevel::kWarning, "--crash-test: crashing on purpose");
+        lv::model::crashForTest();
+    }
     lv::core::log(
         lv::core::LogLevel::kInfo,
         QStringLiteral("Log Viewer %1 starting").arg(lv::model::versionString()).toStdString());

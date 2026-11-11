@@ -1,6 +1,8 @@
 add_library(
     lv_model STATIC
     app_paths.cpp
+    crash_handler.cpp
+    crash_handler.h
     document.cpp
     document.h
     document_line_source.cpp
@@ -52,3 +54,8 @@ target_link_libraries(
     PUBLIC lv::core Qt6::Core
     PRIVATE lv::compile_options
 )
+
+if(WIN32)
+    # MiniDumpWriteDump (crash dumps, SPEC F-ROB-5); dbghelp ships with Windows.
+    target_link_libraries(lv_model PRIVATE dbghelp)
+endif()
