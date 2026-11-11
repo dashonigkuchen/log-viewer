@@ -70,6 +70,9 @@ public:
 
     [[nodiscard]] QLabel* statusLabel() const noexcept { return m_status; }
 
+    // Stops the running search (F-FILT-6); also Escape in the field while searching.
+    [[nodiscard]] QPushButton* stopButton() const noexcept { return m_stop; }
+
     [[nodiscard]] QLabel* errorLabel() const noexcept { return m_error; }
 
 protected:
@@ -96,6 +99,7 @@ private:
     QCheckBox* m_wholeWord = nullptr;
     QCheckBox* m_invert = nullptr;
     QPushButton* m_clear = nullptr;
+    QPushButton* m_stop = nullptr;
     QLabel* m_status = nullptr;
     QLabel* m_error = nullptr;
 };

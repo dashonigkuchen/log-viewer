@@ -233,16 +233,6 @@ void LogView::keyPressEvent(QKeyEvent* event)
     const bool shift = event->modifiers().testFlag(Qt::ShiftModifier);
     const std::optional<core::LineNumber> before = m_currentRow;
     bool movesRow = true;
-    if (control && !shift && event->key() == Qt::Key_Down && !m_marks.isNull()) {
-        goToNextMark();
-        event->accept();
-        return;
-    }
-    if (control && !shift && event->key() == Qt::Key_Up && !m_marks.isNull()) {
-        goToPreviousMark();
-        event->accept();
-        return;
-    }
     if (control && !shift && event->key() >= Qt::Key_1 && event->key() <= Qt::Key_9 &&
         !m_marks.isNull()) {
         toggleMarkColor(event->key() - Qt::Key_0);

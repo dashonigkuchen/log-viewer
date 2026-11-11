@@ -1,5 +1,6 @@
 #include "ui/settings_dialog.h"
 
+#include "model/filter_history.h"
 #include "model/settings.h"
 #include "ui/highlight_dialog.h"
 
@@ -39,7 +40,8 @@ QSpinBox* spinBox(int min, int max, int value, const QString& suffix, QWidget* p
 
 }  // namespace
 
-SettingsDialog::SettingsDialog(model::Settings& settings, QWidget* parent)
+SettingsDialog::SettingsDialog(model::Settings& settings, model::FilterHistory* history,
+                               QWidget* parent)
     : QDialog(parent)
     , m_settings(&settings)
 {
@@ -135,7 +137,20 @@ SettingsDialog::SettingsDialog(model::Settings& settings, QWidget* parent)
     m_threads->setToolTip(QStringLiteral("Takes effect after a restart."));
     auto* behaviorForm = new QFormLayout(behavior);
     behaviorForm->addRow(QStringLiteral("Check files every:"), m_poll);
-    behaviorForm->addRow(QStringLiteral("Filter history:"), m_history);
+    m_clearHistory = new QPushButton(QStringLiteral("Clear Filter History"), behavior);
+    m_clearHistory->setObjectName(QStringLiteral("clearFilterHistory"));
+    m_clearHistory->setEnabled(history != nullptr && !history->entries().empty());
+    connect(m_clearHistory, &QPushButton::clicked, this, [this, history] {
+        if (history != nullptr) {
+            history->clear();  // F-HIST-3
+        }
+        m_clearHistory->setEnabled(false);
+    });
+    auto* historyRow = new QHBoxLayout;
+    historyRow->addWidget(m_history);
+    historyRow->addWidget(m_clearHistory);
+    historyRow->addStretch();
+    behaviorForm->addRow(QStringLiteral("Filter history:"), historyRow);
     behaviorForm->addRow(QStringLiteral("Search threads:"), m_threads);
     behaviorForm->addRow(QString(), m_session);
     behaviorForm->addRow(QString(), m_singleInstance);

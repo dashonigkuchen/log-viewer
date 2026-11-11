@@ -52,6 +52,7 @@ public:
         kSearching,  // results are growing
         kDone,       // all lines searched
         kError,      // the search failed (see errorMessage()); results so far stay visible
+        kCanceled,   // stopped by the user (F-FILT-6); results so far stay visible
     };
     Q_ENUM(State)
 
@@ -68,6 +69,10 @@ public:
 
     // Removes the filter and its results.
     void clear();
+
+    // Stops a running or pending search (F-FILT-6). The matches found so far stay; lines that
+    // are appended later are not searched until the filter is applied again.
+    void cancel();
 
     [[nodiscard]] State state() const noexcept { return m_state; }
 

@@ -34,13 +34,14 @@ class Settings : public QObject
 
 public:
     // Version 2 added the settings dialog values (M6-01), version 3 theme-dependent color
-    // defaults (M6-02); older files are migrated.
-    static constexpr int kSchemaVersion = 3;
+    // defaults (M6-02), version 4 the 250 ms polling default (F-TAIL-4); older files are migrated.
+    static constexpr int kSchemaVersion = 4;
     static constexpr int kDefaultTabWidth = 8;
     static constexpr int kDefaultFontSize = 10;
     static constexpr int kMinFontSize = 4;
     static constexpr int kMaxFontSize = 72;
-    static constexpr int kDefaultPollMs = 1000;
+    // 250 ms keeps new lines within the F-TAIL-4 budget (500 ms) when only polling works.
+    static constexpr int kDefaultPollMs = 250;
     static constexpr int kMinPollMs = 100;
     static constexpr int kMaxPollMs = 10000;
     static constexpr int kDefaultMaxColumns = 100000;

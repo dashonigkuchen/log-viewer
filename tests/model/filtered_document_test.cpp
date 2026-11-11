@@ -13,6 +13,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -210,4 +211,43 @@ TEST_CASE("destroying a filter during a search joins cleanly", "[model][filter]"
     // Pending wake-ups of destroyed filters must not crash.
     QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
     SUCCEED();
+}
+
+TEST_CASE("a running search can be canceled and keeps its matches (F-FILT-6)", "[model][filter]")
+{
+    const TempDir dir;
+    lv::loggen::WriteOptions write;
+    write.sizeBytes = std::uint64_t{40} * 1024 * 1024;
+    write.out = dir / "gen.log";
+    REQUIRE(lv::loggen::writeLog(write).ok());
+    lv::core::ThreadPool pool(1);
+    Document document(write.out);
+    FilteredDocument filter(document, pool);
+    document.open();
+    REQUIRE(waitFor([&] { return document.state() == Document::State::kReady; }));
+
+    // A regex keeps the single thread busy long enough to cancel in the middle.
+    REQUIRE_FALSE(
+        filter.apply(Query{.text = "(a|e)+.*[0-9]{3}$", .mode = QueryMode::kRegex}).has_value());
+    REQUIRE(filter.state() == FilteredDocument::State::kSearching);
+    filter.cancel();
+    CHECK(filter.state() == FilteredDocument::State::kCanceled);
+    const std::uint64_t count = filter.matchCount();
+    const auto matches = allMatches(filter);
+    CHECK(std::ranges::is_sorted(matches));
+    // Nothing arrives after the cancel.
+    for (int i = 0; i < 20; ++i) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    }
+    CHECK(filter.matchCount() == count);
+    CHECK(filter.state() == FilteredDocument::State::kCanceled);
+    CHECK(filter.progress().searchedLines.get() < document.lineCount().get());
+
+    // Canceling when nothing runs does nothing; applying again searches everything.
+    filter.cancel();
+    CHECK(filter.state() == FilteredDocument::State::kCanceled);
+    REQUIRE_FALSE(filter.apply(Query{.text = "ERROR"}).has_value());
+    REQUIRE(waitDone(filter));
+    CHECK(filter.state() == FilteredDocument::State::kDone);
+    CHECK(filter.matchCount() > 0);
 }

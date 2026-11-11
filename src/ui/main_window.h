@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <vector>
 
 class QActionGroup;
@@ -81,6 +82,8 @@ public:
 
     // Qt's scheme for a setting; Unknown = follow the system (F-SET-4).
     [[nodiscard]] static Qt::ColorScheme toQtColorScheme(model::ColorScheme scheme);
+    // The context menu of tab `index` (F-TAB-4); null for an invalid index. Public for tests.
+    [[nodiscard]] std::unique_ptr<QMenu> createTabContextMenu(int index);
     // Adds a match-only rule for `text` to the active set of `tab` (F-HL-7).
     void highlightText(DocumentTab* tab, const QString& text);
 

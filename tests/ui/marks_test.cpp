@@ -114,11 +114,12 @@ private slots:
         auto* view = f.tab->mainView();
         view->setFocus();
         view->setCurrentRow(LineNumber(0));
-        QTest::keyClick(view, Qt::Key_Down, Qt::ControlModifier);
+        // Ctrl+Down/Up are main window actions (tested in ui.Shortcuts).
+        QVERIFY(view->goToNextMark());
         QCOMPARE(view->currentRow().value_or(LineNumber(99)).get(), std::uint64_t{1});
-        QTest::keyClick(view, Qt::Key_Down, Qt::ControlModifier);
+        QVERIFY(view->goToNextMark());
         QCOMPARE(view->currentRow().value_or(LineNumber(99)).get(), std::uint64_t{4});
-        QTest::keyClick(view, Qt::Key_Up, Qt::ControlModifier);
+        QVERIFY(view->goToPreviousMark());
         QCOMPARE(view->currentRow().value_or(LineNumber(99)).get(), std::uint64_t{1});
         QVERIFY(!view->goToPreviousMark());  // none before line 1
 

@@ -5,6 +5,10 @@ Usage:
   lint.py format       --clang-format EXE
   lint.py format-check --clang-format EXE
   lint.py tidy         --clang-tidy EXE --build-dir DIR [--all] [--base REF] [--jobs N]
+  lint.py no-network
+
+no-network (also part of format-check) fails if src/ uses network APIs (SPEC F-ROB-4); only
+QLocalServer/QLocalSocket (single instance, a local pipe) are allowed.
 
 Files are the C++ sources tracked by git (plus untracked, not ignored ones) in
 src/, tests/, bench/, and tools/. The tidy command checks only .cpp files changed
@@ -43,6 +47,36 @@ def source_files() -> list[Path]:
         if path.suffix in CPP_SUFFIXES and path.is_file():
             files.append(path)
     return sorted(set(files))
+
+
+# SPEC F-ROB-4: no network access of any kind. Local IPC (QLocalServer/QLocalSocket) is fine.
+NETWORK_PATTERNS = re.compile(
+    r"\b(QNetworkAccessManager|QNetworkRequest|QNetworkReply|QTcpSocket|QTcpServer|QUdpSocket|"
+    r"QSslSocket|QHostAddress|QHostInfo|QDnsLookup|QHttp\w*|QWebSocket\w*|QAbstractSocket|"
+    r"WSAStartup|WinHttp\w*|InternetOpen\w*|URLDownloadToFile\w*|getaddrinfo|gethostbyname|"
+    r"curl_\w+)\b|#\s*include\s*<(sys/socket\.h|netdb\.h|winsock2?\.h|ws2tcpip\.h|"
+    r"wininet\.h|winhttp\.h)>"
+)
+
+
+def find_network_uses(files: list[Path]) -> list[str]:
+    problems = []
+    for path in files:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("//", 1)[0]
+            match = NETWORK_PATTERNS.search(code)
+            if match:
+                problems.append(f"{path.relative_to(REPO)}:{number}: {match.group(0)}")
+    return problems
+
+
+def run_no_network() -> int:
+    files = [path for path in source_files() if path.relative_to(REPO).parts[0] == "src"]
+    problems = find_network_uses(files)
+    for problem in problems:
+        print(f"network API used (SPEC F-ROB-4): {problem}")
+    print(f"no-network: {len(files)} files checked, {len(problems)} problem(s).")
+    return 1 if problems else 0
 
 
 def check_version(exe: str) -> None:
@@ -123,7 +157,7 @@ def run_tidy(exe: str, build_dir: Path, check_all: bool, base: str, jobs: int) -
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["format", "format-check", "tidy"])
+    parser.add_argument("command", choices=["format", "format-check", "tidy", "no-network"])
     parser.add_argument("--clang-format", default="clang-format")
     parser.add_argument("--clang-tidy", default="clang-tidy")
     parser.add_argument("--build-dir", type=Path)
@@ -132,8 +166,13 @@ def main() -> int:
     parser.add_argument("--jobs", type=int, default=os.cpu_count() or 2)
     args = parser.parse_args()
 
-    if args.command in ("format", "format-check"):
-        return run_format(args.clang_format, args.command == "format-check")
+    if args.command == "no-network":
+        return run_no_network()
+    if args.command == "format":
+        return run_format(args.clang_format, False)
+    if args.command == "format-check":
+        # The CI format job also enforces F-ROB-4.
+        return run_format(args.clang_format, True) or run_no_network()
     if args.build_dir is None:
         parser.error("tidy needs --build-dir")
     check_all = args.all or os.environ.get("LV_TIDY_ALL") == "1"

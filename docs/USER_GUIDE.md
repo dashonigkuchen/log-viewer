@@ -47,6 +47,7 @@ Select text with the mouse (double-click selects a word, triple-click a line) an
 Type a filter above the filtered view and press `Enter`. Changing the mode or an option applies
 the filter again at once. Filtering runs in the background on all CPU cores; the status next to
 the field shows the progress and the number of matches, and results appear while it runs.
+**Stop** (or `Escape` in the field) ends a running search; the matches found so far stay.
 
 ![Filter bar](images/filter-bar.png)
 
@@ -61,7 +62,7 @@ error is shown in red with its position; the previous result stays visible.
 
 Previous filters are kept in the history (the drop-down at the left of the field, or `Up`/`Down`
 in the field). Select an entry and press `Delete` to remove it; **View > Clear Filter History**
-removes all. `Escape` leaves the field. `Ctrl+Shift+F` jumps to the filter field.
+and **Clear Filter History** in the settings remove all. `Escape` leaves the field. `Ctrl+Shift+F` jumps to the filter field.
 
 ### Boolean expressions
 
@@ -175,16 +176,16 @@ symbols like `␀`.
 | Max line length | Characters shown per line before it is cut (the full line is still searched) |
 | Theme | **System** follows Windows; **Light** or **Dark** force a scheme |
 | Current line, marks, filter matches | Colors as `#RRGGBB` or `#AARRGGBB`; empty = default for the theme |
-| Check files every | Polling interval for file changes (100–10,000 ms) |
-| Filter history | Number of remembered filters |
+| Check files every | Polling interval for file changes (default 250 ms, 100–10,000 ms) |
+| Filter history | Number of remembered filters; **Clear Filter History** empties it |
 | Restore open files at startup | Reopen the tabs of the last session with position, filter, and follow mode |
 | Open files in the running window | A second start opens its files as tabs in the running window |
 | Search threads | 0 = all cores; takes effect at the next start |
 
 **File > Keyboard Shortcuts…** lists all menu commands. Select one, press the new key combination,
 or clear it; **Reset** / **Reset All** restore the defaults. Shortcuts used twice are listed and
-must be resolved before saving. Keys inside the log view (`M`, `Ctrl+1`…`9`, `Ctrl+Up/Down`) are
-fixed.
+must be resolved before saving. Next / previous mark (`Ctrl+Down` / `Ctrl+Up`) are commands too.
+Keys inside the log view (`M`, `Ctrl+1`…`9`, arrow keys) are fixed.
 
 ### Where settings are stored
 

@@ -48,6 +48,7 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     , m_wholeWord(new QCheckBox(QStringLiteral("Whole word"), this))
     , m_invert(new QCheckBox(QStringLiteral("Invert"), this))
     , m_clear(new QPushButton(QStringLiteral("Clear"), this))
+    , m_stop(new QPushButton(QStringLiteral("Stop"), this))
     , m_status(new QLabel(this))
     , m_error(new QLabel(this))
 {
@@ -77,6 +78,9 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     m_wholeWord->setObjectName(QStringLiteral("filterWholeWord"));
     m_invert->setObjectName(QStringLiteral("filterInvert"));
     m_clear->setObjectName(QStringLiteral("filterClear"));
+    m_stop->setObjectName(QStringLiteral("filterStop"));
+    m_stop->setToolTip(QStringLiteral("Stop the search (Esc); the matches so far stay"));
+    m_stop->setVisible(false);
     m_status->setObjectName(QStringLiteral("filterStatus"));
     m_error->setObjectName(QStringLiteral("filterError"));
     m_error->setStyleSheet(QStringLiteral("color: #c62828;"));
@@ -91,6 +95,7 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
     row->addWidget(m_wholeWord);
     row->addWidget(m_invert);
     row->addWidget(m_clear);
+    row->addWidget(m_stop);
     row->addWidget(m_status);
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(4, 2, 4, 2);
@@ -119,6 +124,7 @@ FilterBar::FilterBar(model::FilteredDocument& filter, QWidget* parent)
         connect(box, &QCheckBox::clicked, this, &FilterBar::applyOptionChange);
     }
     connect(m_clear, &QPushButton::clicked, this, &FilterBar::clear);
+    connect(m_stop, &QPushButton::clicked, m_filter, &model::FilteredDocument::cancel);
     connect(m_filter, &model::FilteredDocument::stateChanged, this, &FilterBar::updateStatus);
     connect(m_filter, &model::FilteredDocument::progressChanged, this, &FilterBar::updateStatus);
     connect(m_filter, &model::FilteredDocument::reset, this, &FilterBar::updateStatus);
@@ -307,7 +313,15 @@ void FilterBar::updateStatus()
     case State::kError:
         text = QStringLiteral("Search failed: %1").arg(m_filter->errorMessage());
         break;
+    case State::kCanceled: {
+        const std::uint64_t total = progress.totalLines.get();
+        const std::uint64_t percent = total == 0 ? 0 : progress.searchedLines.get() * 100 / total;
+        text = QStringLiteral("Stopped at %1% | %2").arg(percent).arg(matches);
+        break;
     }
+    }
+    m_stop->setVisible(m_filter->state() == State::kSearching ||
+                       m_filter->state() == State::kPending);
     if (progress.skippedLines > 0) {
         text += QStringLiteral(" | %1 lines skipped: regex too complex")
                     .arg(number(progress.skippedLines));
@@ -320,7 +334,12 @@ bool FilterBar::eventFilter(QObject* watched, QEvent* event)
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         const auto* key = static_cast<QKeyEvent*>(event);  // NOLINT(*-static-cast-downcast)
         if (key->key() == Qt::Key_Escape) {
-            restore();
+            using State = model::FilteredDocument::State;
+            if (m_filter->state() == State::kSearching || m_filter->state() == State::kPending) {
+                m_filter->cancel();  // F-FILT-6: Escape first stops a running search
+            } else {
+                restore();
+            }
             return true;
         }
         if (key->key() == Qt::Key_Up || key->key() == Qt::Key_Down) {

@@ -6,12 +6,14 @@ class QCheckBox;
 class QComboBox;
 class QFontComboBox;
 class QLineEdit;
+class QPushButton;
 class QSpinBox;
 
 namespace lv::model
 {
+class FilterHistory;
 class Settings;
-}
+}  // namespace lv::model
 
 namespace lv::ui
 {
@@ -27,7 +29,9 @@ class SettingsDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit SettingsDialog(model::Settings& settings, QWidget* parent = nullptr);
+    // `history` enables "Clear Filter History" (F-HIST-3); it may be null.
+    explicit SettingsDialog(model::Settings& settings, model::FilterHistory* history = nullptr,
+                            QWidget* parent = nullptr);
 
     // Writes the values to the settings (called on OK; public for tests). Returns false and
     // shows the problem if a color is invalid.
@@ -62,9 +66,13 @@ public:
 
     [[nodiscard]] QSpinBox* threadsBox() const noexcept { return m_threads; }
 
+    // Clears the filter history at once (not on OK); disabled without a history.
+    [[nodiscard]] QPushButton* clearHistoryButton() const noexcept { return m_clearHistory; }
+
 private:
     void accept() override;
 
+    QPushButton* m_clearHistory = nullptr;
     model::Settings* m_settings;
     QFontComboBox* m_font = nullptr;
     QCheckBox* m_systemFont = nullptr;

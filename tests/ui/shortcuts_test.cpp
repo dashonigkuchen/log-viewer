@@ -1,5 +1,10 @@
+#include "log_writer.h"
+#include "model/document.h"
+#include "model/mark_set.h"
 #include "model/settings.h"
 #include "temp_dir.h"
+#include "ui/document_tab.h"
+#include "ui/log_view.h"
 #include "ui/main_window.h"
 #include "ui/shortcuts.h"
 
@@ -128,6 +133,48 @@ private slots:
         QCOMPARE(dialog.overrides().size(), std::size_t{1});
         dialog.setShortcut(QStringLiteral("actionReload"), QKeySequence(Qt::Key_F5));
         QVERIFY(dialog.overrides().empty());
+    }
+
+    static void markNavigationIsConfigurable()
+    {
+        // F-MARK-3: Ctrl+Down/Up by default, rebindable like every menu command.
+        const lv::test::TempDir dir;
+        {
+            lv::test::LogWriter writer(dir / "m.log", true);
+            writer.append("a\nb\nc\nd\ne\nf\n");
+        }
+        lv::model::Settings settings(settingsDir(dir));
+        MainWindow window;
+        window.setSettings(&settings);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QAction* next = actionNamed(window, QStringLiteral("actionNextMark"));
+        QAction* previous = actionNamed(window, QStringLiteral("actionPreviousMark"));
+        QVERIFY(next != nullptr && previous != nullptr);
+        QCOMPARE(next->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_Down));
+        QCOMPARE(previous->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_Up));
+
+        auto* tab = window.openFile(dir / "m.log");
+        QVERIFY(QTest::qWaitFor(
+            [tab] { return tab->document().state() == lv::model::Document::State::kReady; }));
+        tab->marks().toggle(std::vector{lv::core::LineNumber(2), lv::core::LineNumber(4)});
+        auto* view = tab->mainView();
+        view->setFocus();
+        view->setCurrentRow(lv::core::LineNumber(0));
+        QTest::keyClick(view, Qt::Key_Down, Qt::ControlModifier);
+        QCOMPARE(view->currentRow().value_or(lv::core::LineNumber(99)).get(), std::uint64_t{2});
+
+        window.editShortcuts([](ShortcutsDialog& dialog) {
+            dialog.setShortcut(QStringLiteral("actionNextMark"), QKeySequence(Qt::Key_F7));
+            QTimer::singleShot(0, &dialog, &QDialog::accept);
+        });
+        QCOMPARE(next->shortcut(), QKeySequence(Qt::Key_F7));
+        // The modal dialog took the activation; window shortcuts need the window active again.
+        window.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&window));
+        view->setFocus();
+        QTest::keyClick(view, Qt::Key_F7);
+        QCOMPARE(view->currentRow().value_or(lv::core::LineNumber(99)).get(), std::uint64_t{4});
     }
 };
 
