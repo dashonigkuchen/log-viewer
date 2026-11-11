@@ -149,6 +149,21 @@ jobs:
           & "$env:QT_ROOT_DIR/bin/windeployqt.exe" --release --no-translations --no-system-d3d-compiler --no-opengl-sw dist/logviewer.exe
           Copy-Item LICENSE, README.md dist/
 
+      - name: Crash dump test
+        # F-ROB-5: the hidden --crash-test flag crashes on purpose; a minidump must appear in
+        # <settings directory>/dumps.
+        run: |
+          $settings = Join-Path $env:RUNNER_TEMP "lv-crash-settings"
+          New-Item -ItemType Directory -Force $settings | Out-Null
+          $env:LV_SETTINGS_DIR = $settings
+          $process = Start-Process -FilePath dist/logviewer.exe -ArgumentList "--crash-test" -PassThru -Wait
+          "exit code: $($process.ExitCode)"
+          $dumps = @(Get-ChildItem (Join-Path $settings "dumps") -Filter *.dmp -ErrorAction SilentlyContinue)
+          $dumps | Format-Table Name, Length
+          if ($dumps.Count -ne 1) { throw "expected one minidump, found $($dumps.Count)" }
+          if ($dumps[0].Length -lt 1024) { throw "minidump is too small: $($dumps[0].Length) bytes" }
+          if ($process.ExitCode -eq 0) { throw "the crash test exited with code 0" }
+
       - name: Verify version info
         env:
           EXPECTED: ${{ steps.versions.outputs.version }}
