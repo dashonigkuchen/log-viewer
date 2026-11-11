@@ -339,7 +339,7 @@ Goal: follow growing files reliably, including rotation and truncation, with inc
   - Scope: F-ROB-5 with `SetUnhandledExceptionFilter` + `MiniDumpWriteDump` (dbghelp, system library), limit 5 files.
   - Done when: hidden debug command line flag `--crash-test` produces a dump in CI. **[Windows]**
 
-- [ ] **M7-03 Release workflow** — Depends on: M0-08, M0-04
+- [x] **M7-03 Release workflow** — Depends on: M0-08, M0-04 (PR #74)
   - Scope: `release.yml` as in `DEVELOPMENT.md` §8, `README.txt` for the zip, `THIRD-PARTY-NOTICES.md` complete.
   - Done when: a test tag on a fork or `workflow_dispatch` dry run produces the draft-release artifacts (owner creates real tags only).
 

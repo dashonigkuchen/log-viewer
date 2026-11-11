@@ -1,0 +1,99 @@
+name: Release
+
+# docs/DEVELOPMENT.md §8. A tag vX.Y.Z on main builds the portable Windows zip and creates a
+# *draft* release; the owner tests the zip and publishes it. Manual runs and pull requests that
+# change the release files are dry runs: they build and upload the zip as an artifact only.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - '.github/workflows/release.yml'
+      - 'packaging/**'
+      - 'THIRD-PARTY-NOTICES.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: windows
+    uses: ./.github/workflows/ci-windows.yml
+
+  package:
+    name: package
+    needs: windows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write  # draft release (tags only)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read the version
+        id: version
+        run: |
+          version=$(grep -oP '^\s+VERSION \K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | head -n1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version: $version"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$version" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match the project version $version"
+            exit 1
+          fi
+
+      - name: Download the Windows build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: LogViewer-${{ steps.version.outputs.version }}-${{ github.sha }}-windows-x64
+          path: dist
+
+      - name: Assemble the zip
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -f dist/logviewer.exe
+          cp LICENSE THIRD-PARTY-NOTICES.md dist/
+          rm -f dist/README.md
+          sed "s/@VERSION@/$VERSION/g" packaging/README.txt | sed 's/$/\r/' > dist/README.txt
+          name="LogViewer-$VERSION-windows-x64"
+          mkdir -p out
+          (cd dist && zip -qr9 "../out/$name.zip" .)
+          (cd out && sha256sum "$name.zip" > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          unzip -l "out/$name.zip" | tail -n 3
+          for required in logviewer.exe LICENSE THIRD-PARTY-NOTICES.md README.txt; do
+            unzip -l "out/$name.zip" "$required" > /dev/null || { echo "::error::$required missing"; exit 1; }
+          done
+          if grep -q '@VERSION@' dist/README.txt; then echo "::error::README.txt not filled in"; exit 1; fi
+
+      - name: Upload the release files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ steps.version.outputs.version }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Create the draft release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Release notes: the CHANGELOG section of this version, if there is one.
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "See CHANGELOG.md." > notes.md; fi
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "Log Viewer $VERSION" --notes-file notes.md \
+            "out/LogViewer-$VERSION-windows-x64.zip" out/SHA256SUMS.txt
