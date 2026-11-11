@@ -186,7 +186,10 @@ jobs:
       - name: Collect performance tools
         run: |
           New-Item -ItemType Directory -Force perf | Out-Null
-          Copy-Item build/windows-msvc-release/bench/lv_bench.exe, tools/perf_acceptance.ps1 perf/
+          # The output directory depends on the generator settings; look the executable up.
+          $bench = Get-ChildItem build/windows-msvc-release -Recurse -Filter lv_bench.exe | Select-Object -First 1
+          if (-not $bench) { throw "lv_bench.exe not found in the build directory" }
+          Copy-Item $bench.FullName, tools/perf_acceptance.ps1 perf/
           Get-ChildItem perf | Format-Table Name, Length
 
       - name: Upload performance tools
